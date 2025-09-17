@@ -1,0 +1,15 @@
+spring:
+  profiles:
+    group:
+      default: common, local
+      # Active ?? ?? YML ??
+      local: common, local
+      dev: common, dev
+      prod: common, prod
+
+logging:
+  level:
+    org: INFO
+    com: INFO
+    root: INFO
+    org.zalando.logbook: TRACE

@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+  jpa:
+    open-in-view: false
+jwt:
+  access-token:
+    name: AccessToken
+    secret: +iBcUJRWGvl+94+ow4nXV1fzWIq4rph8x7MyRmrtWio=
+    expiration: 36000000
+  refresh-token:
+    name: RefreshToken
+    secret: gtzRlqF6bIkmOi5i15A9G5xbLdwiAMmZi6JPOeemC1E=
+    expiration: 864000000
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+  show-actuator: true
+  packages-to-scan: com.pluxity
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+logbook:
+  obfuscate: # 민감 정보 마스킹 가능
+    headers:
+      - Cookie
+      - Set-Cookie
+    json-body-fields:
+      - password
+  predicate:
+    exclude:
+      - path: /actuator/**
+      - path: /swagger-ui/**
+      - path: /api-docs/**
+      - path: /.well-known/**

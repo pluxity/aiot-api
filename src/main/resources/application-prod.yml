@@ -1,0 +1,31 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 1000
+  application:
+    name: aiot-api
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:aiot-mariadb}:${DB_PORT:3306}/a_iot_new
+    username: ${DB_USERNAME:a_iot_new}
+    password: ${DB_PASSWORD:pluxity123!@#}
+  jpa:
+    hibernate:
+      ddl-auto: update #FIXME: flyway 사용하면 여기 바꿔야함
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+
+file:
+  storage-strategy: ${FILE_STORAGE_STRATEGY:s3}
+  local:
+    path: ${FILE_LOCAL_PATH:/app/upload}
+  s3:
+    endpoint-url: ${S3_ENDPOINT_URL:http://minio:9000}
+    public-url: ${S3_PUBLIC_URL:http://localhost/files}
+    bucket: ${S3_BUCKET:aiot-bucket}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${S3_ACCESS_KEY:pluxity}
+    secret-key: ${S3_SECRET_KEY:pluxity0304}
+    pre-signed-url-expiration: 600

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.facility
 
+import com.pluxity.aiot.feature.entity.Feature
 import com.pluxity.aiot.global.entity.BaseEntity
 import com.pluxity.aiot.permission.ResourceType
 import com.pluxity.aiot.user.entity.Permissible
@@ -8,6 +9,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.locationtech.jts.geom.Polygon
 
@@ -25,8 +27,8 @@ class Facility(
     var location: Polygon,
 ) : BaseEntity(),
     Permissible {
-    //    @OneToMany(mappedBy = "facility")
-//    val features: MutableList<Feature> = mutableListOf()
+    @OneToMany(mappedBy = "facility")
+    val features: MutableList<Feature> = mutableListOf()
 
     fun updateName(name: String) {
         require(name.isNotBlank()) { "시설명은 빈 값일 수 없습니다" }

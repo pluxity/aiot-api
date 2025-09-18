@@ -39,6 +39,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("software.amazon.awssdk:s3:2.30.24")
+    implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.5.5")
+    implementation("com.linecorp.kotlin-jdsl:jpql-render:3.5.5")
+    implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-support:3.5.5")
+    implementation ("org.hibernate:hibernate-spatial:6.6.26.Final")
+    implementation("org.locationtech.jts:jts-core:1.20.0")
 
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.11.0")
 

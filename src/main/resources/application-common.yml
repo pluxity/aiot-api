@@ -10,6 +10,9 @@ spring:
       max-request-size: 1GB
   jpa:
     open-in-view: false
+    hibernate:
+      naming:
+        physical-strategy: com.pluxity.aiot.global.util.PhysicalNamingCustomStrategy
 jwt:
   access-token:
     name: AccessToken

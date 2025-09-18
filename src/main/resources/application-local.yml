@@ -7,14 +7,15 @@ spring:
   application:
     name: aiot-api
   datasource:
-    url: jdbc:mariadb://27.102.205.67:3306/a_iot_new
-    username: a_iot_new
+    url: jdbc:mariadb://localhost:3306/aiot
+    username: aiot
     password: pluxity123!@#
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
         default_batch_fetch_size: 100
 
 file:

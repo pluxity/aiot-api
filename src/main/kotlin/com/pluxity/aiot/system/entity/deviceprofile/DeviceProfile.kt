@@ -1,4 +1,4 @@
-package com.pluxity.aiot.system.entity
+package com.pluxity.aiot.system.entity.deviceprofile
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -18,7 +18,7 @@ data class DeviceProfile(
     @Column(name = "field_key", nullable = false, unique = true)
     var fieldKey: String,
     @Column(name = "description")
-    var description: String? = null,
+    var description: String,
     @Column(name = "unit", nullable = false)
     var fieldUnit: String? = null,
     @Column(name = "field_type", nullable = false)
@@ -26,12 +26,12 @@ data class DeviceProfile(
     var fieldType: FieldType,
 ) {
     @OneToMany(mappedBy = "deviceProfile", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var deviceProfileTypes: MutableSet<DeviceProfileType?> = mutableSetOf()
+    var deviceProfileTypes: MutableSet<DeviceProfileType> = mutableSetOf()
 
     fun update(
         fieldKey: String,
-        description: String?,
-        fieldUnit: String,
+        description: String,
+        fieldUnit: String?,
         fieldType: FieldType,
     ) {
         this.fieldKey = fieldKey

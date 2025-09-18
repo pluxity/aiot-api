@@ -1,9 +1,9 @@
-package com.pluxity.aiot.mobius
+package com.pluxity.aiot.system.entity.mobius
 
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
-import com.pluxity.aiot.mobius.dto.MobiusRequest
-import com.pluxity.aiot.mobius.dto.MobiusResponse
+import com.pluxity.aiot.system.entity.mobius.dto.MobiusRequest
+import com.pluxity.aiot.system.entity.mobius.dto.MobiusResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema

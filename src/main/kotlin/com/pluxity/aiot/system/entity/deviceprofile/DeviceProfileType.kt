@@ -1,5 +1,7 @@
-package com.pluxity.aiot.system.entity
+package com.pluxity.aiot.system.entity.deviceprofile
 
+import com.pluxity.aiot.system.entity.DeviceType
+import com.pluxity.aiot.system.entity.EventSetting
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

@@ -34,9 +34,8 @@ class Feature(
     var coord: Point? = null,
     @Column
     var batteryLevel: Int? = null,
-    @Column(columnDefinition = "varchar(50) DEFAULT 'NORMAL'")
-    var eventStatus: String? = null,
-    @Column(columnDefinition = "boolean DEFAULT true")
+    @Column(length = 50)
+    var eventStatus: String? = "NORMAL",
     var isActive: Boolean? = true,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "facility_id")

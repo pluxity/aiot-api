@@ -71,8 +71,10 @@ enum class ErrorCode(
     DUPLICATE_CCTV_OTHER_FEATURE(HttpStatus.BAD_REQUEST, "CCTV ID [%s]는 이미 다른 피처에 할당되어 있습니다."),
     DUPLICATE_FEATURE_OTHER_CCTV(HttpStatus.BAD_REQUEST, "피쳐 ID [%s]는 이미 다른 CCTV에 할당되어 있습니다."),
     DUPLICATE_FEATURE_OTHER_DEVICE(HttpStatus.BAD_REQUEST, "피쳐 ID [%s]는 이미 다른 디바이스에 할당되어 있습니다."),
-    DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다"),
+    DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다."),
+    DUPLICATE_DEVICE_PROFILE_KEY(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 필드명입니다."),
 
+    NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
     NOT_FOUND_STATION(HttpStatus.NOT_FOUND, "ID가 %s인 역을 찾을 수 없습니다."),
     NOT_FOUND_ABBREVIATION(HttpStatus.NOT_FOUND, "ID가 %s인 약어를 찾을 수 없습니다."),
     NOT_FOUND_BUILDING(HttpStatus.NOT_FOUND, "ID가 %s인 건물을 찾을 수 없습니다."),

@@ -1,6 +1,6 @@
-package com.pluxity.aiot.mobius
+package com.pluxity.aiot.system.entity.mobius
 
-import com.pluxity.aiot.mobius.dto.MobiusResponse
+import com.pluxity.aiot.system.entity.mobius.dto.MobiusResponse
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

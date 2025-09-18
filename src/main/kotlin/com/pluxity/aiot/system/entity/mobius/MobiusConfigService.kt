@@ -1,4 +1,4 @@
-package com.pluxity.aiot.mobius
+package com.pluxity.aiot.system.entity.mobius
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct

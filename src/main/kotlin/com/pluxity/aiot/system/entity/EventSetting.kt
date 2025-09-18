@@ -1,5 +1,6 @@
 package com.pluxity.aiot.system.entity
 
+import com.pluxity.aiot.system.entity.deviceprofile.DeviceProfileType
 import jakarta.persistence.CascadeType
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column

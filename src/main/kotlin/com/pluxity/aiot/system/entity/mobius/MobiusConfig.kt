@@ -1,4 +1,4 @@
-package com.pluxity.aiot.mobius
+package com.pluxity.aiot.system.entity.mobius
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

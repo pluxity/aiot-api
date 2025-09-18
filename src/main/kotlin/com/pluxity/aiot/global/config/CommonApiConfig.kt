@@ -17,8 +17,8 @@ class CommonApiConfig {
         OpenAPI()
             .info(
                 Info()
-                    .title("Plug Platform API")
-                    .description("Plug Platform API Documentation")
+                    .title("AIot API")
+                    .description("AIot API Documentation")
                     .version("1.0.0")
                     .contact(Contact().name("Pluxity").email("support@pluxity.com"))
                     .license(
@@ -66,38 +66,22 @@ class CommonApiConfig {
         GroupedOpenApi
             .builder()
             .group("5. 시설관리 API")
-            .pathsToMatch("/facilities/**", "/facility-categories/**", "/lines/**")
-            .build()
-
-    @Bean
-    fun assetApiByPath(): GroupedOpenApi =
-        GroupedOpenApi
-            .builder()
-            .group("6. Asset 관리 API")
-            .pathsToMatch("/assets/**", "/asset-categories/**")
+            .pathsToMatch("/facilities/**")
             .build()
 
     @Bean
     fun featureApiByPath(): GroupedOpenApi =
         GroupedOpenApi
             .builder()
-            .group("7. Feature 관리 API")
-            .pathsToMatch("/features/**", "/label-3d/**")
+            .group("6. Feature 관리 API")
+            .pathsToMatch("/features/**")
             .build()
 
     @Bean
     fun deviceApiByPath(): GroupedOpenApi =
         GroupedOpenApi
             .builder()
-            .group("8. Device 관리 API")
-            .pathsToMatch("/devices/**", "/device-categories/**")
-            .build()
-
-    @Bean
-    fun cctvApiByPath(): GroupedOpenApi =
-        GroupedOpenApi
-            .builder()
-            .group("9. Cctv 관리 API")
-            .pathsToMatch("/cctvs/**")
+            .group("7. 디바이스 연동 설정 API")
+            .pathsToMatch("/mobius/**", "/device-profiles/**")
             .build()
 }

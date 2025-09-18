@@ -1,6 +1,8 @@
 package com.pluxity.aiot.system.entity
 
 import com.pluxity.aiot.feature.entity.Feature
+import com.pluxity.aiot.system.entity.deviceprofile.DeviceProfile
+import com.pluxity.aiot.system.entity.deviceprofile.DeviceProfileType
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

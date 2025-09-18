@@ -3,7 +3,6 @@ package com.pluxity.aiot.global.properties
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.bind.ConstructorBinding
 import java.util.Base64
-import kotlin.text.toByteArray
 
 @ConfigurationProperties(prefix = "jwt")
 data class JwtProperties

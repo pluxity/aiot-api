@@ -17,8 +17,8 @@ class CommonApiConfig {
         OpenAPI()
             .info(
                 Info()
-                    .title("AIoT API")
-                    .description("AIoT API Documentation")
+                    .title("Plug Platform API")
+                    .description("Plug Platform API Documentation")
                     .version("1.0.0")
                     .contact(Contact().name("Pluxity").email("support@pluxity.com"))
                     .license(

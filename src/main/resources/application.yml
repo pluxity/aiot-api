@@ -2,10 +2,16 @@ spring:
   profiles:
     group:
       default: common, local
-      # Active ?? ?? YML ??
       local: common, local
-      dev: common, dev
+      stage: stage, common
       prod: common, prod
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations:
+      - classpath:db/migration
+    table: flyway_schema_history
+    validate-on-migrate: true
 
 logging:
   level:

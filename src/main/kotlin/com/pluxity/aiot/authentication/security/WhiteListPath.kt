@@ -1,4 +1,4 @@
-package com.pluxity.authentication.security
+package com.pluxity.aiot.authentication.security
 
 enum class WhiteListPath(
     val path: String,

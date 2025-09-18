@@ -1,14 +1,15 @@
 package com.pluxity.aiot.authentication.security
 
-import com.pluxity.aiot.domain.account.Account
+import com.pluxity.aiot.user.entity.User
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 
 data class CustomUserDetails(
-    val user: Account,
+    val user: User,
 ) : UserDetails {
-    override fun getAuthorities(): MutableCollection<out GrantedAuthority> = mutableListOf(SimpleGrantedAuthority(user.role.name))
+    override fun getAuthorities(): MutableCollection<out GrantedAuthority> =
+        user.getRoles().map { role -> SimpleGrantedAuthority(role.getAuthority()) }.toMutableList()
 
     override fun getPassword(): String = user.password
 

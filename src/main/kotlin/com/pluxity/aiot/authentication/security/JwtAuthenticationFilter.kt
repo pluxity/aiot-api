@@ -3,7 +3,6 @@ package com.pluxity.aiot.authentication.security
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.response.ErrorResponseBody
-import com.pluxity.authentication.security.WhiteListPath
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

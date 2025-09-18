@@ -6,10 +6,6 @@ enum class ErrorCode(
     private val httpStatus: HttpStatus,
     private val message: String,
 ) : Code {
-    DUPLICATE_GROUP_NAME(HttpStatus.BAD_REQUEST, "%s는 이미 존재하는 그룹명입니다."),
-    NOT_FOUND_ACCOUNT_GROUP(HttpStatus.NOT_FOUND, "ID가 %s인 사용자 그룹을 찾을 수 없습니다."),
-    INVALID_DELETE_EXIST_IN_ACCOUNT(HttpStatus.BAD_REQUEST, "해당 그룹에 속한 계정이 있어 삭제할 수 없습니다."),
-
     INVALID_ID_OR_PASSWORD(HttpStatus.BAD_REQUEST, "아이디 또는 비밀번호가 틀렸습니다."),
 
     INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "ACCESS 토큰이 유효하지 않습니다."),
@@ -29,7 +25,7 @@ enum class ErrorCode(
 
     DUPLICATE_RESOURCE_ID(HttpStatus.BAD_REQUEST, "중복된 리소스 ID가 포함되어 있습니다."),
 
-    NOT_FOUND_USER(HttpStatus.BAD_REQUEST, "%s 회원이 존재하지 않습니다."),
+    NOT_FOUND_USER(HttpStatus.BAD_REQUEST, "해당 회원이 존재하지 않습니다."),
     NOT_FOUND_DATA(HttpStatus.BAD_REQUEST, "데이터가 존재하지 않습니다."),
     NOT_AUTHORIZED(HttpStatus.UNAUTHORIZED, "권한이 없습니다."),
     PERMISSION_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
@@ -41,6 +37,7 @@ enum class ErrorCode(
 
     EXCEED_CATEGORY_DEPTH(HttpStatus.BAD_REQUEST, "카테고리는 깊이를 초과했습니다"),
     INVALID_REFERENCE(HttpStatus.BAD_REQUEST, "요청 된 참조가 유효하지 않습니다."),
+    INVALID_LOCATION(HttpStatus.BAD_REQUEST, "Polygon WKT만 허용됩니다."),
 
     INVALID_PARENT_CATEGORY(HttpStatus.BAD_REQUEST, "카테고리는 자기 자신을 부모로 가질 수 없습니다."),
     CIRCULAR_REFERENCE_CATEGORY(HttpStatus.BAD_REQUEST, "하위 카테고리를 부모 카테고리로 지정할 수 없습니다."),
@@ -74,8 +71,10 @@ enum class ErrorCode(
     DUPLICATE_CCTV_OTHER_FEATURE(HttpStatus.BAD_REQUEST, "CCTV ID [%s]는 이미 다른 피처에 할당되어 있습니다."),
     DUPLICATE_FEATURE_OTHER_CCTV(HttpStatus.BAD_REQUEST, "피쳐 ID [%s]는 이미 다른 CCTV에 할당되어 있습니다."),
     DUPLICATE_FEATURE_OTHER_DEVICE(HttpStatus.BAD_REQUEST, "피쳐 ID [%s]는 이미 다른 디바이스에 할당되어 있습니다."),
+    DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다"),
 
     NOT_FOUND_STATION(HttpStatus.NOT_FOUND, "ID가 %s인 역을 찾을 수 없습니다."),
+    NOT_FOUND_ABBREVIATION(HttpStatus.NOT_FOUND, "ID가 %s인 약어를 찾을 수 없습니다."),
     NOT_FOUND_BUILDING(HttpStatus.NOT_FOUND, "ID가 %s인 건물을 찾을 수 없습니다."),
     NOT_FOUND_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 카테고리를 찾을 수 없습니다."),
     NOT_FOUND_FILE(HttpStatus.NOT_FOUND, "ID가 %s인 파일을 찾을 수 없습니다."),

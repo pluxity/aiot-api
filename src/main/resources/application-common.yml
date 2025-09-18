@@ -9,10 +9,10 @@ spring:
       max-file-size: 1GB
       max-request-size: 1GB
   jpa:
+    properties:
+      hibernate:
+        format_sql: true
     open-in-view: false
-    hibernate:
-      naming:
-        physical-strategy: com.pluxity.aiot.global.util.PhysicalNamingCustomStrategy
 jwt:
   access-token:
     name: AccessToken
@@ -47,3 +47,6 @@ logbook:
       - path: /swagger-ui/**
       - path: /api-docs/**
       - path: /.well-known/**
+
+user:
+  init-password: qwer1234

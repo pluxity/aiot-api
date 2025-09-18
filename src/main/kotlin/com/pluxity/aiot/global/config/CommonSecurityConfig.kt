@@ -3,9 +3,9 @@ package com.pluxity.aiot.global.config
 import com.pluxity.aiot.authentication.security.CustomUserDetails
 import com.pluxity.aiot.authentication.security.JwtAuthenticationFilter
 import com.pluxity.aiot.authentication.security.JwtProvider
-import com.pluxity.aiot.domain.account.AccountRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.user.repository.UserRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
@@ -27,7 +27,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableWebSecurity
 class CommonSecurityConfig(
-    private val repository: AccountRepository,
+    private val repository: UserRepository,
     private val jwtProvider: JwtProvider,
 ) {
     @Bean
@@ -74,9 +74,9 @@ class CommonSecurityConfig(
     fun userDetailsService(): UserDetailsService =
         UserDetailsService { username: String ->
             repository
-                .findByUserid(username)
+                .findByUsername(username)
                 ?.let { CustomUserDetails(it) }
-                ?: throw CustomException(ErrorCode.NOT_FOUND_USER, username)
+                ?: throw CustomException(ErrorCode.NOT_FOUND_USER)
         }
 
     @Bean

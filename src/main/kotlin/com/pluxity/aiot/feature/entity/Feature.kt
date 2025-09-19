@@ -2,7 +2,7 @@ package com.pluxity.aiot.feature.entity
 
 import com.pluxity.aiot.facility.Facility
 import com.pluxity.aiot.global.entity.BaseEntity
-import com.pluxity.aiot.system.entity.DeviceType
+import com.pluxity.aiot.system.device.type.DeviceType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

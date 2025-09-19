@@ -73,8 +73,13 @@ enum class ErrorCode(
     DUPLICATE_FEATURE_OTHER_DEVICE(HttpStatus.BAD_REQUEST, "피쳐 ID [%s]는 이미 다른 디바이스에 할당되어 있습니다."),
     DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다."),
     DUPLICATE_DEVICE_PROFILE_KEY(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 필드명입니다."),
+    DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "조건 범위가 중복됩니다: %s(%s)와 %s(%s) 사이에 중복된 범위가 있습니다."),
 
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
+    NOT_FOUND_DEVICE_TYPE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
+    NOT_FOUND_EVENT_SETTING(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 설정을 찾을 수 없습니다."),
+    NOT_FOUND_DEVICE_EVENT(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 이벤트를 찾을 수 없습니다."),
+    NOT_FOUND_EVENT_CONDITION(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 조건을 찾을 수 없습니다."),
     NOT_FOUND_STATION(HttpStatus.NOT_FOUND, "ID가 %s인 역을 찾을 수 없습니다."),
     NOT_FOUND_ABBREVIATION(HttpStatus.NOT_FOUND, "ID가 %s인 약어를 찾을 수 없습니다."),
     NOT_FOUND_BUILDING(HttpStatus.NOT_FOUND, "ID가 %s인 건물을 찾을 수 없습니다."),

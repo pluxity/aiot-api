@@ -44,7 +44,7 @@ class DeviceType(
         this.version = version
     }
 
-    fun removeDeviceProfile(deviceProfile: DeviceProfile) {
+    fun removeDeviceProfile(deviceProfile: DeviceProfile?) {
         deviceProfileTypes.removeIf { it.deviceProfile == deviceProfile }
     }
 
@@ -71,7 +71,8 @@ class DeviceType(
             if (eventId != null) {
                 // 기존 이벤트 업데이트
                 currentEvents[eventId]?.let { existingEvent ->
-                    existingEvent.update(newEvent.name, newEvent.imageUrl, newEvent.deviceLevel!!)
+                    existingEvent.update(newEvent.name, newEvent.deviceLevel!!)
+                    existingEvent.updateIconId(newEvent.iconId)
                     currentEvents.remove(eventId)
                 }
             } else {

@@ -9,6 +9,6 @@ interface EventConditionRepository : JpaRepository<EventCondition, Long> {
     @Modifying
     @Query("DELETE FROM EventCondition ec WHERE ec.deviceEvent.id IN :eventIds")
     fun deleteAllByDeviceEventIdIn(
-        @Param("eventIds") eventIds: MutableSet<Long>,
+        @Param("eventIds") eventIds: Set<Long>,
     ): Int
 }

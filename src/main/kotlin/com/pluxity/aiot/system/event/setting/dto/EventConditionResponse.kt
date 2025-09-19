@@ -2,7 +2,7 @@ package com.pluxity.aiot.system.event.setting.dto
 
 import com.pluxity.aiot.system.event.condition.EventCondition
 
-class EventConditionResponse(
+data class EventConditionResponse(
     val id: Long?,
     val deviceEventId: Long?,
     val value: String?,
@@ -24,7 +24,7 @@ class EventConditionResponse(
 fun EventCondition.toEventConditionResponse() =
     EventConditionResponse(
         id = this.id,
-        deviceEventId = this.deviceEvent?.id,
+        deviceEventId = this.deviceEvent.id,
         value = this.value,
         minValue = this.minValue,
         maxValue = this.maxValue,
@@ -37,6 +37,6 @@ fun EventCondition.toEventConditionResponse() =
         guideMessage = this.guideMessage,
         notificationIntervalMinutes = this.notificationIntervalMinutes,
         order = this.order,
-        deviceEventName = this.deviceEvent?.name,
-        deviceEventLevel = this.deviceEvent?.deviceLevel?.toString(),
+        deviceEventName = this.deviceEvent.name,
+        deviceEventLevel = this.deviceEvent.deviceLevel?.toString(),
     )

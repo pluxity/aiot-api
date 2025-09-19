@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -99,7 +100,7 @@ class AbbreviationController(
     @ResponseCreated(path = "/abbreviations/{abbreviationId}")
     @PostMapping
     fun createAbbreviation(
-        @RequestBody request: AbbreviationRequest,
+        @RequestBody @Valid request: AbbreviationRequest,
     ): ResponseEntity<Long> = ResponseEntity.ok(abbreviationService.createAbbreviation(request))
 
     @Operation(summary = "약어 정보 수정", description = "약어 정보를 수정합니다")
@@ -141,7 +142,7 @@ class AbbreviationController(
     @PutMapping("/{abbreviationId}")
     fun updateAbbreviation(
         @Parameter(description = "약어 ID", required = true) @PathVariable abbreviationId: Long,
-        @RequestBody request: AbbreviationRequest,
+        @RequestBody @Valid request: AbbreviationRequest,
     ): ResponseEntity<Void> {
         abbreviationService.updateAbbreviation(abbreviationId, request)
         return ResponseEntity.noContent().build()

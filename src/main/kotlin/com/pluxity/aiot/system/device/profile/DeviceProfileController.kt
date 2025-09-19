@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -56,7 +57,7 @@ class DeviceProfileController(
     @ResponseCreated(path = "/device-profiles/{deviceProfileId}")
     @PostMapping
     fun create(
-        @RequestBody request: DeviceProfileRequest,
+        @RequestBody @Valid request: DeviceProfileRequest,
     ): ResponseEntity<Long> = ResponseEntity.ok(deviceProfileService.create(request))
 
     @Operation(summary = "디바이스 프로필 목록 조회", description = "모든 디바이스 프로필 목록을 조회합니다")
@@ -118,7 +119,7 @@ class DeviceProfileController(
     @PutMapping("/{deviceProfileId}")
     fun update(
         @PathVariable deviceProfileId: Long,
-        @RequestBody request: DeviceProfileRequest,
+        @RequestBody @Valid request: DeviceProfileRequest,
     ): ResponseEntity<Void> {
         deviceProfileService.update(deviceProfileId, request)
         return ResponseEntity.noContent().build()

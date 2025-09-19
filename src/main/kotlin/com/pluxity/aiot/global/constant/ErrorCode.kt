@@ -75,6 +75,8 @@ enum class ErrorCode(
     DUPLICATE_DEVICE_PROFILE_KEY(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 필드명입니다."),
     DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "조건 범위가 중복됩니다: %s(%s)와 %s(%s) 사이에 중복된 범위가 있습니다."),
 
+    INVALID_PROFILE_COUNT(HttpStatus.BAD_REQUEST, "일부 프로필을 찾을 수 없습니다."),
+    INVALID_PROFILE_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_TYPE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
     NOT_FOUND_EVENT_SETTING(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 설정을 찾을 수 없습니다."),

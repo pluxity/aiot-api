@@ -1,6 +1,6 @@
 package com.pluxity.aiot.facility
 
-import com.pluxity.aiot.feature.entity.Feature
+import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.entity.BaseEntity
 import com.pluxity.aiot.permission.ResourceType
 import com.pluxity.aiot.user.entity.Permissible

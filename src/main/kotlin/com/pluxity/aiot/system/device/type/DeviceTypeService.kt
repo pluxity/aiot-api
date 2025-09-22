@@ -56,7 +56,7 @@ class DeviceTypeService(
         return list.map { it.toDeviceTypeResponse(fileMap) }
     }
 
-    private fun findById(id: Long) = deviceTypeRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_TYPE, id)
+    fun findById(id: Long) = deviceTypeRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_TYPE, id)
 
     @Transactional(readOnly = true)
     fun getById(id: Long): DeviceTypeResponse {
@@ -86,7 +86,7 @@ class DeviceTypeService(
 
     @Transactional
     fun create(request: DeviceTypeRequest): Long {
-        val deviceType: DeviceType =
+        val deviceType =
             DeviceType(
                 objectId = request.objectId,
                 description = request.description,
@@ -389,15 +389,6 @@ class DeviceTypeService(
     private fun createOrUpdateEvents(eventRequests: List<DeviceEventRequest>): List<DeviceEvent> {
         val events = mutableListOf<DeviceEvent>()
         for (eventRequest in eventRequests) {
-            val deviceEvent =
-                eventRequest.id?.let { id ->
-                    deviceEventRepository.findByIdOrNull(id)
-                        ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_EVENT, id)
-                } ?: DeviceEvent(
-                    name = eventRequest.name,
-                    deviceLevel = eventRequest.deviceLevel,
-                    iconId = eventRequest.iconId,
-                )
             var event: DeviceEvent
             if (eventRequest.id != null) {
                 // 기존 이벤트 업데이트

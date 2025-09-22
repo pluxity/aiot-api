@@ -1,4 +1,4 @@
-package com.pluxity.aiot.feature.entity
+package com.pluxity.aiot.feature
 
 import com.pluxity.aiot.facility.Facility
 import com.pluxity.aiot.global.entity.BaseEntity
@@ -45,5 +45,13 @@ class Feature(
 ) : BaseEntity() {
     fun changeDeviceType(deviceType: DeviceType?) {
         this.deviceType = deviceType
+    }
+
+    fun updateDeviceType(deviceType: DeviceType) {
+        this.deviceType = deviceType
+    }
+
+    fun updateActive(isActive: Boolean) {
+        this.isActive = isActive
     }
 }

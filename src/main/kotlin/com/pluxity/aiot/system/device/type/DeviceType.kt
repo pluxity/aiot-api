@@ -1,6 +1,6 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.feature.entity.Feature
+import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileType

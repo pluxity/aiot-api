@@ -1,1 +1,1 @@
-rootProject.name = "aiot"
+rootProject.name = "aiot-api"

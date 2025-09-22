@@ -1,0 +1,36 @@
+package com.pluxity.aiot.data
+
+import com.fasterxml.jackson.annotation.JsonProperty
+
+data class LocationData(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+data class MobiusBatteryResponse(
+    @field:JsonProperty("m2m:cin")
+    val cin: MobiusCinResponse,
+)
+
+data class MobiusCinResponse(
+    val con: MobiusConResponse,
+)
+
+data class MobiusConResponse(
+    @field:JsonProperty("Battery Level")
+    val batteryLevel: Int,
+)
+
+data class MobiusUrilResponse(
+    @field:JsonProperty("m2m:uril")
+    val uril: List<String>,
+)
+
+data class MobiusLocationResponse(
+    @field:JsonProperty("m2m:cnt")
+    val cntResponse: MobiusCntResponse,
+)
+
+data class MobiusCntResponse(
+    val lbl: List<String>,
+)

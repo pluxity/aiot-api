@@ -44,7 +44,9 @@ dependencies {
     implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-support:3.5.5")
     implementation ("org.hibernate:hibernate-spatial:6.6.26.Final")
     implementation("org.locationtech.jts:jts-core:1.20.0")
-
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.11.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

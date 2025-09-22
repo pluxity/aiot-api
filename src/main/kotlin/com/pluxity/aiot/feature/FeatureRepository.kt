@@ -15,4 +15,6 @@ interface FeatureRepository :
     fun findByObjectIdContaining(
         @Param("objectIdPart") objectIdPart: String,
     ): List<Feature>
+
+    fun deleteAllByDeviceIdIn(deviceIds: List<String>)
 }

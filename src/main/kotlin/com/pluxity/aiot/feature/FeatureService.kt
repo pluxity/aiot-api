@@ -19,7 +19,7 @@ class FeatureService(
     private val deviceTypeService: DeviceTypeService,
 ) {
     @Transactional(readOnly = true)
-    fun findAll(searchCondition: FeatureSearchCondition): List<FeatureResponse> {
+    fun findAll(searchCondition: FeatureSearchCondition? = null): List<FeatureResponse> {
         val poiList =
             featureRepository
                 .findAll {
@@ -30,11 +30,11 @@ class FeatureService(
                             leftFetchJoin(Feature::deviceType),
                         ).where(
                             and(
-                                searchCondition.facilityId?.let { path(Facility::id).equal(it) },
-                                searchCondition.deviceId?.let { path(Feature::deviceId).equal(it) },
-                                searchCondition.name?.let { path(Feature::name).equal(it) },
-                                searchCondition.deviceTypeId?.let { path(DeviceType::id).equal(it) },
-                                searchCondition.isActive?.let { path(Feature::isActive).equal(it) },
+                                searchCondition?.facilityId?.let { path(Facility::id).equal(it) },
+                                searchCondition?.deviceId?.let { path(Feature::deviceId).equal(it) },
+                                searchCondition?.name?.let { path(Feature::name).equal(it) },
+                                searchCondition?.deviceTypeId?.let { path(DeviceType::id).equal(it) },
+                                searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),
                         )
                 }.filterNotNull()

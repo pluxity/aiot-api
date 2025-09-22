@@ -11,7 +11,10 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import java.awt.Point
+import org.locationtech.jts.geom.Coordinate
+import org.locationtech.jts.geom.GeometryFactory
+import org.locationtech.jts.geom.Point
+import org.locationtech.jts.geom.PrecisionModel
 import java.time.LocalDateTime
 
 @Entity
@@ -31,7 +34,7 @@ class Feature(
     var longitude: Double? = null,
     var latitude: Double? = null,
     @Column(columnDefinition = "geometry(Point, 4326)")
-    var coord: Point? = null,
+    var geom: Point? = null,
     @Column
     var batteryLevel: Int? = null,
     @Column(length = 50)
@@ -53,5 +56,28 @@ class Feature(
 
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive
+    }
+
+    fun updateInfo(
+        deviceType: DeviceType?,
+        name: String,
+        objectId: String,
+    ) {
+        this.deviceType = deviceType
+        this.name = name
+        this.objectId = objectId
+    }
+
+    fun updateStatusInfo(
+        longitude: Double,
+        latitude: Double,
+        batteryLevel: Int?,
+    ) {
+        this.longitude = longitude
+        this.latitude = latitude
+        this.batteryLevel = batteryLevel
+        // Point 객체 생성 (SRID 4326 사용)
+        val gf = GeometryFactory(PrecisionModel(), 4326)
+        this.geom = gf.createPoint(Coordinate(longitude, latitude))
     }
 }

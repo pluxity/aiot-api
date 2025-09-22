@@ -1,9 +1,16 @@
 package com.pluxity.aiot.feature.dto
 
+import io.swagger.v3.oas.annotations.media.Schema
+
 data class FeatureSearchCondition(
+    @field:Schema(description = "시설 아이디")
     var facilityId: Long? = null,
+    @field:Schema(description = "디바이스 종류 아이디")
     var deviceTypeId: Long? = null,
+    @field:Schema(description = "이름")
     var name: String? = null,
+    @field:Schema(description = "디바이스 아이디")
     var deviceId: String? = null,
+    @field:Schema(description = "활성화여부")
     var isActive: Boolean? = null,
 )

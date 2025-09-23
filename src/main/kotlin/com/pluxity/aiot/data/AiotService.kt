@@ -39,10 +39,6 @@ class AiotService(
                 headers.setAll(createMobiusHeaders())
             }.build()
 
-    init {
-        System.currentTimeMillis()
-    }
-
     @Transactional
     fun checkSynchronization() {
         runBlocking {
@@ -117,6 +113,7 @@ class AiotService(
                 str.startsWith("latitude:", ignoreCase = true) -> {
                     latitude = str.substringAfter("latitude:").trim().toDoubleOrNull()
                 }
+
                 str.startsWith("longitude:", ignoreCase = true) -> {
                     longitude = str.substringAfter("longitude:").trim().toDoubleOrNull()
                 }

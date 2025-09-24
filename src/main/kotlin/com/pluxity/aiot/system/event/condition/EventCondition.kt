@@ -37,7 +37,7 @@ class EventCondition(
     @Column(length = 500)
     var guideMessage: String? = null,
     @Column(name = "notification_interval_minutes")
-    var notificationIntervalMinutes: Int? = null,
+    var notificationIntervalMinutes: Int = 0,
     @Column(name = "condition_order")
     var order: Int? = null,
 ) {

@@ -1,24 +1,20 @@
 package com.pluxity.aiot.sensor
 
 import com.influxdb.client.QueryApi
-import com.influxdb.client.WriteApi
-import com.influxdb.client.domain.WritePrecision
 import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.alarm.dto.AlarmEvent
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
 import com.pluxity.aiot.alarm.service.SseService
+import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.AiotService
-import com.pluxity.aiot.data.measure.DisplacementGauge
-import com.pluxity.aiot.data.measure.FireAlarm
-import com.pluxity.aiot.data.measure.TemperatureHumidity
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.dto.LastSensorData
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
@@ -42,10 +38,12 @@ class SensorDataMigrationService(
     private val sseService: SseService,
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxProperties,
-    private val deviceTypeRepository: DeviceTypeRepository,
     private val aiotService: AiotService,
-    private val writeApi: WriteApi,
+    processors: List<SensorDataProcessor>,
 ) {
+    private val processorMap: Map<String, SensorDataProcessor> =
+        processors.associateBy { it.getObjectId() }
+
     /**
      * 모든 POI를 찾아서 각 device와 object에 대한 최신 데이터 이력을 가져와 저장
      */
@@ -78,18 +76,15 @@ class SensorDataMigrationService(
         log.info { "Migrating data for device: $deviceId, object: $objectId" }
 
         // 해당 device와 object에 대한 가장 최근 record의 시간 가져오기
-        val type =
-            deviceTypeRepository.findFirstByObjectId(objectId)
-                ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_TYPE_BY_OBJECT_ID, objectId)
         val measureName =
-            when (type.objectId) {
-                "34954" -> "temperature_humidity"
-                "34956" -> "fire_alarm"
-                "34957" -> "displacement_gauge"
+            when (objectId) {
+                SensorType.TEMPERATURE_HUMIDITY.objectId -> "temperature_humidity"
+                SensorType.FIRE.objectId -> "fire_alarm"
+                SensorType.DISPLACEMENT_GAUGE.objectId -> "displacement_gauge"
                 else -> throw CustomException(ErrorCode.INVALID_FORMAT)
             }
 
-        val startTime = getLastRecordTime(deviceId, objectId, measureName) ?: return
+        val startTime = getLastRecordTime(deviceId, measureName) ?: return
         val endTime = LocalDateTime.now()
 
         log.info { "Migrating data from $startTime to $endTime" }
@@ -108,64 +103,7 @@ class SensorDataMigrationService(
         for (sensorData in mobiusData) {
             val content = sensorData.con
             val timestamp = content.timestamp
-
-            when (type.objectId) {
-                "34954" -> {
-                    val tempMeasure =
-                        TemperatureHumidity(
-                            facilityId.toString(),
-                            deviceId,
-                            content.temperature,
-                            "Temperature",
-                            DateTimeUtils.parseUtc(timestamp),
-                        )
-                    writeApi.writeMeasurement(WritePrecision.S, tempMeasure)
-                    val humidityMeasure =
-                        TemperatureHumidity(
-                            facilityId.toString(),
-                            deviceId,
-                            content.humidity,
-                            "Humidity",
-                            DateTimeUtils.parseUtc(timestamp),
-                        )
-                    writeApi.writeMeasurement(WritePrecision.S, humidityMeasure)
-                    val discomfortValue =
-                        0.81 * content.temperature + 0.01 * content.humidity * (0.99 * content.temperature - 14.3) + 46.3
-                    val discomfortMeasure =
-                        TemperatureHumidity(
-                            facilityId.toString(),
-                            deviceId,
-                            discomfortValue,
-                            "DiscomfortIndex",
-                            DateTimeUtils.parseUtc(timestamp),
-                        )
-                    writeApi.writeMeasurement(WritePrecision.S, discomfortMeasure)
-                }
-
-                "34956" -> {
-                    val fireAlarm =
-                        FireAlarm(
-                            facilityId.toString(),
-                            deviceId,
-                            if (content.fireAlarm) 1.0 else 0.0,
-                            DateTimeUtils.parseUtc(timestamp),
-                        )
-                    writeApi.writeMeasurement(WritePrecision.S, fireAlarm)
-                }
-
-                "34957" -> {
-                    val displacementGauge =
-                        DisplacementGauge(
-                            facilityId.toString(),
-                            deviceId,
-                            content.angleX,
-                            content.angleY,
-                            DateTimeUtils.parseUtc(timestamp),
-                        )
-                    writeApi.writeMeasurement(WritePrecision.S, displacementGauge)
-                }
-                else -> Unit
-            }
+            processorMap[objectId]?.insertSensorData(content, facilityId, deviceId, timestamp)
         }
     }
 
@@ -175,11 +113,9 @@ class SensorDataMigrationService(
      */
     private fun getLastRecordTime(
         deviceId: String,
-        objectId: String,
         measureName: String,
     ): LocalDateTime? {
         // 최신 기록 조회를 위한 쿼리
-
         val query =
             Flux
                 .from(influxdbProperties.bucket)
@@ -187,18 +123,18 @@ class SensorDataMigrationService(
                 .filter(
                     Restrictions.and(
                         Restrictions.measurement().equal(measureName),
-                        Restrictions.field().equal("value"),
-                        Restrictions.tag("deviceId").equal("device2"),
+                        Restrictions.tag("deviceId").equal(deviceId),
                     ),
-                ).groupBy("device")
-                .last()
+                ).sort(listOf("_time"), true)
+                .limit(1)
+                .keep(listOf("_time", "deviceId"))
                 .timeShift(9L, ChronoUnit.HOURS)
                 .toString()
         val data = queryApi.query(query, influxdbProperties.org, LastSensorData::class.java)
 
         if (data.isEmpty()) {
             // 기록이 없으면 예외 발생
-            log.info { "센서 데이터가 없습니다. deviceId: $deviceId, objectId: $objectId" }
+            log.info { "센서 데이터가 없습니다. deviceId: $deviceId" }
             return null
         }
 

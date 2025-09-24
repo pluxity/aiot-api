@@ -1,13 +1,20 @@
 package com.pluxity.aiot.alarm.service
 
 import com.pluxity.aiot.alarm.dto.SubscriptionAlarm
+import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.sensor.SensorDataMigrationService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 
 private val log = KotlinLogging.logger {}
 
 @Service
-class EventService {
+class EventService(
+    private val sensorDataMigrationService: SensorDataMigrationService,
+    private val featureRepository: FeatureRepository,
+) {
     fun processData(request: SubscriptionAlarm) {
         // 파라미터 추출
         try {
@@ -18,12 +25,14 @@ class EventService {
             if (surParts.size >= 4) {
                 val deviceId = surParts[2]
                 val objectId: String = surParts[3].split("_")[0]
+                val feature =
+                    featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
 
                 // con 데이터에서 reportingPeriod 추출
                 val reportingPeriod = request.sgn.nev.rep.cin.con.period
 
                 // 데이터 일관성 서비스에 등록
-//                sensorDataMigrationService.registerSensorData(deviceId, objectId, reportingPeriod)
+                sensorDataMigrationService.registerSensorData(deviceId, objectId, feature.facility?.id!!, reportingPeriod)
                 log.debug { "센서 데이터 모니터링 등록 - deviceId: $deviceId, objectId: $objectId, reportingPeriod: ${reportingPeriod}초" }
             }
         } catch (e: Exception) {
@@ -31,6 +40,6 @@ class EventService {
         }
 
         // 센서 데이터 처리
-//        sensorDataHandler.handleData(request)
+//        sensorDataHandler.handleData(request.sgn.nev.rep.cin.con)
     }
 }

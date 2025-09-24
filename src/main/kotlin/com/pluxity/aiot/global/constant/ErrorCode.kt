@@ -79,6 +79,8 @@ enum class ErrorCode(
     INVALID_PROFILE_COUNT(HttpStatus.BAD_REQUEST, "일부 프로필을 찾을 수 없습니다."),
     INVALID_PROFILE_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
+    NOT_FOUND_EVENT_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Event History를 찾을 수 없습니다."),
+    NOT_FOUND_ACTION_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Action History를 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_TYPE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_TYPE_BY_OBJECT_ID(HttpStatus.NOT_FOUND, "Object ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
     NOT_FOUND_EVENT_SETTING(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 설정을 찾을 수 없습니다."),

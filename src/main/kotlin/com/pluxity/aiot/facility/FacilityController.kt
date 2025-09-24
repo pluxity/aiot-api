@@ -143,7 +143,7 @@ class FacilityController(
             ),
         ],
     )
-    @ResponseCreated(path = "/facilities/{facilityId}")
+    @ResponseCreated(path = "/facilities/{id}")
     @PostMapping
     fun save(
         @Parameter(description = "시설 정보", required = true) @Valid @RequestBody

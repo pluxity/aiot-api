@@ -14,4 +14,6 @@ object DateTimeUtils {
     }
 
     fun formatToTimestamp(input: LocalDateTime): String = input.format(formatter)
+
+    fun safeParseFromTimestamp(timestamp: String): LocalDateTime = LocalDateTime.parse(timestamp, formatter)
 }

@@ -27,19 +27,19 @@ data class SubscriptionCinResponse(
 
 data class SubscriptionConResponse(
     @field:JsonProperty("Temperature")
-    val temperature: Double,
+    val temperature: Double?,
     @field:JsonProperty("Humidity")
-    val humidity: Double,
+    val humidity: Double?,
     @field:JsonProperty("Reporting Period")
     val period: Int = 300,
     @field:JsonProperty("Timestamp")
     val timestamp: String,
     @field:JsonProperty("Fire Alarm")
-    val fireAlarm: Boolean,
+    val fireAlarm: Boolean?,
     @field:JsonProperty("Angle-X")
-    val angleX: Double,
+    val angleX: Double?,
     @field:JsonProperty("Angle-Y")
-    val angleY: Double,
+    val angleY: Double?,
 )
 
 data class SubscriptionRepListResponse(

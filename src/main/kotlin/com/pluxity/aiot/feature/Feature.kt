@@ -84,4 +84,8 @@ class Feature(
     fun updateSubscriptionTime(subscriptionTime: LocalDateTime) {
         this.subscriptionTime = subscriptionTime
     }
+
+    fun updateEventStatus(eventStatus: String) {
+        this.eventStatus = eventStatus
+    }
 }

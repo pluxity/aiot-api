@@ -58,7 +58,7 @@ class NgrokConfig(
     private fun startNgrok() {
         try {
             log.info { "Starting ngrok..." }
-            val processBuilder = ProcessBuilder("ngrok", "http", "8080", "--url=http")
+            val processBuilder = ProcessBuilder("ngrok", "http", "8080", "--url=http://")
             processBuilder.redirectErrorStream(true)
             val process = processBuilder.start()
 

@@ -97,7 +97,7 @@ class AbbreviationController(
             ),
         ],
     )
-    @ResponseCreated(path = "/abbreviations/{abbreviationId}")
+    @ResponseCreated(path = "/abbreviations/{id}")
     @PostMapping
     fun createAbbreviation(
         @RequestBody @Valid request: AbbreviationRequest,

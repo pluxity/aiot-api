@@ -3,6 +3,7 @@ package com.pluxity.aiot.data
 import com.pluxity.aiot.abbreviation.AbbreviationRepository
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
 import com.pluxity.aiot.alarm.dto.SubscriptionRepListResponse
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.config.NgrokConfig
@@ -163,7 +164,7 @@ class AiotService(
                 .filter { path -> objectIds.any { id -> path.contains(id!!) } }
                 .filter { it.count { char -> char == '/' } == 3 }
                 .filterNot { it.contains("3_1.2_0") }
-                .filter { !it.contains("P-TST") || it.contains("34957") }
+                .filter { !it.contains("P-TST") || it.contains(SensorType.DISPLACEMENT_GAUGE.objectId) }
                 .toList()
 
         val existFeatureMap = existFeatures.associateBy { it.deviceId }

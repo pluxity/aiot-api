@@ -1,9 +1,14 @@
 package com.pluxity.aiot.data
 
 import com.pluxity.aiot.abbreviation.AbbreviationRepository
+import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
+import com.pluxity.aiot.alarm.dto.SubscriptionRepListResponse
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.config.NgrokConfig
 import com.pluxity.aiot.global.config.WebClientFactory
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.mobius.MobiusConfigService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -12,13 +17,19 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.net.SocketException
 import java.time.Instant
+import java.time.LocalDateTime
 
 private val log = KotlinLogging.logger {}
 
@@ -27,9 +38,16 @@ class AiotService(
     private val deviceTypeRepository: DeviceTypeRepository,
     private val featureRepository: FeatureRepository,
     private val abbreviationRepository: AbbreviationRepository,
+    private val ngrokConfig: NgrokConfig,
     mobiusConfigService: MobiusConfigService,
     webClientFactory: WebClientFactory,
 ) {
+    @Value("\${spring.profiles.active:}")
+    private val activeProfile: String = "local"
+
+    @Value("\${server.port}")
+    private val serverPort: String = "8080"
+
     private val cachedMobiusUrl: String = mobiusConfigService.currentUrl
     private val client: WebClient =
         webClientFactory
@@ -45,7 +63,7 @@ class AiotService(
             val existFeatures = featureRepository.findAll()
             val existingIds = existFeatures.mapNotNull { it.deviceId }
             val features = fetchAllMobiusSensorPaths(existFeatures)
-            val newIds = features.mapNotNull { it.deviceId }
+            val newIds = features.map { it.deviceId }
             val removedIds = existingIds - newIds.toSet()
 
             featureRepository.deleteAllByDeviceIdIn(removedIds)
@@ -62,18 +80,20 @@ class AiotService(
             supervisorScope {
                 features
                     .mapNotNull { feature ->
-                        feature.deviceId?.let { deviceId ->
-                            async {
-                                try {
-                                    val data = fetchDeviceLocationData(deviceId)
-                                    data?.let {
-                                        val batteryLevel = fetchDeviceBatteryData(deviceId)
-                                        log.info { "Status 업데이트 성공: $deviceId (${it.latitude}, ${it.longitude})" }
-                                        feature.updateStatusInfo(it.longitude, it.latitude, batteryLevel)
-                                    } ?: log.warn { "위치 데이터 없음: $deviceId" }
-                                } catch (e: Exception) {
-                                    log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
-                                }
+                        async {
+                            val deviceId = feature.deviceId
+                            try {
+                                fetchDeviceLocationData(deviceId)?.let { locationData ->
+                                    val batteryLevel = fetchDeviceBatteryData(deviceId)
+                                    log.info { "Status 업데이트 성공: $deviceId (${locationData.latitude}, ${locationData.longitude})" }
+                                    feature.updateStatusInfo(
+                                        locationData.longitude,
+                                        locationData.latitude,
+                                        batteryLevel,
+                                    )
+                                } ?: log.warn { "위치 데이터 없음: $deviceId" }
+                            } catch (e: Exception) {
+                                log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
                             }
                         }
                     }.awaitAll()
@@ -232,4 +252,150 @@ class AiotService(
             "X-M2M-Origin" to "S_AIoT_Application",
             "Accept" to "*/*",
         )
+
+    fun updatePoiSubscriptionTime(deviceId: String) {
+        val feature =
+            featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
+        // 구독 시간 업데이트
+        feature.updateSubscriptionTime(LocalDateTime.now())
+        log.info { "Updated subscription time for Feature $deviceId" }
+    }
+
+    private fun fetchSubscription(
+        url: String,
+        body: String,
+        subscriptionName: String,
+        deviceId: String,
+    ) {
+        client
+            .post()
+            .uri(url)
+            .header("Content-Type", "application/json;ty=23")
+            .bodyValue(body)
+            .exchangeToMono { response ->
+                if (response.statusCode().is2xxSuccessful) {
+                    response.bodyToMono<String>().doOnNext { body ->
+                        log.info { "'$subscriptionName' Subscribe Result : '$body'" }
+                        updatePoiSubscriptionTime(deviceId)
+                    }
+                } else {
+                    response.bodyToMono<String>()
+                }
+            }.block()
+    }
+
+    /**
+     * 지정된 POI에 대한 구독을 설정합니다.
+     */
+    private fun setupSubscriptionForPoi(
+        deviceId: String,
+        objectId: String,
+        pluxityUrl: String,
+    ) {
+        val baseUrl = cachedMobiusUrl
+        log.info { "Setting up subscription for POI $deviceId using URL: $pluxityUrl" }
+        val subscriptionName = "$activeProfile-$deviceId-$objectId"
+        val subscriptionBody = """
+        {
+            "m2m:sub": {
+            "rn": "$subscriptionName",
+            "enc": {
+            "net": [3]
+            },
+            "nct": 1,
+            "nu": ["$pluxityUrl/subscription"]
+            }
+        }"""
+
+        val subscriptionUrl = "$baseUrl/$deviceId/$objectId/data-report"
+
+        try {
+            fetchSubscription(subscriptionUrl, subscriptionBody, subscriptionName, deviceId)
+        } catch (e: WebClientResponseException) {
+            if (e.statusCode.value() == 409 && e.responseBodyAsString.contains("resource is already exist")) {
+                log.info { "Subscription '$subscriptionName' already exists. Attempting to remove and recreate." }
+
+                try {
+                    val unsubscribeUrl = "$baseUrl/$deviceId/$objectId/data-report/$subscriptionName"
+
+                    // 기존 구독 삭제
+                    client
+                        .delete()
+                        .uri(unsubscribeUrl)
+                        .retrieve()
+                        .toBodilessEntity()
+                        .block()
+
+                    // 새로운 구독 생성
+                    fetchSubscription(subscriptionUrl, subscriptionBody, subscriptionName, deviceId)
+                } catch (retryEx: Exception) {
+                    log.error { "Error recreating subscription '$subscriptionName' for POI $deviceId / $objectId: ${retryEx.message}" }
+                }
+            } else {
+                log.error { "Error setting up subscription '$subscriptionName' for POI $deviceId / $objectId: ${e.message}" }
+            }
+        } catch (e: Exception) {
+            log.error { "Error setting up subscription '$subscriptionName' for POI $deviceId / $objectId: ${e.message}" }
+        }
+    }
+
+    fun subscription() {
+        val activeFeatures = featureRepository.findByIsActiveTrue()
+        val subscriptionUrl = getSubscriptionUrl()
+        log.info { "Setting up subscriptions for active POIs using URL: $subscriptionUrl" }
+
+        activeFeatures.forEach { feature ->
+            setupSubscriptionForPoi(feature.deviceId, feature.objectId, subscriptionUrl)
+        }
+    }
+
+    suspend fun findByDateRange(
+        deviceId: String,
+        objectId: String,
+        startStr: String,
+        endStr: String,
+    ): List<SubscriptionCinResponse> {
+        val res =
+            client
+                .get()
+                .uri("$cachedMobiusUrl/$deviceId/$objectId/data-report?rcn=4&ty=4&lvl=1&cra=$startStr&crb=$endStr")
+                .retrieve()
+                .awaitBody<SubscriptionRepListResponse>()
+        return res.cin
+    }
+
+    /**
+     * 프로파일에 따른 구독 URL을 반환합니다.
+     */
+    private fun getSubscriptionUrl(): String {
+        val ipv4 = getLocalIpv4()
+        return when (activeProfile) {
+            "local" -> {
+                ngrokConfig.getNgrokUrl().also {
+                    log.info { "Using Ngrok URL for local profile: $it" }
+                }
+            }
+            else -> {
+                "http://$ipv4:$serverPort".also {
+                    log.info { "Using localhost URL for non-local profile: $it" }
+                }
+            }
+        }
+    }
+
+    private fun getLocalIpv4(): String =
+        try {
+            NetworkInterface
+                .getNetworkInterfaces()
+                .asSequence()
+                .flatMap { it.inetAddresses.asSequence() }
+                .filterNot { it.isLoopbackAddress }
+                .filterIsInstance<Inet4Address>()
+                .map { it.hostAddress }
+                .firstOrNull()
+                ?: ""
+        } catch (e: SocketException) {
+            log.error(e) { "IPv4 주소 조회 실패" }
+            ""
+        }
 }

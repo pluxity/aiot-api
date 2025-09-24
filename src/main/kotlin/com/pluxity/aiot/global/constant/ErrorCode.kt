@@ -11,6 +11,7 @@ enum class ErrorCode(
     INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "ACCESS 토큰이 유효하지 않습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "REFRESH 토큰이 유효하지 않습니다."),
     INVALID_TOKEN_FORMAT(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰 형식입니다."),
+    INVALID_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
 
     INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "적절하지 않은 파일 유형입니다."),
     INVALID_FILE_STATUS(HttpStatus.BAD_REQUEST, "적절하지 않은 파일 상태입니다."),
@@ -79,6 +80,7 @@ enum class ErrorCode(
     INVALID_PROFILE_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_TYPE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
+    NOT_FOUND_DEVICE_TYPE_BY_OBJECT_ID(HttpStatus.NOT_FOUND, "Object ID가 %s인 디바이스 타입을 찾을 수 없습니다."),
     NOT_FOUND_EVENT_SETTING(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 설정을 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_EVENT(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 이벤트를 찾을 수 없습니다."),
     NOT_FOUND_EVENT_CONDITION(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 조건을 찾을 수 없습니다."),
@@ -91,6 +93,7 @@ enum class ErrorCode(
     NOT_FOUND_ASSET_BY_CODE(HttpStatus.NOT_FOUND, "코드가 %s인 에셋을 찾을 수 없습니다."),
     NOT_FOUND_ASSET_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 에셋 카테고리를 찾을 수 없습니다."),
     NOT_FOUND_FEATURE(HttpStatus.NOT_FOUND, "ID가 %s인 Feature를 찾을 수 없습니다."),
+    NOT_FOUND_FEATURE_BY_DEVICE_ID(HttpStatus.NOT_FOUND, "Device ID가 %s인 Feature를 찾을 수 없습니다."),
     NOT_FOUND_DEVICE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스를 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_BY_FEATURE(HttpStatus.NOT_FOUND, "Feature ID가 %s인 디바이스를 찾을 수 없습니다."),
     NOT_FOUND_FACILITY_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 시설 카테고리를 찾을 수 없습니다."),

@@ -17,4 +17,8 @@ interface FeatureRepository :
     ): List<Feature>
 
     fun deleteAllByDeviceIdIn(deviceIds: List<String>)
+
+    fun findByIsActiveTrue(): List<Feature>
+
+    fun findByDeviceId(deviceId: String): Feature?
 }

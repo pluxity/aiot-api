@@ -27,9 +27,9 @@ class Feature(
     @JoinColumn(name = "device_type_id")
     var deviceType: DeviceType? = null,
     @Column(nullable = false, unique = true)
-    var deviceId: String? = null,
+    var deviceId: String,
     @Column(nullable = false)
-    var objectId: String? = null,
+    var objectId: String,
     var name: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
@@ -79,5 +79,9 @@ class Feature(
         // Point 객체 생성 (SRID 4326 사용)
         val gf = GeometryFactory(PrecisionModel(), 4326)
         this.geom = gf.createPoint(Coordinate(longitude, latitude))
+    }
+
+    fun updateSubscriptionTime(subscriptionTime: LocalDateTime) {
+        this.subscriptionTime = subscriptionTime
     }
 }

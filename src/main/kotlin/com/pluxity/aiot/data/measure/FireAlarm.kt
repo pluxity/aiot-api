@@ -4,11 +4,10 @@ import com.influxdb.annotations.Column
 import com.influxdb.annotations.Measurement
 import java.time.Instant
 
-@Measurement(name = "temperature_humidity")
-class TemperatureHumidity(
+@Measurement(name = "fire_alarm")
+class FireAlarm(
     @Column(tag = true) val facilityId: String,
     @Column(tag = true) val deviceId: String,
     @Column val value: Double,
-    @Column(tag = true) val fieldKey: String,
     @Column(timestamp = true) val time: Instant,
 )

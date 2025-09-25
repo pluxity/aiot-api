@@ -1,5 +1,6 @@
 package com.pluxity.aiot.system.mobius
 
+import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.system.mobius.dto.MobiusRequest
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController
 class MobiusConfigController(
     private val mobiusTransactionService: MobiusTransactionService,
     private val mobiusConfigService: MobiusConfigService,
+    private val aiotService: AiotService,
 ) {
     @Operation(summary = "연동 정보 조회", description = "연동 정보를 조회합니다")
     @ApiResponses(
@@ -85,8 +87,7 @@ class MobiusConfigController(
     fun changeApiUrl(
         @RequestBody @Valid request: MobiusRequest,
     ): ResponseEntity<Void> {
-        // TODO 수정필요
-//        aiotService.removeAllSubscriptions()
+        aiotService.removeAllSubscriptions()
         mobiusConfigService.createUrl(request.url)
         return ResponseEntity.noContent().build()
     }

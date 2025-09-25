@@ -99,7 +99,7 @@ class SensorDataMigrationService(
 
         log.info { "Found ${mobiusData.size} records in Mobius for device: $deviceId, object: $objectId" }
 
-        // SensorRawData 변환 및 저장
+        // Sensor Data 저장
         for (sensorData in mobiusData) {
             val content = sensorData.con
             val timestamp = content.timestamp

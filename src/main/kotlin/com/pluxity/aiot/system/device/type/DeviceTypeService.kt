@@ -1,5 +1,6 @@
 package com.pluxity.aiot.system.device.type
 
+import com.pluxity.aiot.alarm.service.SensorDataHandler
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.file.extensions.getFileMapByIds
 import com.pluxity.aiot.file.service.FileService
@@ -38,8 +39,7 @@ class DeviceTypeService(
     private val deviceEventRepository: DeviceEventRepository,
     private val eventSettingHistoryRepository: EventSettingHistoryRepository,
     private val eventConditionRepository: EventConditionRepository,
-    // TODO 작업필요
-//    private val sensorDataHandler: SensorDataHandler,
+    private val sensorDataHandler: SensorDataHandler,
     private val em: EntityManager,
     private val featureRepository: FeatureRepository,
     private val fileService: FileService,
@@ -327,37 +327,37 @@ class DeviceTypeService(
             }
         }
 
-        // objectId가 변경된 경우 POI 연관관계 재설정
+        // objectId가 변경된 경우 Feature 연관관계 재설정
         if (objectIdChanged) {
-            log.info { "DeviceType objectId 변경됨: $oldObjectId -> $newObjectId, POI 연관관계 재설정 시작" }
+            log.info { "DeviceType objectId 변경됨: $oldObjectId -> $newObjectId, Feature 연관관계 재설정 시작" }
 
-            // 1. 현재 이 DeviceType과 연결된 모든 POI 가져오기
+            // 1. 현재 이 DeviceType과 연결된 모든 Feature 가져오기
             val connectedFeatures = deviceType.features
 
-            // 2. ObjectId가 현재 DeviceType의 objectId와 일치하지 않는 POI 분리
+            // 2. ObjectId가 현재 DeviceType의 objectId와 일치하지 않는 Feature 분리
             for (feature in connectedFeatures) {
-                val poiObjectId = feature.objectId
-                if (poiObjectId != null && !poiObjectId.contains(newObjectId)) {
+                val featureObjectId = feature.objectId
+                if (!featureObjectId.contains(newObjectId)) {
                     log.info {
-                        "POI(id:${feature.id}, deviceId:${feature.deviceId})의 objectId($poiObjectId)가 변경된 DeviceType objectId($newObjectId)와 일치하지 않아 연결 해제"
+                        "Feature(id:${feature.id}, deviceId:${feature.deviceId})의 objectId($featureObjectId)가 변경된 DeviceType objectId($newObjectId)와 일치하지 않아 연결 해제"
                     }
 
-                    // POI에서 이 DeviceType 연결 해제
-                    deviceType.removePoi(feature)
+                    // Feature에서 이 DeviceType 연결 해제
+                    deviceType.removeFeature(feature)
                 }
             }
 
-            // 3. ObjectId가 newObjectId와 일치하는 다른 POI 찾아서 연결
+            // 3. ObjectId가 newObjectId와 일치하는 다른 Feature 찾아서 연결
             // FIXME: objectId가 하나 이상으로 가지고 있으면 위험 할 수 있다. 추후에 문제되면 아래 로직 변경필요
             val featuresToConnect = featureRepository.findByObjectIdContaining(newObjectId)
-            for (poi in featuresToConnect) {
-                if (poi.deviceType == null || poi.deviceType != deviceType) {
+            for (feature in featuresToConnect) {
+                if (feature.deviceType == null || feature.deviceType != deviceType) {
                     log.info {
-                        "POI(id:${poi.id}, deviceId:${poi.deviceId})의 objectId(${poi.objectId})가 변경된 DeviceType objectId($newObjectId)와 일치하여 연결"
+                        "Feature(id:${feature.id}, deviceId:${feature.deviceId})의 objectId(${feature.objectId})가 변경된 DeviceType objectId($newObjectId)와 일치하여 연결"
                     }
 
-                    // POI에 현재 DeviceType 연결
-                    deviceType.addPoi(poi)
+                    // Feature에 현재 DeviceType 연결
+                    deviceType.addFeature(feature)
                 }
             }
         }
@@ -426,10 +426,10 @@ class DeviceTypeService(
 
     private fun updateSensorDataHandlerCache(deviceType: DeviceType) {
         val fullDeviceType = findById(deviceType.id!!)
-//        sensorDataHandler.updateDeviceTypeCache(fullDeviceType)
+        sensorDataHandler.updateDeviceTypeCache(fullDeviceType)
     }
 
     private fun removeSensorDataHandlerCache(deviceType: DeviceType) {
-//        sensorDataHandler.removeDeviceTypeFromCache(deviceType.objectId)
+        sensorDataHandler.removeDeviceTypeFromCache(deviceType.objectId)
     }
 }

@@ -19,7 +19,7 @@ class DeviceType(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
     @Column(name = "object_id", nullable = false, unique = true)
-    var objectId: String? = null,
+    var objectId: String,
     @Column(name = "description", nullable = false)
     var description: String? = null,
     @Column(name = "version", nullable = false)
@@ -35,7 +35,7 @@ class DeviceType(
     var features: MutableSet<Feature> = mutableSetOf()
 
     fun update(
-        objectId: String?,
+        objectId: String,
         description: String?,
         version: String?,
     ) {
@@ -84,17 +84,17 @@ class DeviceType(
         currentEvents.values.forEach(Consumer { o: DeviceEvent? -> deviceEvents.remove(o) })
     }
 
-    fun addPoi(poi: Feature) {
-        this.features.add(poi)
-        if (poi.deviceType !== this) {
-            poi.changeDeviceType(this)
+    fun addFeature(feature: Feature) {
+        this.features.add(feature)
+        if (feature.deviceType !== this) {
+            feature.changeDeviceType(this)
         }
     }
 
-    fun removePoi(poi: Feature) {
-        this.features.remove(poi)
-        if (poi.deviceType === this) {
-            poi.changeDeviceType(null)
+    fun removeFeature(feature: Feature) {
+        this.features.remove(feature)
+        if (feature.deviceType === this) {
+            feature.changeDeviceType(null)
         }
     }
 }

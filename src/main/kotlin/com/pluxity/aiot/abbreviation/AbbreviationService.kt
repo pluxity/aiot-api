@@ -3,6 +3,8 @@ package com.pluxity.aiot.abbreviation
 import com.pluxity.aiot.abbreviation.dto.AbbreviationRequest
 import com.pluxity.aiot.abbreviation.dto.AbbreviationResponse
 import com.pluxity.aiot.abbreviation.dto.toAbbreviationResponse
+import com.pluxity.aiot.data.AiotService
+import com.pluxity.aiot.feature.FeatureService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import org.springframework.data.repository.findByIdOrNull
@@ -12,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class AbbreviationService(
     private val abbreviationRepository: AbbreviationRepository,
-//    private val aiotService: AiotService,
-//    private val poiService: PoiService
+    private val aiotService: AiotService,
+    private val featureService: FeatureService,
 ) {
     @Transactional(readOnly = true)
     fun getAllAbbreviations(): List<AbbreviationResponse> = abbreviationRepository.findAll().map { it.toAbbreviationResponse() }
@@ -35,7 +37,7 @@ class AbbreviationService(
                 description = request.description,
                 isActive = request.isActive,
             )
-        updatePoiNamesByAbbreviations()
+        updateFeatureNamesByAbbreviations()
         return abbreviationRepository.save(abbreviation).id!!
     }
 
@@ -49,7 +51,7 @@ class AbbreviationService(
             throw CustomException(ErrorCode.DUPLICATE_ABBREVIATION, request.abbreviationKey)
         }
         abbreviation.update(request)
-        updatePoiNamesByAbbreviations()
+        updateFeatureNamesByAbbreviations()
     }
 
     @Transactional
@@ -61,16 +63,13 @@ class AbbreviationService(
     fun findById(id: Long): Abbreviation =
         abbreviationRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_ABBREVIATION, id)
 
-    private fun updatePoiNamesByAbbreviations() {
-        // TODO 작업필요
-//        val abbreviationList = abbreviationRepository.findAll()
-//        val poiList = poiService.findAll()
-//
-//        poiList.forEach { poi ->
-//            val newName = aiotService.parseDeviceId(poi.deviceId(), abbreviationList)
-//            if (newName != poi.name()) {
-//                poiService.updatePoiName(poi.id(), newName)
-//            }
-//        }
+    private fun updateFeatureNamesByAbbreviations() {
+        val features = featureService.findAll()
+        features.forEach { feature ->
+            val newName = aiotService.parseDeviceId(feature.deviceId)
+            if (newName != feature.name) {
+                featureService.updateFeatureName(feature.id, newName)
+            }
+        }
     }
 }

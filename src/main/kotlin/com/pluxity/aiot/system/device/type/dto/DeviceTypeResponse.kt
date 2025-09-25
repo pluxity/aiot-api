@@ -16,7 +16,7 @@ data class DeviceTypeResponse(
 fun DeviceType.toDeviceTypeResponse(fileMap: Map<Long, FileResponse>) =
     DeviceTypeResponse(
         id = this.id!!,
-        objectId = this.objectId!!,
+        objectId = this.objectId,
         description = this.description!!,
         version = this.version!!,
         events = this.deviceEvents.map { it.toDeviceEventInfo(fileMap) },

@@ -43,6 +43,7 @@ class CommonSecurityConfig(
                     .requestMatchers(
                         "/actuator/**",
                         "/health",
+                        "/subscription",
                         "/info",
                         "/prometheus",
                         "/error",

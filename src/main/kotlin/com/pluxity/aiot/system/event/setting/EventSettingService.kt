@@ -1,5 +1,6 @@
 package com.pluxity.aiot.system.event.setting
 
+import com.pluxity.aiot.alarm.service.SensorDataHandler
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.device.event.DeviceEvent
@@ -30,8 +31,7 @@ class EventSettingService(
     private val deviceEventRepository: DeviceEventRepository,
     private val eventSettingHistoryRepository: EventSettingHistoryRepository,
     private val deviceTypeRepository: DeviceTypeRepository,
-    // TODO 센서종류 추가되면 캐시에 담는 로직 추가 필요
-//        private val sensorDataHandler: SensorDataHandler,
+    private val sensorDataHandler: SensorDataHandler,
     private val em: EntityManager,
 ) {
     private fun findDeviceEvent(id: Long) =
@@ -204,8 +204,7 @@ class EventSettingService(
         val deviceType =
             deviceTypeRepository.findByIdOrNull(deviceTypeId)
                 ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_TYPE, deviceTypeId)
-        // TODO
-//        sensorDataHandler.updateDeviceTypeCache(deviceType)
+        sensorDataHandler.updateDeviceTypeCache(deviceType)
         log.debug { "Device type cache updated for device type: ${deviceType.objectId}" }
     }
 

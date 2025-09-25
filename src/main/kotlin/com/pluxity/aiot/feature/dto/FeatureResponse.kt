@@ -23,8 +23,8 @@ fun Feature.toFeatureResponse() =
     FeatureResponse(
         id = this.id!!,
         deviceType = this.deviceType!!,
-        deviceId = this.deviceId!!,
-        objectId = this.objectId!!,
+        deviceId = this.deviceId,
+        objectId = this.objectId,
         name = this.name!!,
         longitude = this.longitude!!,
         latitude = this.latitude!!,

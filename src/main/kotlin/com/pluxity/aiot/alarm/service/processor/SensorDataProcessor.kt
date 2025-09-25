@@ -84,8 +84,8 @@ interface SensorDataProcessor {
 
         val eventName: String = condition.deviceEvent.name
 
-        // POI의 이벤트 상태 업데이트
-        updatePoiEventStatus(feature, condition.deviceEvent.deviceLevel.toString(), featureRepository)
+        // Feature의 이벤트 상태 업데이트
+        updateFeatureEventStatus(feature, condition.deviceEvent.deviceLevel.toString(), featureRepository)
 
         // 알림 간격 확인
         val notificationKey = "$deviceId:$eventName"
@@ -192,7 +192,7 @@ interface SensorDataProcessor {
                 level = eventName,
                 eventName = eventName,
                 deviceId = deviceId,
-                objectId = deviceType.objectId!!,
+                objectId = deviceType.objectId,
                 sensorDescription = deviceType.description!!,
                 value = value,
                 unit = profileType.deviceProfile?.fieldUnit!!,
@@ -222,8 +222,8 @@ interface SensorDataProcessor {
     ) {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
-        // 해당 디바이스 ID로 POI 찾기 (캐시 사용)
-        val feature: Feature? = getPoiFromCacheOrDb(deviceId, featureRepository)
+        // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
+        val feature: Feature? = getFeatureFromCacheOrDb(deviceId, featureRepository)
 
         // 조건 충족을 위한 이벤트 컨테이너 준비
         val eventProcessingTasks: MutableList<CompletableFuture<Void>> = mutableListOf()
@@ -275,11 +275,11 @@ interface SensorDataProcessor {
 
         // 조건을 만족하는 이벤트가 없으면 NORMAL 상태로 설정
         if (!anyConditionMet[0] && feature != null) {
-            updatePoiEventStatus(feature, DeviceEvent.DeviceLevel.NORMAL.toString(), featureRepository)
+            updateFeatureEventStatus(feature, DeviceEvent.DeviceLevel.NORMAL.toString(), featureRepository)
         }
     }
 
-    fun getPoiFromCacheOrDb(
+    fun getFeatureFromCacheOrDb(
         deviceId: String,
         featureRepository: FeatureRepository,
     ): Feature? {
@@ -294,13 +294,13 @@ interface SensorDataProcessor {
         }
 
         // 캐시에 없거나 만료된 경우, DB에서 조회 후 캐시 업데이트
-        val poiOpt = featureRepository.findByDeviceId(deviceId)
-        featureCache[deviceId] = poiOpt
+        val feature = featureRepository.findByDeviceId(deviceId)
+        featureCache[deviceId] = feature
         featureCacheExpiryMap[deviceId] = currentTime + 864_000_000L
-        return poiOpt
+        return feature
     }
 
-    fun updatePoiEventStatus(
+    fun updateFeatureEventStatus(
         feature: Feature?,
         eventStatus: String,
         featureRepository: FeatureRepository,

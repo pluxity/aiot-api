@@ -9,9 +9,12 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+
+private val log = KotlinLogging.logger {}
 
 @Service
 class FeatureService(
@@ -20,7 +23,7 @@ class FeatureService(
 ) {
     @Transactional(readOnly = true)
     fun findAll(searchCondition: FeatureSearchCondition? = null): List<FeatureResponse> {
-        val poiList =
+        val features =
             featureRepository
                 .findAll {
                     select(entity(Feature::class))
@@ -39,7 +42,7 @@ class FeatureService(
                         )
                 }.filterNotNull()
 
-        return poiList.map { it.toFeatureResponse() }
+        return features.map { it.toFeatureResponse() }
     }
 
     @Transactional
@@ -53,6 +56,16 @@ class FeatureService(
             feature.updateDeviceType(deviceType)
         }
         feature.updateActive(request.isActive)
+    }
+
+    @Transactional
+    fun updateFeatureName(
+        id: Long,
+        name: String,
+    ) {
+        val feature = findById(id)
+        feature.updateName(name)
+        log.info { "Updated Feature name: $name (id: $id)" }
     }
 
     private fun findById(id: Long) = featureRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, id)

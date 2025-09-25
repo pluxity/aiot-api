@@ -126,6 +126,7 @@ class FeatureController(
     fun checkSync(): ResponseEntity<Void> {
         aiotService.checkSynchronization()
         aiotService.statusSynchronize()
+        aiotService.subscription()
         return ResponseEntity.noContent().build()
     }
 }

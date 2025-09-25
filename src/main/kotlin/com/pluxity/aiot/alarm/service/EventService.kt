@@ -14,6 +14,7 @@ private val log = KotlinLogging.logger {}
 class EventService(
     private val sensorDataMigrationService: SensorDataMigrationService,
     private val featureRepository: FeatureRepository,
+    private val sensorDataHandler: SensorDataHandler,
 ) {
     fun processData(request: SubscriptionAlarm) {
         // 파라미터 추출
@@ -40,6 +41,6 @@ class EventService(
         }
 
         // 센서 데이터 처리
-//        sensorDataHandler.handleData(request.sgn.nev.rep.cin.con)
+        sensorDataHandler.handleData(request.sgn)
     }
 }

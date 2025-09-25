@@ -72,6 +72,7 @@ class Feature(
         longitude: Double,
         latitude: Double,
         batteryLevel: Int?,
+        facility: Facility?,
     ) {
         this.longitude = longitude
         this.latitude = latitude
@@ -79,6 +80,7 @@ class Feature(
         // Point 객체 생성 (SRID 4326 사용)
         val gf = GeometryFactory(PrecisionModel(), 4326)
         this.geom = gf.createPoint(Coordinate(longitude, latitude))
+        this.facility = facility
     }
 
     fun updateSubscriptionTime(subscriptionTime: LocalDateTime) {
@@ -87,5 +89,9 @@ class Feature(
 
     fun updateEventStatus(eventStatus: String) {
         this.eventStatus = eventStatus
+    }
+
+    fun updateName(name: String) {
+        this.name = name
     }
 }

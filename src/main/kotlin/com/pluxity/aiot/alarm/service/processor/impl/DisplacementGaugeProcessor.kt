@@ -13,9 +13,11 @@ import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.system.device.type.DeviceType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
+@Component
 class DisplacementGaugeProcessor(
     private val sseService: SseService,
     private val eventHistoryRepository: EventHistoryRepository,

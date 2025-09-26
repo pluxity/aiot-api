@@ -23,6 +23,12 @@ spring:
       hibernate:
         default_batch_fetch_size: 100
 
+influx:
+  url: http://localhost:8086
+  token: ${INFLUX_TOKEN:PxevysKSGHQQfl-1E65Kh-fgNeuz-didiMUzcpRV85eX30VNZQLUDnCeUE0c3ZoGdRZ1oHVClS_tPLfskfcEgA==}
+  org: pluxity
+  bucket: aiot-bucket
+
 file:
   storage-strategy: ${FILE_STORAGE_STRATEGY:s3}
   local:

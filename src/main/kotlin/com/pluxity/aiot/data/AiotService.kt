@@ -197,7 +197,7 @@ class AiotService(
 
             ret[deviceId] = existFeatureMap[deviceId]?.apply {
                 updateInfo(deviceType, parsedName, sensorId)
-            } ?: Feature(deviceType = deviceType, deviceId = deviceId, name = parsedName, objectId = objectId)
+            } ?: Feature(deviceType = deviceType, deviceId = deviceId, name = parsedName, objectId = sensorId)
         }
         return ret.values.toList()
     }

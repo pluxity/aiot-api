@@ -92,7 +92,7 @@ class SensorDataMigrationService(
         // Mobius 서버에서 데이터 가져오기
         val mobiusData = fetchMobiusData(deviceId, objectId, startTime, endTime)
 
-        if (mobiusData.isEmpty()) {
+        if (mobiusData == null || mobiusData.isEmpty()) {
             log.info { "No new data found in Mobius for device: $deviceId, object: $objectId" }
             return
         }
@@ -148,7 +148,7 @@ class SensorDataMigrationService(
         objectId: String,
         startTime: LocalDateTime,
         endTime: LocalDateTime,
-    ): List<SubscriptionCinResponse> {
+    ): List<SubscriptionCinResponse>? {
         var objectId = objectId
         // 날짜 형식 변환 - Mobius API는 yyyyMMdd'T'HHmmss 형식으로 요구함
         val startStr = DateTimeUtils.formatToTimestamp(startTime)

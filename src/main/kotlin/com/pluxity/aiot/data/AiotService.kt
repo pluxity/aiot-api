@@ -356,7 +356,7 @@ class AiotService(
         objectId: String,
         startStr: String,
         endStr: String,
-    ): List<SubscriptionCinResponse> {
+    ): List<SubscriptionCinResponse>? {
         val res =
             client
                 .get()

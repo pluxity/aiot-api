@@ -45,6 +45,12 @@ class EventCondition(
     @JoinColumn(name = "event_setting_id")
     var eventSetting: EventSetting? = null
 
+    init {
+        if (order == null) {
+            this.order = getDefaultOrderByDeviceLevel()
+        }
+    }
+
     fun addEventSetting(eventSetting: EventSetting?) {
         this.eventSetting?.conditions?.remove(this)
         this.eventSetting = eventSetting
@@ -71,7 +77,7 @@ class EventCondition(
         this.fireEffectEnabled = fireEffectEnabled
         this.controlType = controlType
         this.guideMessage = guideMessage
-        this.notificationIntervalMinutes = if (notificationIntervalMinutes != null) notificationIntervalMinutes else 0
+        this.notificationIntervalMinutes = notificationIntervalMinutes ?: 0
         this.order = order ?: this.order
     }
 
@@ -86,7 +92,7 @@ class EventCondition(
     fun isAutoResponseEnabled(): Boolean = this.controlType == ControlType.AUTO
 
     private fun getDefaultOrderByDeviceLevel(): Int {
-        if (this.deviceEvent == null || this.deviceEvent.deviceLevel == null) {
+        if (this.deviceEvent.deviceLevel == null) {
             return 0
         }
 

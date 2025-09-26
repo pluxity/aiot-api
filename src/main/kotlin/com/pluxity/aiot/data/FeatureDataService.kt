@@ -139,7 +139,7 @@ class FeatureDataService(
 
     private fun getClimateData(query: String) = queryApi.query(query, influxdbProperties.org, ClimateSensorData::class.java)
 
-    fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
+    private fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
 
     private fun makeDisplacementGaugeData(
         query: String,

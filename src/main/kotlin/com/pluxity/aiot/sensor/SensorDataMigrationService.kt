@@ -10,8 +10,6 @@ import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.dto.LastSensorData
@@ -76,15 +74,8 @@ class SensorDataMigrationService(
         log.info { "Migrating data for device: $deviceId, object: $objectId" }
 
         // 해당 device와 object에 대한 가장 최근 record의 시간 가져오기
-        val measureName =
-            when (objectId) {
-                SensorType.TEMPERATURE_HUMIDITY.objectId -> "temperature_humidity"
-                SensorType.FIRE.objectId -> "fire_alarm"
-                SensorType.DISPLACEMENT_GAUGE.objectId -> "displacement_gauge"
-                else -> throw CustomException(ErrorCode.INVALID_FORMAT)
-            }
-
-        val startTime = getLastRecordTime(deviceId, measureName) ?: return
+        val sensorType = SensorType.fromObjectId(objectId)
+        val startTime = getLastRecordTime(deviceId, sensorType.measureName) ?: return
         val endTime = LocalDateTime.now()
 
         log.info { "Migrating data from $startTime to $endTime" }

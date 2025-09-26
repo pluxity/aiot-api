@@ -1,4 +1,4 @@
-package com.pluxity.aiot.data
+package com.pluxity.aiot.data.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

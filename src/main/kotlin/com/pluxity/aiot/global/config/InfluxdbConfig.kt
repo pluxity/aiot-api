@@ -8,13 +8,13 @@ import com.influxdb.client.QueryApi
 import com.influxdb.client.WriteApi
 import com.influxdb.client.WriteApiBlocking
 import com.influxdb.client.WriteOptions
-import com.pluxity.aiot.global.properties.InfluxProperties
+import com.pluxity.aiot.global.properties.InfluxdbProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
 class InfluxdbConfig(
-    val influxProperties: InfluxProperties,
+    val influxdbProperties: InfluxdbProperties,
 ) {
     /**
      * 비동기 동작 (응답 대기 x)
@@ -51,10 +51,10 @@ class InfluxdbConfig(
     fun influxDBClientOptions(): InfluxDBClientOptions =
         InfluxDBClientOptions
             .builder()
-            .url(influxProperties.url)
-            .authenticateToken(influxProperties.token.toCharArray())
-            .org(influxProperties.org)
-            .bucket(influxProperties.bucket)
+            .url(influxdbProperties.url)
+            .authenticateToken(influxdbProperties.token.toCharArray())
+            .org(influxdbProperties.org)
+            .bucket(influxdbProperties.bucket)
             .logLevel(LogLevel.BASIC) // NONE, BASIC, HEADERS, BODY
             .build()
 }

@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.bind.ConstructorBinding
 
 @ConfigurationProperties(prefix = "influx")
-data class InfluxProperties
+data class InfluxdbProperties
     @ConstructorBinding
     constructor(
         val url: String,

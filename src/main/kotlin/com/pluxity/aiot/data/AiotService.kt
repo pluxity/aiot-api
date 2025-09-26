@@ -4,6 +4,12 @@ import com.pluxity.aiot.abbreviation.AbbreviationRepository
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
 import com.pluxity.aiot.alarm.dto.SubscriptionRepListResponse
 import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.data.dto.LocationData
+import com.pluxity.aiot.data.dto.MobiusBatteryResponse
+import com.pluxity.aiot.data.dto.MobiusLocationResponse
+import com.pluxity.aiot.data.dto.MobiusUrilResponse
+import com.pluxity.aiot.data.dto.SubscriptionM2mSub
+import com.pluxity.aiot.data.dto.SubscriptionRequest
 import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
@@ -427,6 +433,8 @@ class AiotService(
     @Transactional
     fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
         this.cachedMobiusUrl = event.newUrl
+        checkSynchronization()
+        statusSynchronize()
         subscription()
     }
 }

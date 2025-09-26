@@ -12,7 +12,7 @@ import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.properties.InfluxProperties
+import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.dto.LastSensorData
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -37,7 +37,7 @@ class SensorDataMigrationService(
     private val featureRepository: FeatureRepository,
     private val sseService: SseService,
     private val queryApi: QueryApi,
-    private val influxdbProperties: InfluxProperties,
+    private val influxdbProperties: InfluxdbProperties,
     private val aiotService: AiotService,
     processors: List<SensorDataProcessor>,
 ) {
@@ -128,7 +128,6 @@ class SensorDataMigrationService(
                 ).sort(listOf("_time"), true)
                 .limit(1)
                 .keep(listOf("_time", "deviceId"))
-                .timeShift(9L, ChronoUnit.HOURS)
                 .toString()
         val data = queryApi.query(query, influxdbProperties.org, LastSensorData::class.java)
 

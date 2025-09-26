@@ -342,7 +342,7 @@ class AiotService(
     }
 
     fun subscription() {
-        val activeFeatures = featureRepository.findByIsActiveTrue()
+        val activeFeatures = featureRepository.findByIsActiveTrueAndFacilityIsNotNull()
         val subscriptionUrl = getSubscriptionUrl()
         log.info { "Setting up subscriptions for active Features using URL: $subscriptionUrl" }
 
@@ -421,7 +421,7 @@ class AiotService(
     }
 
     fun removeAllSubscriptions() {
-        val targetFeatures = featureRepository.findByIsActiveTrue()
+        val targetFeatures = featureRepository.findAll()
         log.info { "Removing subscriptions for ${targetFeatures.size} Features" }
         for (feature in targetFeatures) {
             // 기존 구독 삭제

@@ -10,8 +10,6 @@ import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.dto.LastSensorData
@@ -76,15 +74,8 @@ class SensorDataMigrationService(
         log.info { "Migrating data for device: $deviceId, object: $objectId" }
 
         // 해당 device와 object에 대한 가장 최근 record의 시간 가져오기
-        val measureName =
-            when (objectId) {
-                SensorType.TEMPERATURE_HUMIDITY.objectId -> "temperature_humidity"
-                SensorType.FIRE.objectId -> "fire_alarm"
-                SensorType.DISPLACEMENT_GAUGE.objectId -> "displacement_gauge"
-                else -> throw CustomException(ErrorCode.INVALID_FORMAT)
-            }
-
-        val startTime = getLastRecordTime(deviceId, measureName) ?: return
+        val sensorType = SensorType.fromObjectId(objectId)
+        val startTime = getLastRecordTime(deviceId, sensorType.measureName) ?: return
         val endTime = LocalDateTime.now()
 
         log.info { "Migrating data from $startTime to $endTime" }
@@ -92,7 +83,7 @@ class SensorDataMigrationService(
         // Mobius 서버에서 데이터 가져오기
         val mobiusData = fetchMobiusData(deviceId, objectId, startTime, endTime)
 
-        if (mobiusData.isEmpty()) {
+        if (mobiusData == null || mobiusData.isEmpty()) {
             log.info { "No new data found in Mobius for device: $deviceId, object: $objectId" }
             return
         }
@@ -148,7 +139,7 @@ class SensorDataMigrationService(
         objectId: String,
         startTime: LocalDateTime,
         endTime: LocalDateTime,
-    ): List<SubscriptionCinResponse> {
+    ): List<SubscriptionCinResponse>? {
         var objectId = objectId
         // 날짜 형식 변환 - Mobius API는 yyyyMMdd'T'HHmmss 형식으로 요구함
         val startStr = DateTimeUtils.formatToTimestamp(startTime)

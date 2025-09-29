@@ -44,5 +44,5 @@ data class SubscriptionConResponse(
 
 data class SubscriptionRepListResponse(
     @field:JsonProperty("m2m:cin")
-    val cin: List<SubscriptionCinResponse>,
+    val cin: List<SubscriptionCinResponse>?,
 )

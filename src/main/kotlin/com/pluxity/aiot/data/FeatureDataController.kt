@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/features")
-@Tag(name = "Feature Data Controller", description = "데이터 조회 API")
+@Tag(name = "Feature Data Controller", description = "피처 데이터 조회 API")
 class FeatureDataController(
     private val featureDataService: FeatureDataService,
 ) {

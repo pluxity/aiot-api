@@ -65,7 +65,7 @@ class FeatureController(
     ): ResponseEntity<DataResponseBody<List<FeatureResponse>>> =
         ResponseEntity.ok(DataResponseBody(featureService.findAll(searchCondition)))
 
-    @Operation(summary = "피쳐 정보 수정", description = "피쳐 정보를 수정합니다")
+    @Operation(summary = "피처 정보 수정", description = "피처 정보를 수정합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "204", description = "정보 수정 성공"),
@@ -81,7 +81,7 @@ class FeatureController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "피쳐를 찾을 수 없음",
+                description = "피처를 찾을 수 없음",
                 content = [
                     Content(
                         mediaType = "application/json",
@@ -111,8 +111,8 @@ class FeatureController(
     }
 
     @Operation(
-        summary = "피쳐 데이터 최신화",
-        description = "피쳐 데이터를 최신화합니다",
+        summary = "피처 데이터 최신화",
+        description = "피처 데이터를 최신화합니다",
     )
     @ApiResponses(
         value = [

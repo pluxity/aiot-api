@@ -57,7 +57,7 @@ object SensorMetrics {
     val ANGLE_Y = MetricDefinition("angleY", "°")
 
     val CLIMATE = listOf(TEMPERATURE, HUMIDITY, DISCOMFORT_INDEX)
-    val DISPLACEMENT_GAUTE = listOf(ANGLE_X, ANGLE_Y)
+    val DISPLACEMENT_GAUGE = listOf(ANGLE_X, ANGLE_Y)
 }
 
 private fun createDeviceDataResponse(
@@ -92,7 +92,7 @@ private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> =
     }
 
 private fun DisplacementGaugeSensorData.toMetricMap(): Map<String, MetricData> =
-    buildMetricMap(this, SensorMetrics.DISPLACEMENT_GAUTE) { definition ->
+    buildMetricMap(this, SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
         when (definition.key) {
             "angleX" -> angleX
             "angleY" -> angleY

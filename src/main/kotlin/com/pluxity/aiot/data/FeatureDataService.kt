@@ -155,7 +155,7 @@ class FeatureDataService(
             timeRange = timeRange,
             timeExtractor = { it.time!! },
             metricsBuilder = {
-                it.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUTE) { definition ->
+                it.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
                     when (definition.key) {
                         "angleX" -> angleX!!
                         "angleY" -> angleY!!

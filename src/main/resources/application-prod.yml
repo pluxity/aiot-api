@@ -11,7 +11,7 @@ spring:
   application:
     name: aiot-api
   datasource:
-    url: jdbc:postgresql://${DB_HOST:aiot-postgres}:${DB_PORT:5432}/aiot
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/aiot
     username: ${DB_USERNAME:pluxity}
     password: ${DB_PASSWORD:pluxity0304}
   jpa:
@@ -23,8 +23,12 @@ spring:
       hibernate:
         default_batch_fetch_size: 100
 
+aiot:
+  subscription:
+    url: ${SUBSCRIPTION_URL:}
+
 influx:
-  url: http://localhost:8086
+  url: http://${INFLUX_HOST:localhost}:8086
   token: ${INFLUX_TOKEN:PxevysKSGHQQfl-1E65Kh-fgNeuz-didiMUzcpRV85eX30VNZQLUDnCeUE0c3ZoGdRZ1oHVClS_tPLfskfcEgA==}
   org: pluxity
   bucket: aiot-bucket

@@ -17,6 +17,7 @@ import com.pluxity.aiot.global.config.NgrokConfig
 import com.pluxity.aiot.global.config.WebClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.properties.SubscriptionProperties
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.mobius.MobiusConfigService
 import com.pluxity.aiot.system.mobius.MobiusUrlUpdatedEvent
@@ -26,6 +27,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -49,10 +51,13 @@ class AiotService(
     private val featureRepository: FeatureRepository,
     private val abbreviationRepository: AbbreviationRepository,
     private val facilityRepository: FacilityRepository,
-    private val ngrokConfig: NgrokConfig,
     mobiusConfigService: MobiusConfigService,
     webClientFactory: WebClientFactory,
+    private val subscriptionProperties: SubscriptionProperties,
 ) {
+    @Autowired(required = false)
+    private val ngrokConfig: NgrokConfig? = null
+
     @Value("\${spring.profiles.active:local}")
     private val activeProfile: String = ""
 
@@ -373,14 +378,17 @@ class AiotService(
         val ipv4 = getLocalIpv4()
         return when (activeProfile) {
             "local" -> {
-                ngrokConfig.getNgrokUrl().also {
+                ngrokConfig?.getNgrokUrl().also {
                     log.info { "Using Ngrok URL for local profile: $it" }
-                }
+                } ?: ""
             }
             else -> {
-                "http://$ipv4:$serverPort".also {
-                    log.info { "Using localhost URL for non-local profile: $it" }
-                }
+                subscriptionProperties.url
+                    .takeIf { it.isNotBlank() }
+                    ?.also { log.info { "Using configured subscription URL: $it" } }
+                    ?: "http://$ipv4:$serverPort".also {
+                        log.info { "Using localhost URL for non-local profile: $it" }
+                    }
             }
         }
     }

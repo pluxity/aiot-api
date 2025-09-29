@@ -2,7 +2,7 @@ package com.pluxity.aiot.global.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-@ConfigurationProperties(prefix = "user")
-data class UserProperties(
-    val initPassword: String,
+@ConfigurationProperties(prefix = "aiot.subscription")
+data class SubscriptionProperties(
+    val url: String = "",
 )

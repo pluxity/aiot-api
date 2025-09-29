@@ -1,12 +1,9 @@
 package com.pluxity.aiot.global.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.bind.ConstructorBinding
 
 @ConfigurationProperties(prefix = "spring.data.redis")
-class RedisProperties
-    @ConstructorBinding
-    constructor(
-        val host: String,
-        val port: Int = 0,
-    )
+class RedisProperties(
+    val host: String,
+    val port: Int = 0,
+)

@@ -1,6 +1,6 @@
 package com.pluxity.aiot.data.dto
 
-data class DeviceDataResponse(
+data class DataResponse(
     val meta: MetaData,
     val timestamp: String,
     val metrics: Map<String, MetricData>,
@@ -12,7 +12,7 @@ data class MetricData(
 )
 
 data class MetaData(
-    val deviceId: String,
+    val targetId: String,
     val query: QueryInfo,
 )
 
@@ -20,14 +20,14 @@ data class QueryInfo(
     val metrics: List<String>,
 )
 
-data class DeviceListDataResponse(
+data class ListDataResponse(
     val meta: ListMetaData,
     val timestamps: List<String>,
     val metrics: Map<String, ListMetricData>,
 )
 
 data class ListMetaData(
-    val deviceId: String,
+    val targetId: String,
     val query: ListQueryInfo,
 )
 

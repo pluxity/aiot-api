@@ -68,5 +68,15 @@ class FeatureService(
         log.info { "Updated Feature name: $name (id: $id)" }
     }
 
+    @Transactional(readOnly = true)
+    fun findByDeviceIdResponse(deviceId: String): FeatureResponse {
+        val feature =
+            featureRepository.findByDeviceId(deviceId) ?: throw CustomException(
+                ErrorCode.NOT_FOUND_DEVICE_BY_FEATURE,
+                deviceId,
+            )
+        return feature.toFeatureResponse()
+    }
+
     private fun findById(id: Long) = featureRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, id)
 }

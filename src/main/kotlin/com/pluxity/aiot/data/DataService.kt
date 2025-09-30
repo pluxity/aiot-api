@@ -5,9 +5,9 @@ import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.dto.ClimateSensorData
-import com.pluxity.aiot.data.dto.DeviceDataResponse
-import com.pluxity.aiot.data.dto.DeviceListDataResponse
+import com.pluxity.aiot.data.dto.DataResponse
 import com.pluxity.aiot.data.dto.DisplacementGaugeSensorData
+import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.dto.ListMetaData
 import com.pluxity.aiot.data.dto.ListMetricData
 import com.pluxity.aiot.data.dto.ListQueryInfo
@@ -15,7 +15,8 @@ import com.pluxity.aiot.data.dto.SensorMetrics
 import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.dto.toDeviceDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
-import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.facility.FacilityService
+import com.pluxity.aiot.feature.FeatureService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
@@ -26,44 +27,29 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Service
-class FeatureDataService(
+class DataService(
     private val influxdbProperties: InfluxdbProperties,
     private val queryApi: QueryApi,
-    private val featureRepository: FeatureRepository,
+    private val featureService: FeatureService,
+    private val facilityService: FacilityService,
 ) {
     companion object {
         private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
     }
 
     @Transactional(readOnly = true)
-    fun getTimeSeries(
+    fun getFeatureTimeSeries(
         deviceId: String,
         interval: DataInterval,
         from: String,
         to: String,
-    ): DeviceListDataResponse {
+    ): ListDataResponse {
         val sensorType = getSensorType(deviceId)
         val timeRange = Pair(from, to).parseTimeRange()
-        val query =
-            Flux
-                .from(influxdbProperties.bucket)
-                .range(DateTimeUtils.toIsoTimeFromKst(from), DateTimeUtils.toIsoTimeFromKst(to))
-                .filter(
-                    Restrictions.and(
-                        Restrictions.measurement().equal(sensorType.measureName),
-                        Restrictions.tag("deviceId").equal(deviceId),
-                    ),
-                ).aggregateWindow(1, interval.unit, "mean")
-                .withCreateEmpty(false)
-                .filter(
-                    Restrictions.and(
-                        Restrictions.time().notEqual(DateTimeUtils.toIsoTimeFromKst(to)),
-                    ),
-                ).pivot(listOf("_time"), listOf("fieldKey"), "_value")
-                .sort(listOf("_time"), false)
-                .toString()
+        val query = getTimeSeriesQuery(from, to, Restrictions.tag("deviceId").equal(deviceId), sensorType.measureName, interval.unit)
         return when (sensorType) {
             SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, deviceId, interval, timeRange)
             SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, deviceId, interval, timeRange)
@@ -72,7 +58,26 @@ class FeatureDataService(
     }
 
     @Transactional(readOnly = true)
-    fun getLatestData(deviceId: String): DeviceDataResponse {
+    fun getFacilityTimeSeries(
+        facilityId: Long,
+        interval: DataInterval,
+        from: String,
+        to: String,
+        sensorType: SensorType,
+    ): ListDataResponse {
+        facilityService.findByIdResponse(facilityId)
+        val timeRange = Pair(from, to).parseTimeRange()
+        val query =
+            getTimeSeriesQuery(from, to, Restrictions.tag("facilityId").equal(facilityId.toString()), sensorType.measureName, interval.unit)
+        return when (sensorType) {
+            SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, facilityId.toString(), interval, timeRange)
+            SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, facilityId.toString(), interval, timeRange)
+            else -> throw CustomException(ErrorCode.NOT_FOUND_DATA)
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun getFeatureLatestData(deviceId: String): DataResponse {
         val sensorType = getSensorType(deviceId)
         val query =
             Flux
@@ -100,12 +105,31 @@ class FeatureDataService(
         }
     }
 
+    private fun getTimeSeriesQuery(
+        from: String,
+        to: String,
+        restrictions: Restrictions,
+        measureName: String,
+        unit: ChronoUnit,
+    ): String =
+        Flux
+            .from(influxdbProperties.bucket)
+            .range(DateTimeUtils.toIsoTimeFromKst(from), DateTimeUtils.toIsoTimeFromKst(to))
+            .filter(
+                Restrictions.and(
+                    Restrictions.measurement().equal(measureName),
+                    restrictions,
+                ),
+            ).aggregateWindow(1, unit, "mean")
+            .withCreateEmpty(false)
+            .filter(
+                Restrictions.time().notEqual(DateTimeUtils.toIsoTimeFromKst(to)),
+            ).pivot(listOf("_time"), listOf("fieldKey"), "_value")
+            .sort(listOf("_time"), false)
+            .toString()
+
     private fun getSensorType(deviceId: String): SensorType {
-        val feature =
-            featureRepository.findByDeviceId(deviceId) ?: throw CustomException(
-                ErrorCode.NOT_FOUND_DEVICE_BY_FEATURE,
-                deviceId,
-            )
+        val feature = featureService.findByDeviceIdResponse(deviceId)
         return SensorType.fromObjectId(feature.objectId.take(5))
     }
 
@@ -120,7 +144,7 @@ class FeatureDataService(
         deviceId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
-    ): DeviceListDataResponse {
+    ): ListDataResponse {
         val data = getClimateData(query)
         return createDeviceListDataResponse(
             data = data,
@@ -150,7 +174,7 @@ class FeatureDataService(
         deviceId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
-    ): DeviceListDataResponse {
+    ): ListDataResponse {
         val data = getDisplacementGauge(query)
         return createDeviceListDataResponse(
             data = data,
@@ -177,7 +201,7 @@ class FeatureDataService(
         timeRange: Pair<LocalDateTime, LocalDateTime>,
         timeExtractor: (T) -> Instant,
         metricsBuilder: (List<T>) -> Map<String, ListMetricData>,
-    ): DeviceListDataResponse {
+    ): ListDataResponse {
         val bucketList =
             data.map {
                 DateTimeFormatter
@@ -195,6 +219,6 @@ class FeatureDataService(
                     metrics.keys.toList(),
                 ),
             )
-        return DeviceListDataResponse(metaData, bucketList, metrics)
+        return ListDataResponse(metaData, bucketList, metrics)
     }
 }

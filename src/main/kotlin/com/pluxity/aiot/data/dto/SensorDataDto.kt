@@ -64,11 +64,11 @@ private fun createDeviceDataResponse(
     deviceId: String,
     time: Instant?,
     metricMap: Map<String, MetricData>,
-): DeviceDataResponse {
+): DataResponse {
     val queryInfo = QueryInfo(metricMap.keys.toList())
     val meta = MetaData(deviceId, queryInfo)
 
-    return DeviceDataResponse(
+    return DataResponse(
         meta = meta,
         timestamp = time.toString(),
         metrics = metricMap,
@@ -76,9 +76,9 @@ private fun createDeviceDataResponse(
 }
 
 // 간소화된 확장 함수들
-fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DeviceDataResponse = createDeviceDataResponse(deviceId, time, toMetricMap())
+fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, time, toMetricMap())
 
-fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DeviceDataResponse =
+fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DataResponse =
     createDeviceDataResponse(deviceId, time, toMetricMap())
 
 private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> =

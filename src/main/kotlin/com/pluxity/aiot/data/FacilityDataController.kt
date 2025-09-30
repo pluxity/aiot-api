@@ -1,6 +1,6 @@
 package com.pluxity.aiot.data
 
-import com.pluxity.aiot.data.dto.DataResponse
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.global.response.DataResponseBody
@@ -20,12 +20,12 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/features")
-@Tag(name = "Feature Data Controller", description = "피처 데이터 조회 API")
-class FeatureDataController(
+@RequestMapping("/facilities")
+@Tag(name = "Facility Data Controller", description = "시설별 데이터 조회 API")
+class FacilityDataController(
     private val dataService: DataService,
 ) {
-    @Operation(summary = "센서 시간별 데이터 조회", description = "Device ID로 특정 센서의 데이터 정보를 시간별로 조회합니다.")
+    @Operation(summary = "시간별 데이터 조회", description = "Facility ID로 특정 시설의 데이터 정보를 시간별로 조회합니다.")
     @ApiResponses(
         value = [
             ApiResponse(
@@ -34,44 +34,36 @@ class FeatureDataController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "해당 ID의 센서를 찾을 수 없음",
+                description = "해당 ID의 시설을 찾을 수 없음",
                 content = [Content(schema = Schema(implementation = ErrorResponseBody::class))],
             ),
         ],
     )
-    @GetMapping("/{deviceId}/time-series")
+    @GetMapping("/{facilityId}/time-series")
     fun getPeriodData(
-        @Parameter(description = "Device ID", required = true) @PathVariable deviceId: String,
+        @Parameter(description = "시설 ID", required = true) @PathVariable facilityId: Long,
         @Parameter(description = "데이터 집계 간격", example = "HOUR")
         @RequestParam(defaultValue = "HOUR", required = false) interval: DataInterval,
         @Parameter(description = "조회 시작일(yyyyMMddHHmmss)", required = true)
         @RequestParam("from") from: String,
         @Parameter(description = "조회 종료일(yyyyMMddHHmmss)", required = true)
         @RequestParam("to") to: String,
+        @Parameter(
+            description = "조회 타입",
+            required = true,
+            schema = Schema(allowableValues = ["TEMPERATURE_HUMIDITY", "DISPLACEMENT_GAUGE"]),
+        )
+        @RequestParam("sensorType") sensorType: SensorType,
     ): ResponseEntity<DataResponseBody<ListDataResponse>> =
-        ResponseEntity.ok(DataResponseBody(dataService.getFeatureTimeSeries(deviceId, interval, from, to)))
-
-    @Operation(summary = "센서 최근 데이터 조회", description = "ID로 특정 센서의 최근 데이터 정보를 조회합니다.")
-    @ApiResponses(
-        value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "최근 데이터 조회 성공",
+        ResponseEntity.ok(
+            DataResponseBody(
+                dataService.getFacilityTimeSeries(
+                    facilityId,
+                    interval,
+                    from,
+                    to,
+                    sensorType,
+                ),
             ),
-            ApiResponse(
-                responseCode = "404",
-                description = "해당 ID의 센서를 찾을 수 없음",
-                content = [Content(schema = Schema(implementation = ErrorResponseBody::class))],
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "최근 데이터가 없음",
-                content = [Content(schema = Schema(implementation = ErrorResponseBody::class))],
-            ),
-        ],
-    )
-    @GetMapping("/{deviceId}/latest")
-    fun getLatestData(
-        @Parameter(description = "Device ID", required = true) @PathVariable deviceId: String,
-    ): ResponseEntity<DataResponseBody<DataResponse>> = ResponseEntity.ok(DataResponseBody(dataService.getFeatureLatestData(deviceId)))
+        )
 }

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.data
 
+import com.pluxity.aiot.abbreviation.Abbreviation
 import com.pluxity.aiot.abbreviation.AbbreviationRepository
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
 import com.pluxity.aiot.alarm.dto.SubscriptionRepListResponse
@@ -191,18 +192,24 @@ class AiotService(
         val existFeatureMap = existFeatures.associateBy { it.deviceId }
 
         val ret = mutableMapOf<String, Feature>()
+        val abbreviations = abbreviationRepository.findByIsActiveTrue()
 
-        for (path in paths) {
+        val deviceTypeMap = deviceTypes.associateBy { it.objectId }
+        paths.forEach { path ->
             val splitPaths = path.split("/")
-            val deviceId = splitPaths[2]
-            val sensorId = splitPaths[3]
+            val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
             val objectId = sensorId.take(5)
-            val deviceType = deviceTypes.firstOrNull { it.objectId == objectId }
-            val parsedName = parseDeviceId(deviceId)
+            val deviceType = deviceTypeMap[objectId]
+            val parsedName = parseDeviceId(deviceId, abbreviations)
 
             ret[deviceId] = existFeatureMap[deviceId]?.apply {
                 updateInfo(deviceType, parsedName, sensorId)
-            } ?: Feature(deviceType = deviceType, deviceId = deviceId, name = parsedName, objectId = sensorId)
+            } ?: Feature(
+                deviceType = deviceType,
+                deviceId = deviceId,
+                name = parsedName,
+                objectId = sensorId,
+            )
         }
         return ret.values.toList()
     }
@@ -214,13 +221,15 @@ class AiotService(
      * 모든 단어가 제거되면 원본 deviceId 그대로 사용합니다.
      * 숫자 부분(식별자)은 유지하여 결과 이름 뒤에 추가합니다.
      */
-    fun parseDeviceId(deviceId: String): String {
-        val abbreviations = abbreviationRepository.findByIsActiveTrue()
+    fun parseDeviceId(
+        deviceId: String,
+        abbreviations: List<Abbreviation>,
+    ): String {
         // -, _, 공백을 모두 -로 치환
-        val normalizedId = deviceId.replace("[\\s_]".toRegex(), "-")
+        val normalizedId = deviceId.replace("[\\s_]", "-")
 
         // -로 분리
-        val parts = normalizedId.split("-".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val parts = normalizedId.split("-")
 
         val result = StringBuilder()
         var hasValidPart = false
@@ -240,21 +249,16 @@ class AiotService(
             }
         }
 
-        for (part in parts) {
-            if (part.isEmpty()) continue
-
-            // 숫자로만 구성된 부분은 처리하지 않고 건너뜀 (나중에 접미사로 추가)
-            if (part.matches("\\d+".toRegex())) continue
-
-            // 해당 부분이 약어 테이블에 있는지 확인
-            val abbr = abbrMap[part.lowercase()]
-            if (abbr != null) {
-                // 약어를 찾았으면 전체 이름 사용
-                if (!result.isEmpty()) result.append(" ")
+        parts
+            .asSequence()
+            .filter { it.isNotEmpty() && !it.matches("\\d+".toRegex()) }
+            .mapNotNull { abbrMap[it.lowercase()] }
+            .firstOrNull()
+            ?.let { abbr ->
+                if (result.isNotEmpty()) result.append(" ")
                 result.append(abbr.fullName)
                 hasValidPart = true
             }
-        }
 
         // 모든 부분이 제거되었으면 원본 deviceId 사용
         if (!hasValidPart) {

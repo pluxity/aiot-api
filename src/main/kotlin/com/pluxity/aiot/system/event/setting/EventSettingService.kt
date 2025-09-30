@@ -247,8 +247,8 @@ class EventSettingService(
         rangeB: String,
     ): Boolean {
         try {
-            val partsA = rangeA.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            val partsB = rangeB.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            val partsA = rangeA.split(",")
+            val partsB = rangeB.split(",")
 
             if (partsA.size != 2 || partsB.size != 2) {
                 return false // 형식이 잘못된 경우

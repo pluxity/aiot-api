@@ -29,16 +29,18 @@ class AbbreviationService(
             throw CustomException(ErrorCode.DUPLICATE_ABBREVIATION, request.abbreviationKey)
         }
 
-        val abbreviation =
-            Abbreviation(
-                type = request.type,
-                abbreviationKey = request.abbreviationKey,
-                fullName = request.fullName,
-                description = request.description,
-                isActive = request.isActive,
+        val saveAbbreviation =
+            abbreviationRepository.save(
+                Abbreviation(
+                    type = request.type,
+                    abbreviationKey = request.abbreviationKey,
+                    fullName = request.fullName,
+                    description = request.description,
+                    isActive = request.isActive,
+                ),
             )
         updateFeatureNamesByAbbreviations()
-        return abbreviationRepository.save(abbreviation).id!!
+        return saveAbbreviation.id!!
     }
 
     @Transactional
@@ -64,9 +66,10 @@ class AbbreviationService(
         abbreviationRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_ABBREVIATION, id)
 
     private fun updateFeatureNamesByAbbreviations() {
+        val abbreviations = abbreviationRepository.findByIsActiveTrue()
         val features = featureService.findAll()
         features.forEach { feature ->
-            val newName = aiotService.parseDeviceId(feature.deviceId)
+            val newName = aiotService.parseDeviceId(feature.deviceId, abbreviations)
             if (newName != feature.name) {
                 featureService.updateFeatureName(feature.id, newName)
             }

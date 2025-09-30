@@ -141,7 +141,7 @@ class DataService(
 
     private fun makeClimateData(
         query: String,
-        deviceId: String,
+        targetId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
@@ -156,12 +156,12 @@ class DataService(
                     else -> 0.0
                 }
             }
-        return createListDataResponse(deviceId, interval, timeRange, metrics, bucketList)
+        return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
     private fun makeDisplacementGaugeData(
         query: String,
-        deviceId: String,
+        targetId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
@@ -175,7 +175,7 @@ class DataService(
                     else -> 0.0
                 }
             }
-        return createListDataResponse(deviceId, interval, timeRange, metrics, bucketList)
+        return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
     private fun convertUtcToKstString(
@@ -191,7 +191,7 @@ class DataService(
     private fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
 
     private fun createListDataResponse(
-        deviceId: String,
+        targetId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
         metrics: Map<String, ListMetricData>,
@@ -199,7 +199,7 @@ class DataService(
     ): ListDataResponse =
         ListDataResponse(
             ListMetaData(
-                deviceId,
+                targetId,
                 ListQueryInfo(
                     interval.name,
                     timeRange.first.toString(),

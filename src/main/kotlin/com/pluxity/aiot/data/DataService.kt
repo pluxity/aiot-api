@@ -146,28 +146,18 @@ class DataService(
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
         val data = getClimateData(query)
-        return createDeviceListDataResponse(
-            data = data,
-            deviceId = deviceId,
-            interval = interval,
-            timeRange = timeRange,
-            timeExtractor = { it.time!! },
-            metricsBuilder = {
-                it.buildListMetricMap(SensorMetrics.CLIMATE) { definition ->
-                    when (definition.key) {
-                        "temperature" -> temperature!!
-                        "humidity" -> humidity!!
-                        "discomfortIndex" -> discomfortIndex!!
-                        else -> 0.0
-                    }
+        val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
+        val metrics =
+            data.buildListMetricMap(SensorMetrics.CLIMATE) { definition ->
+                when (definition.key) {
+                    "temperature" -> temperature!!
+                    "humidity" -> humidity!!
+                    "discomfortIndex" -> discomfortIndex!!
+                    else -> 0.0
                 }
-            },
-        )
+            }
+        return createListDataResponse(deviceId, interval, timeRange, metrics, bucketList)
     }
-
-    private fun getClimateData(query: String) = queryApi.query(query, influxdbProperties.org, ClimateSensorData::class.java)
-
-    private fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
 
     private fun makeDisplacementGaugeData(
         query: String,
@@ -176,40 +166,38 @@ class DataService(
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
         val data = getDisplacementGauge(query)
-        return createDeviceListDataResponse(
-            data = data,
-            deviceId = deviceId,
-            interval = interval,
-            timeRange = timeRange,
-            timeExtractor = { it.time!! },
-            metricsBuilder = {
-                it.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
-                    when (definition.key) {
-                        "angleX" -> angleX!!
-                        "angleY" -> angleY!!
-                        else -> 0.0
-                    }
+        val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
+        val metrics =
+            data.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
+                when (definition.key) {
+                    "angleX" -> angleX!!
+                    "angleY" -> angleY!!
+                    else -> 0.0
                 }
-            },
-        )
+            }
+        return createListDataResponse(deviceId, interval, timeRange, metrics, bucketList)
     }
 
-    private fun <T> createDeviceListDataResponse(
-        data: List<T>,
+    private fun convertUtcToKstString(
+        interval: DataInterval,
+        time: Instant,
+    ): String =
+        DateTimeFormatter
+            .ofPattern(interval.format)
+            .format(time.atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime())
+
+    private fun getClimateData(query: String) = queryApi.query(query, influxdbProperties.org, ClimateSensorData::class.java)
+
+    private fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
+
+    private fun createListDataResponse(
         deviceId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
-        timeExtractor: (T) -> Instant,
-        metricsBuilder: (List<T>) -> Map<String, ListMetricData>,
-    ): ListDataResponse {
-        val bucketList =
-            data.map {
-                DateTimeFormatter
-                    .ofPattern(interval.format)
-                    .format(timeExtractor(it).atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime())
-            }
-        val metrics = metricsBuilder(data)
-        val metaData =
+        metrics: Map<String, ListMetricData>,
+        bucketList: List<String>,
+    ): ListDataResponse =
+        ListDataResponse(
             ListMetaData(
                 deviceId,
                 ListQueryInfo(
@@ -218,7 +206,8 @@ class DataService(
                     timeRange.second.toString(),
                     metrics.keys.toList(),
                 ),
-            )
-        return ListDataResponse(metaData, bucketList, metrics)
-    }
+            ),
+            bucketList,
+            metrics,
+        )
 }

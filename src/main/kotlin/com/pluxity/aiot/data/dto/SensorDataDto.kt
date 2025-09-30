@@ -62,7 +62,7 @@ object SensorMetrics {
 
 private fun createDeviceDataResponse(
     deviceId: String,
-    time: Instant?,
+    time: Instant,
     metricMap: Map<String, MetricData>,
 ): DataResponse {
     val queryInfo = QueryInfo(metricMap.keys.toList())
@@ -76,10 +76,10 @@ private fun createDeviceDataResponse(
 }
 
 // 간소화된 확장 함수들
-fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, time, toMetricMap())
+fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, time!!, toMetricMap())
 
 fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DataResponse =
-    createDeviceDataResponse(deviceId, time, toMetricMap())
+    createDeviceDataResponse(deviceId, time!!, toMetricMap())
 
 private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> =
     buildMetricMap(this, SensorMetrics.CLIMATE) { definition ->

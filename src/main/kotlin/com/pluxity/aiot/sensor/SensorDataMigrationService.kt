@@ -140,15 +140,13 @@ class SensorDataMigrationService(
         startTime: LocalDateTime,
         endTime: LocalDateTime,
     ): List<SubscriptionCinResponse>? {
-        var objectId = objectId
         // 날짜 형식 변환 - Mobius API는 yyyyMMdd'T'HHmmss 형식으로 요구함
         val startStr = DateTimeUtils.formatToTimestamp(startTime)
         val endStr = DateTimeUtils.formatToTimestamp(endTime)
-        objectId += "_1.0_0"
 
         // Mobius API 호출
         return runBlocking {
-            aiotService.findByDateRange(deviceId, objectId, startStr, endStr)
+            aiotService.findByDateRange(deviceId, "${objectId}_1.0_0", startStr, endStr)
         }
     }
 

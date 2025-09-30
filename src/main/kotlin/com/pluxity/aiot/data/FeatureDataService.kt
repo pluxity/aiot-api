@@ -57,7 +57,11 @@ class FeatureDataService(
                     ),
                 ).aggregateWindow(1, interval.unit, "mean")
                 .withCreateEmpty(false)
-                .pivot(listOf("_time"), listOf("fieldKey"), "_value")
+                .filter(
+                    Restrictions.and(
+                        Restrictions.time().notEqual(DateTimeUtils.toIsoTimeFromKst(to)),
+                    ),
+                ).pivot(listOf("_time"), listOf("fieldKey"), "_value")
                 .sort(listOf("_time"), false)
                 .toString()
         return when (sensorType) {

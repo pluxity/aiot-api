@@ -94,9 +94,25 @@ class DeviceTypeService(
             )
 
         // 이벤트 생성 및 연결
+        val newEventIconIds = mutableMapOf<DeviceEvent, Long>() // 새 이벤트의 iconId 저장
         if (request.deviceEvents != null && request.deviceEvents.isNotEmpty()) {
             val eventsList = createOrUpdateEvents(request.deviceEvents)
-            eventsList.forEach { it.updateDeviceType(deviceType) }
+            eventsList.forEach { event ->
+                event.updateDeviceType(deviceType)
+                // 새 이벤트의 iconId를 임시 저장 (id가 없으면 새 이벤트)
+                if (event.id == null && event.iconId != null) {
+                    newEventIconIds[event] = event.iconId!!
+                }
+            }
+        }
+
+        // 모든 연관관계 설정 후 한 번에 저장
+        val savedDeviceType = deviceTypeRepository.save(deviceType)
+
+        // 새로 생성된 DeviceEvent의 iconId 처리
+        newEventIconIds.forEach { (event, iconId) ->
+            val iconFile = fileService.finalizeUpload(iconId, "${prefix}${event.id}/")
+            event.updateIconId(iconFile.id)
         }
 
         // 프로필 연결 및 이벤트 세팅 설정
@@ -122,7 +138,8 @@ class DeviceTypeService(
 
             // 프로필 연결 및 EventSetting 생성
             profiles.forEach { profile: DeviceProfile ->
-                val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
+                val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = savedDeviceType)
+                savedDeviceType.deviceProfileTypes.add(deviceProfileType)
                 val profileSettings: DeviceProfileTypeRequest? = profileSettingsMap[profile.id]
                 val eventSetting =
                     EventSetting(
@@ -131,7 +148,7 @@ class DeviceTypeService(
                         isOriginal = true,
                     )
 
-                deviceType.deviceEvents.forEach { event: DeviceEvent ->
+                savedDeviceType.deviceEvents.forEach { event: DeviceEvent ->
                     val condition =
                         EventCondition(
                             deviceEvent = event,
@@ -153,12 +170,10 @@ class DeviceTypeService(
                         )
                     eventSetting.addCondition(condition)
                 }
-                eventSettingRepository.save(eventSetting)
+                deviceProfileType.addEventSetting(eventSetting)
             }
         }
 
-        // 모든 연관관계 설정 후 한 번에 저장
-        val savedDeviceType = deviceTypeRepository.save(deviceType)
         updateSensorDataHandlerCache(savedDeviceType)
         return savedDeviceType.id!!
     }
@@ -209,12 +224,23 @@ class DeviceTypeService(
             }
 
             // 이벤트 생성 또는 업데이트
-            val events =
-                createOrUpdateEvents(request.deviceEvents)
+            val events = createOrUpdateEvents(request.deviceEvents)
+
+            // 새 이벤트의 iconId를 임시 저장
+            val newEventIconIds = events
+                .filter { it.id == null && it.iconId != null }
+                .associateWith { it.iconId!! }
+
             deviceType.updateDeviceEvents(events)
 
-            // 변경 내용 저장
+            // 변경 내용 저장 (새 DeviceEvent에 id가 생성됨)
             em.flush()
+
+            // 새로 생성된 DeviceEvent의 iconId 처리
+            newEventIconIds.forEach { (event, iconId) ->
+                val iconFile = fileService.finalizeUpload(iconId, "${prefix}${event.id}/")
+                event.updateIconId(iconFile.id)
+            }
         }
 
         // 기존 deviceProfileTypes와 요청(request)의 deviceProfileTypes를 비교하여 동기화
@@ -405,19 +431,13 @@ class DeviceTypeService(
                     } ?: event.updateIconId(null)
                 }
             } else {
-                // 새 이벤트 생성
+                // 새 이벤트 생성 (DeviceType에 추가되기 전이므로 아직 저장하지 않음)
                 event =
-                    deviceEventRepository.save(
-                        DeviceEvent(
-                            name = eventRequest.name,
-                            deviceLevel = eventRequest.deviceLevel,
-                            iconId = eventRequest.iconId,
-                        ),
+                    DeviceEvent(
+                        name = eventRequest.name,
+                        deviceLevel = eventRequest.deviceLevel,
+                        iconId = eventRequest.iconId,
                     )
-                val filePath = "$prefix${event.id}/"
-                eventRequest.iconId?.let { fileId ->
-                    fileService.finalizeUpload(fileId, filePath)
-                }
             }
             events.add(event)
         }

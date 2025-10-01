@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component
 
 @Aspect
 @Component
-@Profile("!local")
+@Profile("!local & !test")
 class PermissionCheckAspect(
     private val userService: UserService,
     private val strategyResolver: PermissionStrategyResolver,

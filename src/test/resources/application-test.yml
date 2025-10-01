@@ -1,0 +1,72 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+#    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE,MONTH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 1000
+
+jwt:
+  access-token:
+    name: AccessToken
+    secret: +iBcUJRWGvl+94+ow4nXV1fzWIq4rph8x7MyRmrtWio=
+    expiration: 36000000
+  refresh-token:
+    name: RefreshToken
+    secret: gtzRlqF6bIkmOi5i15A9G5xbLdwiAMmZi6JPOeemC1E=
+    expiration: 864000000
+
+user:
+  init-password: test1234
+
+aiot:
+  subscription:
+    url: http://localhost:8080
+
+influx:
+  url: http://localhost:8086
+  token: test-token
+  org: test-org
+  bucket: test-bucket
+
+file:
+  storage-strategy: local
+  local:
+    path: C:/Dev/Upload/Test/
+  s3:
+    endpoint-url: http://localhost:9000
+    public-url: http://localhost:9000
+    bucket: test-bucket
+    region: ap-northeast-2
+    access-key: test
+    secret-key: test
+    pre-signed-url-expiration: 600
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com: DEBUG

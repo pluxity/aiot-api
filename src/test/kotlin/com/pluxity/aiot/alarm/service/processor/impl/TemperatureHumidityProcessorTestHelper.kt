@@ -48,6 +48,30 @@ class TemperatureHumidityProcessorTestHelper(
     }
 
     /**
+     * Humidity DeviceProfile (공유)
+     */
+    val humidityProfile: DeviceProfile by lazy {
+        getOrCreateProfile(
+            fieldKey = "Humidity",
+            description = "습도",
+            fieldUnit = "%",
+            fieldType = DeviceProfile.FieldType.Float,
+        )
+    }
+
+    /**
+     * FireAlarm DeviceProfile (공유)
+     */
+    val fireAlarmProfile: DeviceProfile by lazy {
+        getOrCreateProfile(
+            fieldKey = "FireAlarm",
+            description = "화재감지",
+            fieldUnit = "boolean",
+            fieldType = DeviceProfile.FieldType.Boolean,
+        )
+    }
+
+    /**
      * Temperature 조건으로 DeviceType 생성
      */
     fun setupTemperatureDevice(

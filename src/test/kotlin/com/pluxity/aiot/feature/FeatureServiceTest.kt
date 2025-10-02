@@ -93,7 +93,7 @@ class FeatureServiceTest(
 
                 Then("해당 DeviceType의 Feature만 반환된다") {
                     result shouldHaveSize 2
-                    result.all { it.deviceType?.id == deviceType1.id } shouldBe true
+                    result.all { it.deviceType.id == deviceType1.id } shouldBe true
                 }
             }
 
@@ -220,6 +220,32 @@ class FeatureServiceTest(
 
                 Then("NOT_FOUND_FEATURE 예외가 발생한다") {
                     exception.errorCode shouldBe ErrorCode.NOT_FOUND_FEATURE
+                }
+            }
+        }
+
+        Given("Feature deviceId 조회 기능") {
+            When("존재하는 deviceId로 조회하면") {
+                // 사전 조건
+                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_DEVICE_ID"))
+                val feature = featureRepository.save(FeatureFixture.create(deviceType = deviceType, deviceId = "DEVICE_ID_001", objectId = "TYPE_DEVICE_ID", name = "Device by ID"))
+
+                val result = featureService.findByDeviceIdResponse(feature.deviceId)
+
+                Then("해당 Feature가 반환된다") {
+                    result.deviceId shouldBe "DEVICE_ID_001"
+                    result.name shouldBe "Device by ID"
+                }
+            }
+
+            When("존재하지 않는 deviceId로 조회하면") {
+                val exception =
+                    shouldThrow<CustomException> {
+                        featureService.findByDeviceIdResponse("NON_EXISTENT_DEVICE_ID")
+                    }
+
+                Then("NOT_FOUND_DEVICE_BY_FEATURE 예외가 발생한다") {
+                    exception.errorCode shouldBe ErrorCode.NOT_FOUND_DEVICE_BY_FEATURE
                 }
             }
         }

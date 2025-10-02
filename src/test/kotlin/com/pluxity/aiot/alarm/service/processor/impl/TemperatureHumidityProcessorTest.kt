@@ -152,4 +152,746 @@ class TemperatureHumidityProcessorTest(
                 }
             }
         }
+
+        Given("Operator: GREATER_THAN 테스트") {
+            When("온도 30.0°C - GREATER_THAN 25.0 조건 충족") {
+                val deviceId = "TH_GT_001"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_gt1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempHighGT",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도가 25도를 초과했습니다",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 30.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 30.0
+                    eventHistories.first().eventName shouldBe "TempHighGT"
+                }
+            }
+
+            When("온도 25.0°C - GREATER_THAN 25.0 조건 미충족 (같은 값)") {
+                val deviceId = "TH_GT_002"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_gt2",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempHighGT2",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 25.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장되지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
+
+        Given("Operator: LESS_THAN 테스트") {
+            When("온도 20.0°C - LESS_THAN 25.0 조건 충족") {
+                val deviceId = "TH_LT_001"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_lt1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempLowLT",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.LESS_THAN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도가 25도 미만입니다",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 20.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 20.0
+                    eventHistories.first().eventName shouldBe "TempLowLT"
+                }
+            }
+
+            When("온도 25.0°C - LESS_THAN 25.0 조건 미충족 (같은 값)") {
+                val deviceId = "TH_LT_002"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_lt2",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempLowLT2",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.LESS_THAN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 25.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장되지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
+
+        Given("Operator: GREATER_THAN_OR_EQUAL 테스트") {
+            When("온도 30.0°C - GREATER_THAN_OR_EQUAL 25.0 조건 충족") {
+                val deviceId = "TH_GTE_001"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_gte1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempHighGTE",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도 25도 이상",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 30.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 30.0
+                }
+            }
+
+            When("온도 25.0°C - GREATER_THAN_OR_EQUAL 25.0 조건 충족 (같은 값)") {
+                val deviceId = "TH_GTE_002"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_gte2",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempHighGTE2",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도 25도 이상",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 25.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다 (경계값 포함)") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 25.0
+                }
+            }
+
+            When("온도 20.0°C - GREATER_THAN_OR_EQUAL 25.0 조건 미충족") {
+                val deviceId = "TH_GTE_003"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_gte3",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempHighGTE3",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 20.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장되지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
+
+        Given("Operator: LESS_THAN_OR_EQUAL 테스트") {
+            When("온도 20.0°C - LESS_THAN_OR_EQUAL 25.0 조건 충족") {
+                val deviceId = "TH_LTE_001"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_lte1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempLowLTE",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도 25도 이하",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 20.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 20.0
+                }
+            }
+
+            When("온도 25.0°C - LESS_THAN_OR_EQUAL 25.0 조건 충족 (같은 값)") {
+                val deviceId = "TH_LTE_002"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_lte2",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempLowLTE2",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도 25도 이하",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 25.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다 (경계값 포함)") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 25.0
+                }
+            }
+
+            When("온도 30.0°C - LESS_THAN_OR_EQUAL 25.0 조건 미충족") {
+                val deviceId = "TH_LTE_003"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_lte3",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempLowLTE3",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 30.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장되지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
+
+        Given("NotificationInterval: IGNORED 케이스 테스트") {
+            When("MANUAL 조치 - 5분 내 재발생 (IGNORED)") {
+                val deviceId = "TH_INTERVAL_001"
+                val setup =
+                    helper.setupTemperatureDevice(
+                        objectId = "tempHumidity_interval1",
+                        deviceId = deviceId,
+                        eventName = "TempWarningInterval",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도가 높습니다",
+                    )
+
+                val processor = helper.createProcessor()
+
+                // 첫 번째 이벤트 발생 (28.0°C)
+                val sensorData1 = helper.createSensorData(temperature = 28.0)
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData1)
+
+                // 5분 내 두 번째 이벤트 발생 (28.5°C) - 즉시 재실행 (interval 내)
+                val sensorData2 = helper.createSensorData(temperature = 28.5)
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData2)
+
+                Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED로 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 2
+
+                    val firstEvent = eventHistories.first { it.value == 28.0 }
+                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
+
+                    val secondEvent = eventHistories.first { it.value == 28.5 }
+                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
+                }
+            }
+
+            When("AUTO 조치 - 10분 내 재발생 (IGNORED)") {
+                val deviceId = "TH_INTERVAL_002"
+                val setup =
+                    helper.setupTemperatureDevice(
+                        objectId = "tempHumidity_interval2",
+                        deviceId = deviceId,
+                        eventName = "TempDangerInterval",
+                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        minValue = 30.0,
+                        maxValue = 40.0,
+                        controlType = EventCondition.ControlType.AUTO,
+                        guideMessage = "온도가 매우 높습니다",
+                    )
+
+                val processor = helper.createProcessor()
+
+                // 첫 번째 이벤트 발생 (35.0°C)
+                val sensorData1 = helper.createSensorData(temperature = 35.0)
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData1)
+
+                // 10분 내 두 번째 이벤트 발생 (36.0°C) - 즉시 재실행 (interval 내)
+                val sensorData2 = helper.createSensorData(temperature = 36.0)
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData2)
+
+                Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED로 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 2
+
+                    val firstEvent = eventHistories.first { it.value == 35.0 }
+                    firstEvent.actionResult shouldBe "AUTOMATIC_COMPLETED"
+
+                    val secondEvent = eventHistories.first { it.value == 36.0 }
+                    secondEvent.actionResult shouldBe "AUTOMATIC_IGNORED"
+                }
+            }
+        }
+
+        Given("특수 케이스: 경계값 정확도 테스트") {
+            When("BETWEEN 범위의 정확한 minValue (25.0)") {
+                val deviceId = "TH_BOUNDARY_001"
+                val setup =
+                    helper.setupTemperatureDevice(
+                        objectId = "tempHumidity_boundary1",
+                        deviceId = deviceId,
+                        eventName = "TempBoundaryMin",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "경계값 테스트",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 25.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다 (경계값 포함)") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 25.0
+                    eventHistories.first().minValue shouldBe 25.0
+                    eventHistories.first().maxValue shouldBe 30.0
+                }
+            }
+
+            When("BETWEEN 범위의 정확한 maxValue (30.0)") {
+                val deviceId = "TH_BOUNDARY_002"
+                val setup =
+                    helper.setupTemperatureDevice(
+                        objectId = "tempHumidity_boundary2",
+                        deviceId = deviceId,
+                        eventName = "TempBoundaryMax",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "경계값 테스트",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 30.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다 (경계값 포함)") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 30.0
+                    eventHistories.first().minValue shouldBe 25.0
+                    eventHistories.first().maxValue shouldBe 30.0
+                }
+            }
+        }
+
+        Given("특수 케이스: 습도 센서 테스트") {
+            When("습도 65.0% - BETWEEN(60.0~70.0) 조건 충족") {
+                val deviceId = "TH_HUMIDITY_001"
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_humidity1",
+                        deviceId = deviceId,
+                        profile = helper.humidityProfile,
+                        eventName = "HumidityWarning",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 60.0,
+                        maxValue = 70.0,
+                        operator = EventCondition.ConditionOperator.BETWEEN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "습도가 높습니다",
+                    )
+
+                val sensorData = helper.createSensorData(humidity = 65.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "Humidity"
+                    eventHistories.first().value shouldBe 65.0
+                    eventHistories.first().unit shouldBe "%"
+                }
+            }
+        }
+
+        Given("특수 케이스: 온도와 습도 동시 처리") {
+            When("온도 28.0°C와 습도 65.0%가 동시에 조건 충족") {
+                val deviceId = "TH_BOTH_001"
+
+                // 온도 조건
+                val tempSetup =
+                    helper.setupTemperatureDevice(
+                        objectId = "tempHumidity_both1",
+                        deviceId = deviceId,
+                        eventName = "TempWarningBoth",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "온도 주의",
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 28.0, humidity = 65.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, tempSetup.deviceType, tempSetup.facilityId, sensorData)
+
+                Then("온도 이벤트만 저장된다 (습도 조건은 별도 설정 필요)") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "Temperature"
+                    eventHistories.first().value shouldBe 28.0
+                }
+            }
+        }
+
+        Given("특수 케이스: DiscomfortIndex 계산 및 이벤트 처리") {
+            When("온도 30.0°C, 습도 70.0% -> DiscomfortIndex 약 78.8 (불쾌지수 위험)") {
+                val deviceId = "TH_DISCOMFORT_001"
+
+                // DiscomfortIndex 프로필 생성
+                val discomfortProfile =
+                    helper.getOrCreateProfile(
+                        fieldKey = "DiscomfortIndex",
+                        description = "불쾌지수",
+                        fieldUnit = "DI",
+                        fieldType = com.pluxity.aiot.system.device.profile.DeviceProfile.FieldType.Float,
+                    )
+
+                // DiscomfortIndex >= 75.0 조건
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_discomfort1",
+                        deviceId = deviceId,
+                        profile = discomfortProfile,
+                        eventName = "DiscomfortHigh",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 75.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.AUTO,
+                        guideMessage = "불쾌지수가 높습니다",
+                    )
+
+                // 온도 30°C, 습도 70% -> DI = 0.81*30 + 0.01*70*(0.99*30-14.3) + 46.3 ≈ 78.8
+                val sensorData = helper.createSensorData(temperature = 30.0, humidity = 70.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("DiscomfortIndex 이벤트가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "DiscomfortIndex"
+                    // DI = 0.81*30 + 0.01*70*(0.99*30-14.3) + 46.3 = 81.38
+                    val actualValue = eventHistories.first().value
+                    actualValue.shouldNotBeNull()
+                    (actualValue in 81.37..81.39) shouldBe true
+                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                }
+            }
+
+            When("온도 20.0°C, 습도 50.0% -> DiscomfortIndex 약 63.8 (쾌적)") {
+                val deviceId = "TH_DISCOMFORT_002"
+
+                val discomfortProfile =
+                    helper.getOrCreateProfile(
+                        fieldKey = "DiscomfortIndex",
+                        description = "불쾌지수",
+                        fieldUnit = "DI",
+                        fieldType = com.pluxity.aiot.system.device.profile.DeviceProfile.FieldType.Float,
+                    )
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_discomfort2",
+                        deviceId = deviceId,
+                        profile = discomfortProfile,
+                        eventName = "DiscomfortHigh",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 75.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "불쾌지수 체크",
+                    )
+
+                // 온도 20°C, 습도 50% -> DI = 0.81*20 + 0.01*50*(0.99*20-14.3) + 46.3 ≈ 63.8
+                val sensorData = helper.createSensorData(temperature = 20.0, humidity = 50.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("DiscomfortIndex가 75 미만이므로 이벤트가 발생하지 않고 NORMAL 상태") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+
+                    val feature = helper.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "NORMAL"
+                }
+            }
+        }
+
+        Given("Filter Chain: eventEnabled = false") {
+            When("eventEnabled = false인 경우 이벤트가 처리되지 않는다") {
+                val deviceId = "TH_DISABLED_001"
+
+                val setup =
+                    helper.setupDeviceWithDisabledEvent(
+                        objectId = "tempHumidity_disabled1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempWarning",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        operator = EventCondition.ConditionOperator.BETWEEN,
+                    )
+
+                val sensorData = helper.createSensorData(temperature = 28.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("eventEnabled = false이므로 이벤트가 발생하지 않고 NORMAL 상태") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+
+                    val feature = helper.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "NORMAL"
+                }
+            }
+        }
+
+        Given("Filter Chain: notificationEnabled = false") {
+            When("notificationEnabled = false인 경우 알림이 발생하지 않는다") {
+                val deviceId = "TH_NO_NOTIFICATION_001"
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "tempHumidity_no_notif1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        eventName = "TempWarning",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 25.0,
+                        maxValue = 30.0,
+                        operator = EventCondition.ConditionOperator.BETWEEN,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "알림 없음",
+                    )
+
+                // notificationEnabled를 false로 변경
+                val condition = setup.deviceType.deviceProfileTypes.first().eventSettings.first().conditions.first()
+                condition.notificationEnabled = false
+                helper.deviceTypeRepository.save(setup.deviceType)
+
+                val sensorData = helper.createSensorData(temperature = 28.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("notificationEnabled = false이므로 이벤트가 발생하지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
+
+        Given("여러 조건 동시 충족") {
+            When("같은 센서에 WARNING과 DANGER 조건이 동시 충족") {
+                val deviceId = "TH_MULTI_CONDITION_001"
+
+                val setup =
+                    helper.setupDeviceWithMultipleConditions(
+                        objectId = "tempHumidity_multi1",
+                        deviceId = deviceId,
+                        profile = helper.temperatureProfile,
+                        conditions =
+                            listOf(
+                                com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
+                                    eventName = "TempWarning",
+                                    eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                                    minValue = 25.0,
+                                    maxValue = 30.0,
+                                    operator = EventCondition.ConditionOperator.BETWEEN,
+                                    controlType = EventCondition.ControlType.MANUAL,
+                                    guideMessage = "경고",
+                                    notificationIntervalMinutes = 5,
+                                ),
+                                com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
+                                    eventName = "TempDanger",
+                                    eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                                    minValue = 28.0,
+                                    maxValue = 40.0,
+                                    operator = EventCondition.ConditionOperator.BETWEEN,
+                                    controlType = EventCondition.ControlType.AUTO,
+                                    guideMessage = "위험",
+                                    notificationIntervalMinutes = 10,
+                                ),
+                            ),
+                    )
+
+                // 28.5°C는 WARNING(25~30)과 DANGER(28~40) 모두 충족
+                val sensorData = helper.createSensorData(temperature = 28.5)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("WARNING과 DANGER 이벤트가 모두 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 2
+                    eventHistories.map { it.eventName }.toSet() shouldBe setOf("TempWarning", "TempDanger")
+                    eventHistories.first { it.eventName == "TempWarning" }.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first { it.eventName == "TempDanger" }.actionResult shouldBe "AUTOMATIC_COMPLETED"
+                }
+            }
+        }
+
+        Given("Operator: EQUALS 테스트 (Boolean 센서)") {
+            When("습도 80.0% - EQUALS 80.0 조건 충족") {
+                val deviceId = "TH_EQ_001"
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "humidity_eq1",
+                        deviceId = deviceId,
+                        profile = helper.humidityProfile,
+                        eventName = "HumidityExact80",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 80.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.EQUALS,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "습도가 정확히 80%입니다",
+                    )
+
+                val sensorData = helper.createSensorData(humidity = 80.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().value shouldBe 80.0
+                    eventHistories.first().eventName shouldBe "HumidityExact80"
+                }
+            }
+
+            When("습도 75.0% - EQUALS 80.0 조건 미충족") {
+                val deviceId = "TH_EQ_002"
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = "humidity_eq2",
+                        deviceId = deviceId,
+                        profile = helper.humidityProfile,
+                        eventName = "HumidityExact80_2",
+                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        minValue = 80.0,
+                        maxValue = null,
+                        operator = EventCondition.ConditionOperator.EQUALS,
+                        controlType = EventCondition.ControlType.MANUAL,
+                        guideMessage = "습도가 정확히 80%입니다",
+                    )
+
+                val sensorData = helper.createSensorData(humidity = 75.0)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+
+                Then("EventHistory가 저장되지 않는다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 0
+                }
+            }
+        }
     })

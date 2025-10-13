@@ -50,5 +50,4 @@ object FacilityFixture {
             )
         return gf.createPolygon(coordinates)
     }
-
 }

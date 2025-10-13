@@ -20,5 +20,4 @@ object EventSettingFixture {
             isOriginal = isOriginal,
             months = months,
         )
-
 }

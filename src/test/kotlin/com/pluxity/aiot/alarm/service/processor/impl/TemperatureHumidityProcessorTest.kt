@@ -769,7 +769,13 @@ class TemperatureHumidityProcessorTest(
                     )
 
                 // notificationEnabled를 false로 변경
-                val condition = setup.deviceType.deviceProfileTypes.first().eventSettings.first().conditions.first()
+                val condition =
+                    setup.deviceType.deviceProfileTypes
+                        .first()
+                        .eventSettings
+                        .first()
+                        .conditions
+                        .first()
                 condition.notificationEnabled = false
                 helper.deviceTypeRepository.save(setup.deviceType)
 

@@ -42,5 +42,4 @@ object EventConditionFixture {
         eventSetting?.let { condition.addEventSetting(it) }
         return condition
     }
-
 }

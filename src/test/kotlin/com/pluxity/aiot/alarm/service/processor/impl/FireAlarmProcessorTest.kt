@@ -214,7 +214,13 @@ class FireAlarmProcessorTest(
 
                 // fireAlarm을 직접 설정할 수 없으므로 createSensorData 대신 직접 조건 테스트
                 val processor = helper.createProcessor()
-                val condition = setup.deviceType.deviceProfileTypes.first().eventSettings.first().conditions.first()
+                val condition =
+                    setup.deviceType.deviceProfileTypes
+                        .first()
+                        .eventSettings
+                        .first()
+                        .conditions
+                        .first()
 
                 // 0.9995는 1.0과의 차이가 0.001 미만 (0.0005)이므로 true로 인식되어야 함
                 val isConditionMet = processor.isConditionMet(condition, 0.9995)
@@ -243,7 +249,13 @@ class FireAlarmProcessorTest(
                     )
 
                 val processor = helper.createProcessor()
-                val condition = setup.deviceType.deviceProfileTypes.first().eventSettings.first().conditions.first()
+                val condition =
+                    setup.deviceType.deviceProfileTypes
+                        .first()
+                        .eventSettings
+                        .first()
+                        .conditions
+                        .first()
 
                 // 0.002는 0.0과의 차이가 0.001보다 크므로 false로 인식되지 않아야 함
                 val isConditionMet = processor.isConditionMet(condition, 0.002)

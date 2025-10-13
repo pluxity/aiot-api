@@ -18,5 +18,4 @@ object DeviceEventFixture {
             deviceLevel = deviceLevel,
             deviceType = deviceType,
         )
-
 }

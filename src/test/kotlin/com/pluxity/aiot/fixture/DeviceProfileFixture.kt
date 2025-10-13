@@ -18,5 +18,4 @@ object DeviceProfileFixture {
             fieldUnit = fieldUnit,
             fieldType = fieldType,
         )
-
 }

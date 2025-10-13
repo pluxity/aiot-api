@@ -227,9 +227,10 @@ class DeviceTypeService(
             val events = createOrUpdateEvents(request.deviceEvents)
 
             // 새 이벤트의 iconId를 임시 저장
-            val newEventIconIds = events
-                .filter { it.id == null && it.iconId != null }
-                .associateWith { it.iconId!! }
+            val newEventIconIds =
+                events
+                    .filter { it.id == null && it.iconId != null }
+                    .associateWith { it.iconId!! }
 
             deviceType.updateDeviceEvents(events)
 

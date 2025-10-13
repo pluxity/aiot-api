@@ -1,6 +1,11 @@
 package com.pluxity.aiot.system.event.setting
 
-import com.pluxity.aiot.fixture.*
+import com.pluxity.aiot.fixture.DeviceEventFixture
+import com.pluxity.aiot.fixture.DeviceProfileFixture
+import com.pluxity.aiot.fixture.DeviceProfileTypeFixture
+import com.pluxity.aiot.fixture.DeviceTypeFixture
+import com.pluxity.aiot.fixture.EventConditionFixture
+import com.pluxity.aiot.fixture.EventSettingFixture
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
@@ -41,7 +46,10 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_001"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "temperature"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
                 val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType))
 
                 val result = eventSettingService.getById(eventSetting.id!!)
@@ -67,7 +75,10 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_ALL"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "humidity"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
 
                 eventSettingRepository.saveAll(
                     listOf(
@@ -87,7 +98,10 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_DELETE"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "pressure"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
                 val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType))
 
                 eventSettingService.delete(eventSetting.id!!)
@@ -107,10 +121,16 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_UPDATE_ENABLED"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "temp_enabled"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
                 val deviceEvent = deviceEventRepository.save(DeviceEventFixture.create(name = "TempEventEnabled", deviceType = deviceType))
 
-                val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false))
+                val eventSetting =
+                    eventSettingRepository.save(
+                        EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false),
+                    )
 
                 val condition = EventConditionFixture.create(deviceEvent = deviceEvent, eventSetting = eventSetting, value = "20.0")
                 eventSetting.addCondition(condition)
@@ -154,10 +174,16 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_UPDATE_PERIOD"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "temp_period"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
                 val deviceEvent = deviceEventRepository.save(DeviceEventFixture.create(name = "TempEventPeriod", deviceType = deviceType))
 
-                val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false))
+                val eventSetting =
+                    eventSettingRepository.save(
+                        EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false),
+                    )
 
                 val condition = EventConditionFixture.create(deviceEvent = deviceEvent, eventSetting = eventSetting, value = "20.0")
                 eventSetting.addCondition(condition)
@@ -202,10 +228,16 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_UPDATE_HISTORY"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "temp_history"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
                 val deviceEvent = deviceEventRepository.save(DeviceEventFixture.create(name = "TempEventHistory", deviceType = deviceType))
 
-                val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false))
+                val eventSetting =
+                    eventSettingRepository.save(
+                        EventSettingFixture.create(deviceProfileType = deviceProfileType, eventEnabled = false),
+                    )
 
                 val condition = EventConditionFixture.create(deviceEvent = deviceEvent, eventSetting = eventSetting, value = "20.0")
                 eventSetting.addCondition(condition)
@@ -251,15 +283,30 @@ class EventSettingServiceTest(
                 // 사전 조건
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_OVERLAP"))
                 val deviceProfile = deviceProfileRepository.save(DeviceProfileFixture.create(fieldKey = "temp_overlap"))
-                val deviceProfileType = deviceProfileTypeRepository.save(DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile))
+                val deviceProfileType =
+                    deviceProfileTypeRepository.save(
+                        DeviceProfileTypeFixture.create(deviceType = deviceType, deviceProfile = deviceProfile),
+                    )
 
                 val deviceEvent1 = deviceEventRepository.save(DeviceEventFixture.create(name = "Event1", deviceType = deviceType))
                 val deviceEvent2 = deviceEventRepository.save(DeviceEventFixture.create(name = "Event2", deviceType = deviceType))
 
                 val eventSetting = eventSettingRepository.save(EventSettingFixture.create(deviceProfileType = deviceProfileType))
 
-                val condition1 = EventConditionFixture.create(deviceEvent = deviceEvent1, eventSetting = eventSetting, value = "10.0,20.0", operator = EventCondition.ConditionOperator.BETWEEN)
-                val condition2 = EventConditionFixture.create(deviceEvent = deviceEvent2, eventSetting = eventSetting, value = "15.0,25.0", operator = EventCondition.ConditionOperator.BETWEEN)
+                val condition1 =
+                    EventConditionFixture.create(
+                        deviceEvent = deviceEvent1,
+                        eventSetting = eventSetting,
+                        value = "10.0,20.0",
+                        operator = EventCondition.ConditionOperator.BETWEEN,
+                    )
+                val condition2 =
+                    EventConditionFixture.create(
+                        deviceEvent = deviceEvent2,
+                        eventSetting = eventSetting,
+                        value = "15.0,25.0",
+                        operator = EventCondition.ConditionOperator.BETWEEN,
+                    )
 
                 eventSetting.addCondition(condition1)
                 eventSetting.addCondition(condition2)
@@ -317,5 +364,4 @@ class EventSettingServiceTest(
                 }
             }
         }
-
     })

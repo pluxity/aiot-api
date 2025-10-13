@@ -286,7 +286,11 @@ class DeviceTypeServiceTest(
                 val createdId = deviceTypeService.create(createRequest)
 
                 // 생성된 이벤트 ID 조회
-                val normalEventId = deviceEventRepository.findAll().first { it.name == "NormalUpdate2" && it.deviceType?.id == createdId }.id
+                val normalEventId =
+                    deviceEventRepository
+                        .findAll()
+                        .first { it.name == "NormalUpdate2" && it.deviceType?.id == createdId }
+                        .id
 
                 val updateRequest =
                     DeviceTypeRequest(

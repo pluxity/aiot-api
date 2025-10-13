@@ -15,5 +15,4 @@ object DeviceTypeFixture {
             description = description,
             version = version,
         )
-
 }

@@ -44,7 +44,9 @@ class DeviceTypeService(
     private val featureRepository: FeatureRepository,
     private val fileService: FileService,
 ) {
-    private val prefix = "device_events/"
+    companion object {
+        private const val PREFIX = "device_events/"
+    }
 
     @Transactional(readOnly = true)
     fun findAll(): List<DeviceTypeResponse> {
@@ -111,7 +113,7 @@ class DeviceTypeService(
 
         // 새로 생성된 DeviceEvent의 iconId 처리
         newEventIconIds.forEach { (event, iconId) ->
-            val iconFile = fileService.finalizeUpload(iconId, "${prefix}${event.id}/")
+            val iconFile = fileService.finalizeUpload(iconId, "${PREFIX}${event.id}/")
             event.updateIconId(iconFile.id)
         }
 
@@ -239,7 +241,7 @@ class DeviceTypeService(
 
             // 새로 생성된 DeviceEvent의 iconId 처리
             newEventIconIds.forEach { (event, iconId) ->
-                val iconFile = fileService.finalizeUpload(iconId, "${prefix}${event.id}/")
+                val iconFile = fileService.finalizeUpload(iconId, "${PREFIX}${event.id}/")
                 event.updateIconId(iconFile.id)
             }
         }
@@ -427,7 +429,7 @@ class DeviceTypeService(
 
                 if (eventRequest.iconId != event.iconId) {
                     eventRequest.iconId?.let { iconFileId ->
-                        val iconFile = fileService.finalizeUpload(iconFileId, "${prefix}${event.id}/")
+                        val iconFile = fileService.finalizeUpload(iconFileId, "${PREFIX}${event.id}/")
                         event.updateIconId(iconFile.id)
                     } ?: event.updateIconId(null)
                 }

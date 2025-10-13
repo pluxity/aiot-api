@@ -39,8 +39,8 @@ class FeatureService(
                         ).where(
                             and(
                                 searchCondition?.facilityId?.let { path(Facility::id).equal(it) },
-                                searchCondition?.deviceId?.let { path(Feature::deviceId).equal(it) },
-                                searchCondition?.name?.let { path(Feature::name).equal(it) },
+                                searchCondition?.deviceId?.takeIf { it.isNotBlank() }?.let { path(Feature::deviceId).equal(it) },
+                                searchCondition?.name?.takeIf { it.isNotBlank() }?.let { path(Feature::name).equal(it) },
                                 searchCondition?.deviceTypeId?.let { path(DeviceType::id).equal(it) },
                                 searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),

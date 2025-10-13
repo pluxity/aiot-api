@@ -9,8 +9,6 @@ enum class ResourceType(
 ) {
     NONE("NONE", ""),
     FACILITY("시설", "facilities"),
-    DEVICE_CATEGORY("장비 분류", "device-categories"),
-    CCTV("CCTV", "cctvs"),
     ;
 
     companion object {

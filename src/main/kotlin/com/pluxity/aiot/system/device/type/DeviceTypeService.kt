@@ -311,8 +311,8 @@ class DeviceTypeService(
             for (profileId in requestedProfileIds) {
                 if (!existingProfileIds.contains(profileId)) {
                     val profile =
-                        deviceProfileRepository.findByIdOrNull(id)
-                            ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_PROFILE, id)
+                        deviceProfileRepository.findByIdOrNull(profileId)
+                            ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_PROFILE, profileId)
 
                     val dpt = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
                     em.persist(dpt)

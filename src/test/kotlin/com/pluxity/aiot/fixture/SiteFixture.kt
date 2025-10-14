@@ -1,21 +1,21 @@
 package com.pluxity.aiot.fixture
 
-import com.pluxity.aiot.facility.Facility
+import com.pluxity.aiot.site.Site
 import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Polygon
 import org.locationtech.jts.geom.PrecisionModel
 
-object FacilityFixture {
+object SiteFixture {
     private val gf = GeometryFactory(PrecisionModel(), 4326)
 
     fun create(
         id: Long? = null,
-        name: String = "Test Facility",
-        description: String? = "Test facility description",
+        name: String = "Test Site",
+        description: String? = "Test Site description",
         location: Polygon = createDefaultPolygon(),
-    ): Facility =
-        Facility(
+    ): Site =
+        Site(
             id = id,
             name = name,
             description = description,

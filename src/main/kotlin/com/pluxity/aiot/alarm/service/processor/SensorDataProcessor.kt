@@ -41,13 +41,13 @@ interface SensorDataProcessor {
     fun process(
         deviceId: String,
         deviceType: DeviceType,
-        facilityId: Long,
+        siteId: Long,
         data: SubscriptionConResponse,
     )
 
     fun insertSensorData(
         content: SubscriptionConResponse,
-        facilityId: Long,
+        siteId: Long,
         deviceId: String,
         timestamp: String,
     )

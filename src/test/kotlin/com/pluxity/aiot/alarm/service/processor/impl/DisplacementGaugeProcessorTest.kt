@@ -4,8 +4,8 @@ import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional
 class DisplacementGaugeProcessorTest(
     deviceTypeRepository: DeviceTypeRepository,
     deviceProfileRepository: DeviceProfileRepository,
-    facilityRepository: FacilityRepository,
+    siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
@@ -44,7 +44,7 @@ class DisplacementGaugeProcessorTest(
             DisplacementGaugeProcessorTestHelper(
                 deviceTypeRepository,
                 deviceProfileRepository,
-                facilityRepository,
+                siteRepository,
                 featureRepository,
                 eventHistoryRepository,
                 actionHistoryService,
@@ -76,7 +76,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 85.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("85°는 85° ~ 95° 범위 경계값 (정확히 minRange)이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -106,7 +106,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 84.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("84°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -137,7 +137,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 96.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("96°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -168,7 +168,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 90.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("90°는 범위 중앙값이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -205,7 +205,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = -3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("-3.5°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -236,7 +236,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = 0.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("0°는 범위 중앙값이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -268,7 +268,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = 3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("3.5°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -299,7 +299,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = -3.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("-3°는 범위 경계값 (정확히 minRange)이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -332,7 +332,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 95.0, angleY = 3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setupX.deviceType, setupX.facilityId, sensorData)
+                processor.process(deviceId, setupX.deviceType, setupX.siteId, sensorData)
 
                 Then("AngleX 이벤트만 저장된다 (AngleY 조건은 별도 설정 필요)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -365,10 +365,10 @@ class DisplacementGaugeProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 첫 번째 이벤트
-                processor.process(deviceId, setup.deviceType, setup.facilityId, helper.createSensorData(angleX = 84.0))
+                processor.process(deviceId, setup.deviceType, setup.siteId, helper.createSensorData(angleX = 84.0))
 
                 // 5분 내 두 번째 이벤트
-                processor.process(deviceId, setup.deviceType, setup.facilityId, helper.createSensorData(angleX = 83.0))
+                processor.process(deviceId, setup.deviceType, setup.siteId, helper.createSensorData(angleX = 83.0))
 
                 Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -402,7 +402,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 85.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("파싱 실패 시 조건이 충족되지 않아 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -431,7 +431,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = 3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("parts.size != 2이므로 특수 로직이 적용되지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -462,7 +462,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 100.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("100° > 95° 조건 충족으로 이벤트 발생") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)

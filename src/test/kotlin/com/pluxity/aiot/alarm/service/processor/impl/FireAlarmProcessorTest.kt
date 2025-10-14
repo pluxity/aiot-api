@@ -4,8 +4,8 @@ import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional
 class FireAlarmProcessorTest(
     deviceTypeRepository: DeviceTypeRepository,
     deviceProfileRepository: DeviceProfileRepository,
-    facilityRepository: FacilityRepository,
+    siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
@@ -44,7 +44,7 @@ class FireAlarmProcessorTest(
             FireAlarmProcessorTestHelper(
                 deviceTypeRepository,
                 deviceProfileRepository,
-                facilityRepository,
+                siteRepository,
                 featureRepository,
                 eventHistoryRepository,
                 actionHistoryService,
@@ -74,7 +74,7 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = true)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("화재 이벤트가 저장되고 AUTO로 처리된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -107,7 +107,7 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = false)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("이벤트가 발생하지 않고 NORMAL 상태") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -142,7 +142,7 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = false)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("FireNormal 이벤트가 저장되고 MANUAL로 처리된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -179,10 +179,10 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = true)
 
                 // 첫 번째 화재 감지
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 // 5분 내 두 번째 화재 감지
-                processor.process(deviceId, setup.deviceType, setup.facilityId, sensorData)
+                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
                 Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)

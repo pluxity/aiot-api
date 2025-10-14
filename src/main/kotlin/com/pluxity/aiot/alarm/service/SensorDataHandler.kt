@@ -50,7 +50,7 @@ class SensorDataHandler(
                 return
             }
 
-        processor.process(deviceId, deviceType, feature.facility?.id!!, sgn.nev.rep.cin.con)
+        processor.process(deviceId, deviceType, feature.site?.id!!, sgn.nev.rep.cin.con)
     }
 
     fun updateDeviceTypeCache(deviceType: DeviceType) {

@@ -1,11 +1,11 @@
-package com.pluxity.aiot.facility.dto
+package com.pluxity.aiot.site.dto
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped
-import com.pluxity.aiot.facility.Facility
 import com.pluxity.aiot.global.response.BaseResponse
 import com.pluxity.aiot.global.response.toBaseResponse
+import com.pluxity.aiot.site.Site
 
-data class FacilityResponse(
+data class SiteResponse(
     val id: Long?,
     val name: String,
     val description: String?,
@@ -13,8 +13,8 @@ data class FacilityResponse(
     @field:JsonUnwrapped val baseResponse: BaseResponse,
 )
 
-fun Facility.toFacilityResponse(): FacilityResponse =
-    FacilityResponse(
+fun Site.toSiteResponse(): SiteResponse =
+    SiteResponse(
         id = this.id,
         name = this.name,
         description = this.description,

@@ -1,10 +1,10 @@
-package com.pluxity.aiot.facility
+package com.pluxity.aiot.site
 
-import com.pluxity.aiot.facility.dto.FacilityRequest
-import com.pluxity.aiot.facility.dto.FacilityResponse
 import com.pluxity.aiot.global.annotation.ResponseCreated
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
+import com.pluxity.aiot.site.dto.SiteRequest
+import com.pluxity.aiot.site.dto.SiteResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -24,12 +24,12 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/facilities")
-@Tag(name = "Facility Controller", description = "시설 관리 API")
-class FacilityController(
-    private val facilityService: FacilityService,
+@RequestMapping("/sites")
+@Tag(name = "Site Controller", description = "현장 관리 API")
+class SiteController(
+    private val siteService: SiteService,
 ) {
-    @Operation(summary = "시설 목록 조회", description = "모든 시설 목록을 조회합니다")
+    @Operation(summary = "현장 목록 조회", description = "모든 현장 목록을 조회합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "목록 조회 성공"),
@@ -46,10 +46,9 @@ class FacilityController(
         ],
     )
     @GetMapping
-    fun getFacilities(): ResponseEntity<DataResponseBody<List<FacilityResponse>>> =
-        ResponseEntity.ok(DataResponseBody(facilityService.findAll()))
+    fun getFacilities(): ResponseEntity<DataResponseBody<List<SiteResponse>>> = ResponseEntity.ok(DataResponseBody(siteService.findAll()))
 
-    @Operation(summary = "시설 상세 조회", description = "특정 아이디 시설을 조회합니다")
+    @Operation(summary = "현장 상세 조회", description = "특정 아이디 현장을 조회합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공"),
@@ -65,13 +64,12 @@ class FacilityController(
             ),
         ],
     )
-    @GetMapping("/{facilityId}")
-    fun getFacility(
-        @Parameter(description = "시설 ID", required = true) @PathVariable facilityId: Long,
-    ): ResponseEntity<DataResponseBody<FacilityResponse>> =
-        ResponseEntity.ok(DataResponseBody(facilityService.findByIdResponse(facilityId)))
+    @GetMapping("/{siteId}")
+    fun getSite(
+        @Parameter(description = "현장 ID", required = true) @PathVariable siteId: Long,
+    ): ResponseEntity<DataResponseBody<SiteResponse>> = ResponseEntity.ok(DataResponseBody(siteService.findByIdResponse(siteId)))
 
-    @Operation(summary = "시설 정보 수정", description = "시설 정보를 수정합니다")
+    @Operation(summary = "현장 정보 수정", description = "현장 정보를 수정합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "204", description = "정보 수정 성공"),
@@ -87,7 +85,7 @@ class FacilityController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "시설을 찾을 수 없음",
+                description = "현장을 찾을 수 없음",
                 content = [
                     Content(
                         mediaType = "application/json",
@@ -107,17 +105,17 @@ class FacilityController(
             ),
         ],
     )
-    @PutMapping("/{facilityId}")
+    @PutMapping("/{siteId}")
     fun patchLocation(
-        @Parameter(description = "시설 ID", required = true) @PathVariable facilityId: Long,
+        @Parameter(description = "현장 ID", required = true) @PathVariable siteId: Long,
         @Parameter(description = "수정 정보", required = true) @Valid @RequestBody
-        request: FacilityRequest,
+        request: SiteRequest,
     ): ResponseEntity<Void> {
-        facilityService.putUpdate(facilityId, request)
+        siteService.putUpdate(siteId, request)
         return ResponseEntity.noContent().build()
     }
 
-    @Operation(summary = "시설 생성", description = "새로운 시설을 생성합니다")
+    @Operation(summary = "현장 생성", description = "새로운 현장을 생성합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "201", description = "성공"),
@@ -146,11 +144,11 @@ class FacilityController(
     @ResponseCreated(path = "/facilities/{id}")
     @PostMapping
     fun save(
-        @Parameter(description = "시설 정보", required = true) @Valid @RequestBody
-        request: FacilityRequest,
-    ): ResponseEntity<Long> = ResponseEntity.ok(facilityService.save(request))
+        @Parameter(description = "현장 정보", required = true) @Valid @RequestBody
+        request: SiteRequest,
+    ): ResponseEntity<Long> = ResponseEntity.ok(siteService.save(request))
 
-    @Operation(summary = "시설 삭제", description = "시설을 삭제합니다")
+    @Operation(summary = "현장 삭제", description = "현장을 삭제합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "204", description = "삭제 성공"),
@@ -166,7 +164,7 @@ class FacilityController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "시설을 찾을 수 없음",
+                description = "현장을 찾을 수 없음",
                 content = [
                     Content(
                         mediaType = "application/json",
@@ -186,11 +184,11 @@ class FacilityController(
             ),
         ],
     )
-    @DeleteMapping("/{facilityId}")
+    @DeleteMapping("/{siteId}")
     fun deletePath(
-        @Parameter(description = "시설 ID", required = true) @PathVariable facilityId: Long,
+        @Parameter(description = "현장 ID", required = true) @PathVariable siteId: Long,
     ): ResponseEntity<Void> {
-        facilityService.deleteFacility(facilityId)
+        siteService.delete(siteId)
         return ResponseEntity.noContent().build()
     }
 }

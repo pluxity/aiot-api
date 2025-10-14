@@ -1,7 +1,7 @@
 package com.pluxity.aiot.feature
 
-import com.pluxity.aiot.facility.Facility
 import com.pluxity.aiot.global.entity.BaseEntity
+import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.system.device.type.DeviceType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -41,8 +41,8 @@ class Feature(
     var eventStatus: String? = "NORMAL",
     var isActive: Boolean? = true,
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "facility_id")
-    var facility: Facility? = null,
+    @JoinColumn(name = "site_id")
+    var site: Site? = null,
     @Column
     private var subscriptionTime: LocalDateTime? = null,
 ) : BaseEntity() {
@@ -72,7 +72,7 @@ class Feature(
         longitude: Double,
         latitude: Double,
         batteryLevel: Int?,
-        facility: Facility?,
+        site: Site?,
     ) {
         this.longitude = longitude
         this.latitude = latitude
@@ -80,7 +80,7 @@ class Feature(
         // Point 객체 생성 (SRID 4326 사용)
         val gf = GeometryFactory(PrecisionModel(), 4326)
         this.geom = gf.createPoint(Coordinate(longitude, latitude))
-        this.facility = facility
+        this.site = site
     }
 
     fun updateSubscriptionTime(subscriptionTime: LocalDateTime) {

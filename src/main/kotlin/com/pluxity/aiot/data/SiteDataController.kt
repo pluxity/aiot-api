@@ -20,12 +20,12 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/facilities")
-@Tag(name = "Facility Data Controller", description = "시설별 데이터 조회 API")
-class FacilityDataController(
+@RequestMapping("/sites")
+@Tag(name = "Site Data Controller", description = "현장별 데이터 조회 API")
+class SiteDataController(
     private val dataService: DataService,
 ) {
-    @Operation(summary = "시간별 데이터 조회", description = "Facility ID로 특정 시설의 데이터 정보를 시간별로 조회합니다.")
+    @Operation(summary = "시간별 데이터 조회", description = "Site ID로 특정 현장의 데이터 정보를 시간별로 조회합니다.")
     @ApiResponses(
         value = [
             ApiResponse(
@@ -34,14 +34,14 @@ class FacilityDataController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "해당 ID의 시설을 찾을 수 없음",
+                description = "해당 ID의 현장을 찾을 수 없음",
                 content = [Content(schema = Schema(implementation = ErrorResponseBody::class))],
             ),
         ],
     )
-    @GetMapping("/{facilityId}/time-series")
+    @GetMapping("/{siteId}/time-series")
     fun getPeriodData(
-        @Parameter(description = "시설 ID", required = true) @PathVariable facilityId: Long,
+        @Parameter(description = "현장 ID", required = true) @PathVariable siteId: Long,
         @Parameter(description = "데이터 집계 간격", example = "HOUR")
         @RequestParam(defaultValue = "HOUR", required = false) interval: DataInterval,
         @Parameter(description = "조회 시작일(yyyyMMddHHmmss)", required = true)
@@ -57,8 +57,8 @@ class FacilityDataController(
     ): ResponseEntity<DataResponseBody<ListDataResponse>> =
         ResponseEntity.ok(
             DataResponseBody(
-                dataService.getFacilityTimeSeries(
-                    facilityId,
+                dataService.getSiteTimeSeries(
+                    siteId,
                     interval,
                     from,
                     to,

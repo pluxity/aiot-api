@@ -5,8 +5,8 @@ import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -19,7 +19,7 @@ import com.pluxity.aiot.system.event.condition.EventCondition
 class TemperatureHumidityProcessorTestHelper(
     deviceTypeRepository: DeviceTypeRepository,
     deviceProfileRepository: DeviceProfileRepository,
-    facilityRepository: FacilityRepository,
+    siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
@@ -28,7 +28,7 @@ class TemperatureHumidityProcessorTestHelper(
 ) : ProcessorTestHelper(
         deviceTypeRepository,
         deviceProfileRepository,
-        facilityRepository,
+        siteRepository,
         featureRepository,
         eventHistoryRepository,
         actionHistoryService,

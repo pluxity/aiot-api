@@ -1,9 +1,9 @@
 package com.pluxity.aiot.feature.dto
 
-import com.pluxity.aiot.facility.dto.FacilityResponse
-import com.pluxity.aiot.facility.dto.toFacilityResponse
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.file.dto.FileResponse
+import com.pluxity.aiot.site.dto.SiteResponse
+import com.pluxity.aiot.site.dto.toSiteResponse
 import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.system.device.type.dto.toDeviceTypeResponse
 
@@ -18,7 +18,7 @@ data class FeatureResponse(
     val batteryLevel: Int?,
     val eventStatus: String,
     val isActive: Boolean,
-    val facilityResponse: FacilityResponse?,
+    val siteResponse: SiteResponse?,
 )
 
 fun Feature.toFeatureResponse(fileMap: Map<Long, FileResponse>) =
@@ -33,5 +33,5 @@ fun Feature.toFeatureResponse(fileMap: Map<Long, FileResponse>) =
         batteryLevel = this.batteryLevel,
         eventStatus = this.eventStatus!!,
         isActive = this.isActive!!,
-        facilityResponse = this.facility?.toFacilityResponse(),
+        siteResponse = this.site?.toSiteResponse(),
     )

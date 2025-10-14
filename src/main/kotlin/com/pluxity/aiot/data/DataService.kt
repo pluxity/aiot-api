@@ -15,12 +15,12 @@ import com.pluxity.aiot.data.dto.SensorMetrics
 import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.dto.toDeviceDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
-import com.pluxity.aiot.facility.FacilityService
 import com.pluxity.aiot.feature.FeatureService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.site.SiteService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -34,7 +34,7 @@ class DataService(
     private val influxdbProperties: InfluxdbProperties,
     private val queryApi: QueryApi,
     private val featureService: FeatureService,
-    private val facilityService: FacilityService,
+    private val siteService: SiteService,
 ) {
     companion object {
         private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
@@ -58,20 +58,20 @@ class DataService(
     }
 
     @Transactional(readOnly = true)
-    fun getFacilityTimeSeries(
-        facilityId: Long,
+    fun getSiteTimeSeries(
+        siteId: Long,
         interval: DataInterval,
         from: String,
         to: String,
         sensorType: SensorType,
     ): ListDataResponse {
-        facilityService.findByIdResponse(facilityId)
+        siteService.findByIdResponse(siteId)
         val timeRange = Pair(from, to).parseTimeRange()
         val query =
-            getTimeSeriesQuery(from, to, Restrictions.tag("facilityId").equal(facilityId.toString()), sensorType.measureName, interval.unit)
+            getTimeSeriesQuery(from, to, Restrictions.tag("siteId").equal(siteId.toString()), sensorType.measureName, interval.unit)
         return when (sensorType) {
-            SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, facilityId.toString(), interval, timeRange)
-            SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, facilityId.toString(), interval, timeRange)
+            SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, siteId.toString(), interval, timeRange)
+            SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, siteId.toString(), interval, timeRange)
             else -> throw CustomException(ErrorCode.NOT_FOUND_DATA)
         }
     }

@@ -35,7 +35,7 @@ class DisplacementGaugeProcessor(
     override fun process(
         deviceId: String,
         deviceType: DeviceType,
-        facilityId: Long,
+        siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.angleX?.let {
@@ -70,19 +70,19 @@ class DisplacementGaugeProcessor(
             "${SensorType.DISPLACEMENT_GAUGE.description} - DeviceId: $deviceId, " +
                 "Timestamp: ${data.timestamp}, Period: ${data.period}"
         }
-        insertSensorData(data, facilityId, deviceId, data.timestamp)
+        insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 
     override fun insertSensorData(
         content: SubscriptionConResponse,
-        facilityId: Long,
+        siteId: Long,
         deviceId: String,
         timestamp: String,
     ) {
         content.angleX?.let {
             val displacementGauge =
                 DisplacementGauge(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     ANGLE_X,
                     it,
@@ -93,7 +93,7 @@ class DisplacementGaugeProcessor(
         content.angleY?.let {
             val displacementGauge =
                 DisplacementGauge(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     ANGLE_Y,
                     it,

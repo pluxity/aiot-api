@@ -62,11 +62,11 @@ class CommonApiConfig {
             .build()
 
     @Bean
-    fun facilityApiByPath(): GroupedOpenApi =
+    fun siteApiByPath(): GroupedOpenApi =
         GroupedOpenApi
             .builder()
-            .group("5. 시설관리 API")
-            .pathsToMatch("/facilities/**")
+            .group("5. 현장관리 API")
+            .pathsToMatch("/sites/**")
             .build()
 
     @Bean

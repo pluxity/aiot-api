@@ -1,11 +1,11 @@
-package com.pluxity.aiot.facility
+package com.pluxity.aiot.site
 
-import com.pluxity.aiot.facility.dto.FacilityRequest
-import com.pluxity.aiot.facility.dto.FacilityResponse
-import com.pluxity.aiot.facility.dto.toFacilityResponse
 import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.constant.ErrorCode.NOT_FOUND_FACILITY
+import com.pluxity.aiot.global.constant.ErrorCode.NOT_FOUND_SITE
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.site.dto.SiteRequest
+import com.pluxity.aiot.site.dto.SiteResponse
+import com.pluxity.aiot.site.dto.toSiteResponse
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Polygon
 import org.locationtech.jts.geom.PrecisionModel
@@ -15,46 +15,46 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class FacilityService(
-    private val facilityRepository: FacilityRepository,
+class SiteService(
+    private val siteRepository: SiteRepository,
 ) {
     private val gf = GeometryFactory(PrecisionModel(), 4326)
     private val wktReader = WKTReader(gf)
 
     @Transactional
-    fun save(request: FacilityRequest): Long {
+    fun save(request: SiteRequest): Long {
         val location = parsePolygon(request.location)
-        val facility =
-            Facility(
+        val site =
+            Site(
                 name = request.name,
                 description = request.description,
                 location = location,
             )
-        return facilityRepository.save(facility).id!!
+        return siteRepository.save(site).id!!
     }
 
     @Transactional(readOnly = true)
-    fun findAll(): List<FacilityResponse> = facilityRepository.findAllByOrderByCreatedAtDesc().map { it.toFacilityResponse() }
+    fun findAll(): List<SiteResponse> = siteRepository.findAllByOrderByCreatedAtDesc().map { it.toSiteResponse() }
 
     @Transactional(readOnly = true)
-    fun findByIdResponse(id: Long): FacilityResponse = findById(id).toFacilityResponse()
+    fun findByIdResponse(id: Long): SiteResponse = findById(id).toSiteResponse()
 
     @Transactional
     fun putUpdate(
         id: Long,
-        request: FacilityRequest,
+        request: SiteRequest,
     ) {
-        val facility = findById(id)
+        val site = findById(id)
         val location = parsePolygon(request.location)
-        facility.updateName(request.name)
-        facility.updateDescription(request.description)
-        facility.updateLocation(location)
+        site.updateName(request.name)
+        site.updateDescription(request.description)
+        site.updateLocation(location)
     }
 
     @Transactional
-    fun deleteFacility(id: Long) {
-        val facility = findById(id)
-        facilityRepository.delete(facility)
+    fun delete(id: Long) {
+        val site = findById(id)
+        siteRepository.delete(site)
     }
 
     private fun parsePolygon(wkt: String): Polygon {
@@ -65,8 +65,8 @@ class FacilityService(
         return location
     }
 
-    private fun findById(id: Long): Facility =
-        facilityRepository
+    private fun findById(id: Long): Site =
+        siteRepository
             .findByIdOrNull(id)
-            ?: throw CustomException(NOT_FOUND_FACILITY, id)
+            ?: throw CustomException(NOT_FOUND_SITE, id)
 }

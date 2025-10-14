@@ -1,6 +1,5 @@
 package com.pluxity.aiot.feature
 
-import com.pluxity.aiot.facility.Facility
 import com.pluxity.aiot.feature.dto.FeatureResponse
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
@@ -9,6 +8,7 @@ import com.pluxity.aiot.file.extensions.getFileMapByIds
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeService
@@ -34,11 +34,11 @@ class FeatureService(
                     select(entity(Feature::class))
                         .from(
                             entity(Feature::class),
-                            leftFetchJoin(Feature::facility),
+                            leftFetchJoin(Feature::site),
                             leftFetchJoin(Feature::deviceType),
                         ).where(
                             and(
-                                searchCondition?.facilityId?.let { path(Facility::id).equal(it) },
+                                searchCondition?.siteId?.let { path(Site::id).equal(it) },
                                 searchCondition?.deviceId?.takeIf { it.isNotBlank() }?.let { path(Feature::deviceId).equal(it) },
                                 searchCondition?.name?.takeIf { it.isNotBlank() }?.let { path(Feature::name).equal(it) },
                                 searchCondition?.deviceTypeId?.let { path(DeviceType::id).equal(it) },

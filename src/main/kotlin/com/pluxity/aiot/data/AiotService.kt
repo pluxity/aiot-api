@@ -11,7 +11,6 @@ import com.pluxity.aiot.data.dto.MobiusLocationResponse
 import com.pluxity.aiot.data.dto.MobiusUrilResponse
 import com.pluxity.aiot.data.dto.SubscriptionM2mSub
 import com.pluxity.aiot.data.dto.SubscriptionRequest
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.config.NgrokConfig
@@ -19,6 +18,7 @@ import com.pluxity.aiot.global.config.WebClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.SubscriptionProperties
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.mobius.MobiusConfigService
 import com.pluxity.aiot.system.mobius.MobiusUrlUpdatedEvent
@@ -51,7 +51,7 @@ class AiotService(
     private val deviceTypeRepository: DeviceTypeRepository,
     private val featureRepository: FeatureRepository,
     private val abbreviationRepository: AbbreviationRepository,
-    private val facilityRepository: FacilityRepository,
+    private val siteRepository: SiteRepository,
     mobiusConfigService: MobiusConfigService,
     webClientFactory: WebClientFactory,
     private val subscriptionProperties: SubscriptionProperties,
@@ -103,8 +103,8 @@ class AiotService(
                                 fetchDeviceLocationData(deviceId)?.let { locationData ->
                                     val batteryLevel = fetchDeviceBatteryData(deviceId)
                                     log.info { "Status 업데이트 성공: $deviceId (${locationData.latitude}, ${locationData.longitude})" }
-                                    val facility =
-                                        facilityRepository.findFirstByPointInPolygon(
+                                    val site =
+                                        siteRepository.findFirstByPointInPolygon(
                                             locationData.longitude,
                                             locationData.latitude,
                                         )
@@ -112,7 +112,7 @@ class AiotService(
                                         locationData.longitude,
                                         locationData.latitude,
                                         batteryLevel,
-                                        facility,
+                                        site,
                                     )
                                 } ?: log.warn { "위치 데이터 없음: $deviceId" }
                             } catch (e: Exception) {
@@ -351,7 +351,7 @@ class AiotService(
     }
 
     fun subscription() {
-        val activeFeatures = featureRepository.findByIsActiveTrueAndFacilityIsNotNull()
+        val activeFeatures = featureRepository.findByIsActiveTrueAndSiteIsNotNull()
         val subscriptionUrl = getSubscriptionUrl()
         log.info { "Setting up subscriptions for active Features using URL: $subscriptionUrl" }
 

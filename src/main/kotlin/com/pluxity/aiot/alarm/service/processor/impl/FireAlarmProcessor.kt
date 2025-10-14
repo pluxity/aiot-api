@@ -34,7 +34,7 @@ class FireAlarmProcessor(
     override fun process(
         deviceId: String,
         deviceType: DeviceType,
-        facilityId: Long,
+        siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.fireAlarm?.let {
@@ -52,19 +52,19 @@ class FireAlarmProcessor(
             )
             log.debug { "Fire Alarm processed: $it" }
         }
-        insertSensorData(data, facilityId, deviceId, data.timestamp)
+        insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 
     override fun insertSensorData(
         content: SubscriptionConResponse,
-        facilityId: Long,
+        siteId: Long,
         deviceId: String,
         timestamp: String,
     ) {
         content.fireAlarm?.let {
             val fireAlarm =
                 FireAlarm(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     if (it) 1.0 else 0.0,
                     DateTimeUtils.parseUtc(timestamp),

@@ -1,4 +1,4 @@
-package com.pluxity.aiot.facility
+package com.pluxity.aiot.site
 
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.entity.BaseEntity
@@ -14,8 +14,8 @@ import jakarta.persistence.Table
 import org.locationtech.jts.geom.Polygon
 
 @Entity
-@Table(name = "facility")
-class Facility(
+@Table(name = "site")
+class Site(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
@@ -27,11 +27,11 @@ class Facility(
     var location: Polygon,
 ) : BaseEntity(),
     Permissible {
-    @OneToMany(mappedBy = "facility")
+    @OneToMany(mappedBy = "site")
     val features: MutableList<Feature> = mutableListOf()
 
     fun updateName(name: String) {
-        require(name.isNotBlank()) { "시설명은 빈 값일 수 없습니다" }
+        require(name.isNotBlank()) { "현장명은 빈 값일 수 없습니다" }
         this.name = name
     }
 
@@ -47,5 +47,5 @@ class Facility(
         get() = id.toString()
 
     override val resourceType: ResourceType
-        get() = ResourceType.FACILITY
+        get() = ResourceType.SITE
 }

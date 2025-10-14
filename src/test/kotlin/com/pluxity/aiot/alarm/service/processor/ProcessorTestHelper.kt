@@ -5,10 +5,10 @@ import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.fixture.FacilityFixture
 import com.pluxity.aiot.fixture.FeatureFixture
+import com.pluxity.aiot.fixture.SiteFixture
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -24,7 +24,7 @@ import com.pluxity.aiot.system.event.setting.EventSetting
 abstract class ProcessorTestHelper(
     val deviceTypeRepository: DeviceTypeRepository,
     protected val deviceProfileRepository: DeviceProfileRepository,
-    val facilityRepository: FacilityRepository,
+    val siteRepository: SiteRepository,
     val featureRepository: FeatureRepository,
     protected val eventHistoryRepository: EventHistoryRepository,
     protected val actionHistoryService: ActionHistoryService,
@@ -140,19 +140,19 @@ abstract class ProcessorTestHelper(
         // 6. DeviceType 저장 (CASCADE)
         val savedDeviceType = deviceTypeRepository.save(deviceType)
 
-        // 7. Facility & Feature 생성
-        val facility = facilityRepository.save(FacilityFixture.create(name = "테스트 시설 $deviceId"))
+        // 7. Site & Feature 생성
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
                 deviceType = savedDeviceType,
-                facility = facility,
+                site = site,
             ),
         )
 
-        return TestSetup(savedDeviceType, facility.id!!)
+        return TestSetup(savedDeviceType, site.id!!)
     }
 
     /**
@@ -224,18 +224,18 @@ abstract class ProcessorTestHelper(
         eventSetting.addCondition(condition)
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)
-        val facility = facilityRepository.save(FacilityFixture.create(name = "테스트 시설 $deviceId"))
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
                 deviceType = savedDeviceType,
-                facility = facility,
+                site = site,
             ),
         )
 
-        return TestSetup(savedDeviceType, facility.id!!)
+        return TestSetup(savedDeviceType, site.id!!)
     }
 
     /**
@@ -285,18 +285,18 @@ abstract class ProcessorTestHelper(
         }
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)
-        val facility = facilityRepository.save(FacilityFixture.create(name = "테스트 시설 $deviceId"))
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
                 deviceType = savedDeviceType,
-                facility = facility,
+                site = site,
             ),
         )
 
-        return TestSetup(savedDeviceType, facility.id!!)
+        return TestSetup(savedDeviceType, site.id!!)
     }
 
     data class ConditionSpec(
@@ -313,6 +313,6 @@ abstract class ProcessorTestHelper(
 
     data class TestSetup(
         val deviceType: DeviceType,
-        val facilityId: Long,
+        val siteId: Long,
     )
 }

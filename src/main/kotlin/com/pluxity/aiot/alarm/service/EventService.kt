@@ -33,7 +33,7 @@ class EventService(
                 val reportingPeriod = request.sgn.nev.rep.cin.con.period
 
                 // 데이터 일관성 서비스에 등록
-                sensorDataMigrationService.registerSensorData(deviceId, objectId, feature.facility?.id!!, reportingPeriod)
+                sensorDataMigrationService.registerSensorData(deviceId, objectId, feature.site?.id!!, reportingPeriod)
                 log.debug { "센서 데이터 모니터링 등록 - deviceId: $deviceId, objectId: $objectId, reportingPeriod: ${reportingPeriod}초" }
             }
         } catch (e: Exception) {

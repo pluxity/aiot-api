@@ -17,7 +17,7 @@ interface FeatureRepository :
 
     fun deleteAllByDeviceIdIn(deviceIds: List<String>)
 
-    fun findByIsActiveTrueAndFacilityIsNotNull(): List<Feature>
+    fun findByIsActiveTrueAndSiteIsNotNull(): List<Feature>
 
     fun findByDeviceId(deviceId: String): Feature?
 }

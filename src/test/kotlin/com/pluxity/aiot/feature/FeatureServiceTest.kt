@@ -1,13 +1,13 @@
 package com.pluxity.aiot.feature
 
-import com.pluxity.aiot.facility.FacilityRepository
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.fixture.DeviceTypeFixture
-import com.pluxity.aiot.fixture.FacilityFixture
 import com.pluxity.aiot.fixture.FeatureFixture
+import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
@@ -26,12 +26,13 @@ class FeatureServiceTest(
     private val featureService: FeatureService,
     private val featureRepository: FeatureRepository,
     private val deviceTypeRepository: DeviceTypeRepository,
-    private val facilityRepository: FacilityRepository,
+    private val siteRepository: SiteRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
 
         Given("Feature 조회 기능") {
+            featureRepository.deleteAll()
             When("전체 Feature를 조회하면") {
                 // 사전 조건: 데이터 준비
                 val deviceType1 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_001"))
@@ -52,31 +53,31 @@ class FeatureServiceTest(
                 }
             }
 
-            When("facilityId로 필터링하면") {
-                // 사전 조건: Facility와 Feature 생성
-                val facility1 = facilityRepository.save(FacilityFixture.create(name = "Facility 1"))
-                val facility2 = facilityRepository.save(FacilityFixture.create(name = "Facility 2"))
+            When("siteId로 필터링하면") {
+                // 사전 조건: Site와 Feature 생성
+                val site1 = siteRepository.save(SiteFixture.create(name = "Site 1"))
+                val site2 = siteRepository.save(SiteFixture.create(name = "Site 2"))
                 val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_FAC_001"))
 
                 featureRepository.saveAll(
                     listOf(
                         FeatureFixture.create(
                             deviceType = deviceType,
-                            facility = facility1,
+                            site = site1,
                             deviceId = "DEVICE_FAC_001",
                             objectId = "OBJ_FAC_001",
                             name = "Device Fac 1",
                         ),
                         FeatureFixture.create(
                             deviceType = deviceType,
-                            facility = facility1,
+                            site = site1,
                             deviceId = "DEVICE_FAC_002",
                             objectId = "OBJ_FAC_002",
                             name = "Device Fac 2",
                         ),
                         FeatureFixture.create(
                             deviceType = deviceType,
-                            facility = facility2,
+                            site = site2,
                             deviceId = "DEVICE_FAC_003",
                             objectId = "OBJ_FAC_003",
                             name = "Device Fac 3",
@@ -84,12 +85,12 @@ class FeatureServiceTest(
                     ),
                 )
 
-                val searchCondition = FeatureSearchCondition(facilityId = facility1.id!!)
+                val searchCondition = FeatureSearchCondition(siteId = site1.id!!)
                 val result = featureService.findAll(searchCondition)
 
-                Then("해당 Facility의 Feature만 반환된다") {
+                Then("해당 Site의 Feature만 반환된다") {
                     result shouldHaveSize 2
-                    result.all { it.facilityResponse?.id == facility1.id } shouldBe true
+                    result.all { it.siteResponse?.id == site1.id } shouldBe true
                 }
             }
 

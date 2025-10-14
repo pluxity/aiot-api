@@ -8,7 +8,7 @@ enum class ResourceType(
     val endpoint: String,
 ) {
     NONE("NONE", ""),
-    FACILITY("시설", "facilities"),
+    SITE("현장", "sites"),
     ;
 
     companion object {

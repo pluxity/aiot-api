@@ -54,7 +54,7 @@ class SensorDataMigrationService(
 
         allFeatures.forEach { feature ->
             try {
-                migrateDeviceData(feature.deviceId, feature.objectId, feature.facility?.id!!)
+                migrateDeviceData(feature.deviceId, feature.objectId, feature.site?.id!!)
             } catch (e: Exception) {
                 log.error(e) { "Error migrating data for device: ${feature.deviceId}, object: ${feature.objectId}" }
             }
@@ -69,7 +69,7 @@ class SensorDataMigrationService(
     fun migrateDeviceData(
         deviceId: String,
         objectId: String,
-        facilityId: Long,
+        siteId: Long,
     ) {
         log.info { "Migrating data for device: $deviceId, object: $objectId" }
 
@@ -94,7 +94,7 @@ class SensorDataMigrationService(
         for (sensorData in mobiusData) {
             val content = sensorData.con
             val timestamp = content.timestamp
-            processorMap[objectId]?.insertSensorData(content, facilityId, deviceId, timestamp)
+            processorMap[objectId]?.insertSensorData(content, siteId, deviceId, timestamp)
         }
     }
 
@@ -202,7 +202,7 @@ class SensorDataMigrationService(
     fun registerSensorData(
         deviceId: String,
         objectId: String,
-        facilityId: Long,
+        siteId: Long,
         reportingPeriod: Int?,
     ) {
         val deviceKey = "$deviceId:$objectId"
@@ -226,7 +226,7 @@ class SensorDataMigrationService(
                     log.info { "데이터 누락 감지 - deviceId: $deviceId, objectId: $objectId, Reporting Period: ${period}초" }
 
                     try {
-                        migrateDeviceData(deviceId, objectId, facilityId)
+                        migrateDeviceData(deviceId, objectId, siteId)
                         log.info { "데이터 복구 완료 - deviceId: $deviceId, objectId: $objectId" }
 
                         // 성공 시 실패 카운트 리셋
@@ -248,7 +248,7 @@ class SensorDataMigrationService(
                     }
 
                     // 타이머 재설정 (지속적 모니터링)
-                    registerSensorData(deviceId, objectId, facilityId, reportingPeriod)
+                    registerSensorData(deviceId, objectId, siteId, reportingPeriod)
                 } catch (e: Exception) {
                     log.error(e) { "데이터 복구 처리 중 오류 - deviceId: $deviceId, objectId: $objectId" }
                 } finally {

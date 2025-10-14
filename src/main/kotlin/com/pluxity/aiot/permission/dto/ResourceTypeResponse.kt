@@ -7,15 +7,15 @@ import io.swagger.v3.oas.annotations.media.Schema
 data class ResourceTypeResponse(
     @field:Schema(
         description = "리소스 타입의 고유 키 (Enum 상수 이름)",
-        example = "FACILITY",
+        example = "SITE",
     ) val key: String,
     @field:Schema(
         description = "리소스 타입의 한글 이름",
-        example = "시설",
+        example = "현장",
     ) val name: String,
     @field:Schema(
         description = "관련 API 엔드포인트 경로",
-        example = "facilities",
+        example = "sites",
     ) val endpoint: String,
 )
 

@@ -36,7 +36,7 @@ class TemperatureHumidityProcessor(
     override fun process(
         deviceId: String,
         deviceType: DeviceType,
-        facilityId: Long,
+        siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.temperature?.let {
@@ -88,19 +88,19 @@ class TemperatureHumidityProcessor(
                     "(Temp: ${data.temperature}°C, Humidity: ${data.humidity}%)"
             }
         }
-        insertSensorData(data, facilityId, deviceId, data.timestamp)
+        insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 
     override fun insertSensorData(
         content: SubscriptionConResponse,
-        facilityId: Long,
+        siteId: Long,
         deviceId: String,
         timestamp: String,
     ) {
         content.temperature?.let {
             val tempMeasure =
                 TemperatureHumidity(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     it,
                     "Temperature",
@@ -111,7 +111,7 @@ class TemperatureHumidityProcessor(
         content.humidity?.let {
             val humidityMeasure =
                 TemperatureHumidity(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     it,
                     "Humidity",
@@ -122,7 +122,7 @@ class TemperatureHumidityProcessor(
         if (content.temperature != null && content.humidity != null) {
             val discomfortMeasure =
                 TemperatureHumidity(
-                    facilityId.toString(),
+                    siteId.toString(),
                     deviceId,
                     calculateDiscomfortIndex(content.temperature, content.humidity),
                     "DiscomfortIndex",

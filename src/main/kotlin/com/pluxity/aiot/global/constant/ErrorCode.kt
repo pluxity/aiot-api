@@ -101,7 +101,7 @@ enum class ErrorCode(
     NOT_FOUND_FACILITY_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 시설 카테고리를 찾을 수 없습니다."),
     NOT_FOUND_FACILITY_PARENT_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 facility의 상위 카테고리를 찾을 수 없습니다."),
     NOT_FOUND_FACILITY_CODE(HttpStatus.NOT_FOUND, "코드가 %s인 시설을 찾을 수 없습니다."),
-    NOT_FOUND_FACILITY(HttpStatus.NOT_FOUND, "ID가 %s인 시설을 찾을 수 없습니다."),
+    NOT_FOUND_SITE(HttpStatus.NOT_FOUND, "ID가 %s인 현장을 찾을 수 없습니다."),
     NOT_FOUND_FACILITY_PATH(HttpStatus.NOT_FOUND, "ID가 %s인 경로를 찾을 수 없습니다."),
     NOT_FOUND_LINE(HttpStatus.NOT_FOUND, "ID가 %s인 노선을 찾을 수 없습니다."),
     NOT_FOUND_PATH_TYPE(HttpStatus.NOT_FOUND, "타입 %s를 찾을 수 없습니다."),

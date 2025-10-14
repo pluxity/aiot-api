@@ -6,7 +6,7 @@ import java.time.Instant
 
 @Measurement(name = "displacement_gauge")
 class DisplacementGauge(
-    @Column(tag = true) val facilityId: String,
+    @Column(tag = true) val siteId: String,
     @Column(tag = true) val deviceId: String,
     @Column(tag = true) val fieldKey: String,
     @Column val value: Double,

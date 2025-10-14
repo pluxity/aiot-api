@@ -7,7 +7,7 @@ data class PermissionRequest(
     @field:Schema(
         description = "자원 유형",
         implementation = ResourceType::class,
-        example = "FACILITY",
+        example = "SITE",
     ) val resourceType: String,
     @field:Schema(
         description = "자원 아이디",

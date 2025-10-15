@@ -1,6 +1,5 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.global.annotation.ResponseCreated
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
@@ -12,12 +11,9 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -29,38 +25,6 @@ import org.springframework.web.bind.annotation.RestController
 class DeviceTypeController(
     private val deviceTypeService: DeviceTypeService,
 ) {
-    @Operation(summary = "디바이스 종류 생성", description = "새로운 디바이스 종류를 생성합니다")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "201", description = "성공"),
-            ApiResponse(
-                responseCode = "400",
-                description = "잘못된 요청",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "500",
-                description = "서버 오류",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-        ],
-    )
-    @ResponseCreated(path = "/device-types/{id}")
-    @PostMapping
-    fun create(
-        @RequestBody @Valid request: DeviceTypeRequest,
-    ): ResponseEntity<Long> = ResponseEntity.ok(deviceTypeService.create(request))
-
     @Operation(summary = "디바이스 종류 목록 조회", description = "모든 디바이스 종류 목록을 조회합니다")
     @ApiResponses(
         value = [
@@ -186,50 +150,6 @@ class DeviceTypeController(
         @RequestBody request: DeviceTypeRequest,
     ): ResponseEntity<Void> {
         deviceTypeService.update(id, request)
-        return ResponseEntity.ok().build()
-    }
-
-    @Operation(summary = "디바이스 종류 정보 삭제", description = "디바이스 종류 정보를 삭제합니다")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "204", description = "삭제 성공"),
-            ApiResponse(
-                responseCode = "400",
-                description = "잘못된 요청",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "디바이스 종류 정보를 찾을 수 없음",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "500",
-                description = "서버 오류",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-        ],
-    )
-    @DeleteMapping("/{id}")
-    fun delete(
-        @PathVariable id: Long,
-    ): ResponseEntity<Void> {
-        deviceTypeService.delete(id)
         return ResponseEntity.ok().build()
     }
 }

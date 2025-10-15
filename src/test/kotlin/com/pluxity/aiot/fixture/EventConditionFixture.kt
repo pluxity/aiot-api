@@ -1,8 +1,8 @@
 package com.pluxity.aiot.fixture
 
 import com.pluxity.aiot.system.device.event.DeviceEvent
+import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.setting.EventSetting
 
 object EventConditionFixture {
     fun create(
@@ -20,7 +20,7 @@ object EventConditionFixture {
         guideMessage: String? = null,
         notificationIntervalMinutes: Int = 0,
         order: Int? = null,
-        eventSetting: EventSetting? = null,
+        deviceProfileType: DeviceProfileType? = null,
     ): EventCondition {
         val condition =
             EventCondition(
@@ -39,7 +39,7 @@ object EventConditionFixture {
                 notificationIntervalMinutes = notificationIntervalMinutes,
                 order = order,
             )
-        eventSetting?.let { condition.addEventSetting(it) }
+        deviceProfileType?.let { condition.addDeviceProfileType(it) }
         return condition
     }
 }

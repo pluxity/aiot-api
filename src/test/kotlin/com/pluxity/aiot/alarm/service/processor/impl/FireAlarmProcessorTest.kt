@@ -217,8 +217,6 @@ class FireAlarmProcessorTest(
                 val condition =
                     setup.deviceType.deviceProfileTypes
                         .first()
-                        .eventSettings
-                        .first()
                         .conditions
                         .first()
 
@@ -251,8 +249,6 @@ class FireAlarmProcessorTest(
                 val processor = helper.createProcessor()
                 val condition =
                     setup.deviceType.deviceProfileTypes
-                        .first()
-                        .eventSettings
                         .first()
                         .conditions
                         .first()

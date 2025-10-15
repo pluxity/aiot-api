@@ -1,7 +1,7 @@
 package com.pluxity.aiot.system.device.profile
 
 import com.pluxity.aiot.system.device.type.DeviceType
-import com.pluxity.aiot.system.event.setting.EventSetting
+import com.pluxity.aiot.system.event.condition.EventCondition
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -25,11 +25,10 @@ class DeviceProfileType(
     var deviceType: DeviceType,
 ) {
     @OneToMany(mappedBy = "deviceProfileType", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val eventSettings: MutableSet<EventSetting> = mutableSetOf()
+    val conditions: MutableSet<EventCondition> = mutableSetOf()
 
-    fun addEventSetting(eventSetting: EventSetting) {
-        this.eventSettings.add(eventSetting)
+    fun addCondition(condition: EventCondition) {
+        this.conditions.add(condition)
+        condition.deviceProfileType = this
     }
-
-    fun getEventSetting(): EventSetting? = eventSettings.firstOrNull()
 }

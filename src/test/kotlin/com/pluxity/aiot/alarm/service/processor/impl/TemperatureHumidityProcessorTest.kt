@@ -772,8 +772,6 @@ class TemperatureHumidityProcessorTest(
                 val condition =
                     setup.deviceType.deviceProfileTypes
                         .first()
-                        .eventSettings
-                        .first()
                         .conditions
                         .first()
                 condition.notificationEnabled = false

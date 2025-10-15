@@ -20,7 +20,6 @@ import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.setting.EventSetting
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -109,15 +108,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                // EventSetting 생성
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 // DeviceEvent 생성
                 val deviceEvent =
                     DeviceEvent(
@@ -139,7 +129,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 condition.changeMinMax(25.0, 30.0)
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 // DeviceType 저장 (CASCADE)
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
@@ -225,14 +215,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "HumidityDanger",
@@ -252,7 +234,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 condition.changeMinMax(80.0, 100.0)
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "습도 테스트 시설"))
@@ -330,14 +312,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "FireDetected",
@@ -356,7 +330,7 @@ class ProcessorEndToEndTest(
                         notificationIntervalMinutes = 1,
                         order = 1,
                     )
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "화재 테스트 시설"))
@@ -431,14 +405,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "FireDetected",
@@ -456,7 +422,7 @@ class ProcessorEndToEndTest(
                         guideMessage = "화재 발생 - 수동 대응 필요",
                         order = 1,
                     )
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "화재 MANUAL 시설"))
@@ -527,14 +493,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "AngleXCaution",
@@ -555,7 +513,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 condition.changeMinMax(5.0, 90.0)
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "변위 테스트 시설"))
@@ -630,14 +588,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "AngleYCaution",
@@ -657,7 +607,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 condition.changeMinMax(3.0, 0.0)
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "변위 Y축 시설"))
@@ -754,14 +704,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(tempProfileType)
 
-                val tempEventSetting =
-                    EventSetting(
-                        deviceProfileType = tempProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                tempProfileType.addEventSetting(tempEventSetting)
-
                 val tempDeviceEvent =
                     DeviceEvent(
                         name = "TempWarning",
@@ -780,7 +722,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 tempCondition.changeMinMax(25.0, 30.0)
-                tempEventSetting.addCondition(tempCondition)
+                tempProfileType.addCondition(tempCondition)
 
                 // Humidity DeviceProfileType
                 val humidityProfileType =
@@ -789,14 +731,6 @@ class ProcessorEndToEndTest(
                         deviceType = deviceType,
                     )
                 deviceType.deviceProfileTypes.add(humidityProfileType)
-
-                val humidityEventSetting =
-                    EventSetting(
-                        deviceProfileType = humidityProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                humidityProfileType.addEventSetting(humidityEventSetting)
 
                 val humidityDeviceEvent =
                     DeviceEvent(
@@ -816,7 +750,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 humidityCondition.changeMinMax(80.0, 100.0)
-                humidityEventSetting.addCondition(humidityCondition)
+                humidityProfileType.addCondition(humidityCondition)
 
                 // AngleX DeviceProfileType
                 val angleXProfileType =
@@ -825,14 +759,6 @@ class ProcessorEndToEndTest(
                         deviceType = deviceType,
                     )
                 deviceType.deviceProfileTypes.add(angleXProfileType)
-
-                val angleXEventSetting =
-                    EventSetting(
-                        deviceProfileType = angleXProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                angleXProfileType.addEventSetting(angleXEventSetting)
 
                 val angleXDeviceEvent =
                     DeviceEvent(
@@ -852,7 +778,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 angleXCondition.changeMinMax(5.0, 90.0)
-                angleXEventSetting.addCondition(angleXCondition)
+                angleXProfileType.addCondition(angleXCondition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "다중 센서 시설"))
@@ -972,14 +898,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(discomfortProfileType)
 
-                val discomfortEventSetting =
-                    EventSetting(
-                        deviceProfileType = discomfortProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                discomfortProfileType.addEventSetting(discomfortEventSetting)
-
                 val discomfortDeviceEvent =
                     DeviceEvent(
                         name = "DiscomfortCaution",
@@ -998,7 +916,7 @@ class ProcessorEndToEndTest(
                         guideMessage = "불쾌지수 높음",
                         order = 1,
                     )
-                discomfortEventSetting.addCondition(discomfortCondition)
+                discomfortProfileType.addCondition(discomfortCondition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "불쾌지수 시설"))
@@ -1073,14 +991,6 @@ class ProcessorEndToEndTest(
                     )
                 deviceType.deviceProfileTypes.add(deviceProfileType)
 
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
                 val deviceEvent =
                     DeviceEvent(
                         name = "TempWarning",
@@ -1100,7 +1010,7 @@ class ProcessorEndToEndTest(
                         order = 1,
                     )
                 condition.changeMinMax(25.0, 30.0)
-                eventSetting.addCondition(condition)
+                deviceProfileType.addCondition(condition)
 
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Interval 시설"))
@@ -1144,290 +1054,6 @@ class ProcessorEndToEndTest(
                     // Note: Notification Interval은 실시간 시간 비교를 사용하므로,
                     // 테스트 환경에서는 실제 시간 경과를 시뮬레이션하기 어렵습니다.
                     // 여기서는 첫 이벤트가 MANUAL_PENDING으로 저장되는 것만 검증합니다.
-                }
-            }
-        }
-
-        Given("2-7. Filter Chain 복합 검증") {
-            When("eventEnabled = false - 이벤트 처리 안 됨") {
-                val tempProfile =
-                    getOrCreateProfile(
-                        fieldKey = "Temperature",
-                        fieldType = DeviceProfile.FieldType.Float,
-                    )
-
-                val deviceType =
-                    DeviceType(
-                        objectId = "FILTER_E2E_001",
-                        description = "필터 테스트",
-                        version = "1.0",
-                    )
-
-                val deviceProfileType =
-                    DeviceProfileType(
-                        deviceProfile = tempProfile,
-                        deviceType = deviceType,
-                    )
-                deviceType.deviceProfileTypes.add(deviceProfileType)
-
-                // eventEnabled = false
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = false,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
-                val deviceEvent =
-                    DeviceEvent(
-                        name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
-                    )
-                deviceEvent.updateDeviceType(deviceType)
-
-                val condition =
-                    EventCondition(
-                        deviceEvent = deviceEvent,
-                        value = "25.0,30.0",
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        notificationEnabled = true,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 경고",
-                        order = 1,
-                    )
-                condition.changeMinMax(25.0, 30.0)
-                eventSetting.addCondition(condition)
-
-                val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
-                val site = siteRepository.saveAndFlush(SiteFixture.create(name = "필터 시설"))
-                val initialEventStatus = "NORMAL"
-                val feature =
-                    featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceId = "FILTER_DEVICE_001",
-                            objectId = "FILTER_E2E_001",
-                            deviceType = savedDeviceType,
-                            site = site,
-                        ),
-                    )
-
-                val processor =
-                    TemperatureHumidityProcessor(
-                        sseServiceMock,
-                        eventHistoryRepository,
-                        actionHistoryService,
-                        featureRepository,
-                        writeApiMock,
-                    )
-
-                val sensorData =
-                    com.pluxity.aiot.alarm.dto.SubscriptionConResponse(
-                        temperature = 28.0, // 조건 충족
-                        humidity = null,
-                        timestamp = "20250115T103000",
-                        period = 60,
-                        fireAlarm = null,
-                        angleX = null,
-                        angleY = null,
-                    )
-
-                processor.process("FILTER_DEVICE_001", savedDeviceType, site.id!!, sensorData)
-
-                Then("eventEnabled=false이므로 EventHistory 생성 안 됨 및 Feature.eventStatus 변경 없음") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId("FILTER_DEVICE_001")
-                    eventHistories shouldHaveSize 0
-
-                    val updatedFeature = featureRepository.findById(feature.id!!).get()
-                    updatedFeature.eventStatus shouldBe initialEventStatus
-                }
-            }
-
-            When("notificationEnabled = false - 조건 충족해도 알림 발생 안 함") {
-                val tempProfile =
-                    getOrCreateProfile(
-                        fieldKey = "Temperature",
-                        fieldType = DeviceProfile.FieldType.Float,
-                    )
-
-                val deviceType =
-                    DeviceType(
-                        objectId = "NOTI_FILTER_E2E_001",
-                        description = "알림 필터 테스트",
-                        version = "1.0",
-                    )
-
-                val deviceProfileType =
-                    DeviceProfileType(
-                        deviceProfile = tempProfile,
-                        deviceType = deviceType,
-                    )
-                deviceType.deviceProfileTypes.add(deviceProfileType)
-
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                    )
-                deviceProfileType.addEventSetting(eventSetting)
-
-                val deviceEvent =
-                    DeviceEvent(
-                        name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
-                    )
-                deviceEvent.updateDeviceType(deviceType)
-
-                // notificationEnabled = false
-                val condition =
-                    EventCondition(
-                        deviceEvent = deviceEvent,
-                        value = "25.0,30.0",
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        notificationEnabled = false,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 경고",
-                        order = 1,
-                    )
-                condition.changeMinMax(25.0, 30.0)
-                eventSetting.addCondition(condition)
-
-                val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
-                val site = siteRepository.saveAndFlush(SiteFixture.create(name = "알림 필터 시설"))
-                val feature =
-                    featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceId = "NOTI_FILTER_DEVICE_001",
-                            objectId = "NOTI_FILTER_E2E_001",
-                            deviceType = savedDeviceType,
-                            site = site,
-                        ),
-                    )
-
-                val processor =
-                    TemperatureHumidityProcessor(
-                        sseServiceMock,
-                        eventHistoryRepository,
-                        actionHistoryService,
-                        featureRepository,
-                        writeApiMock,
-                    )
-
-                val sensorData =
-                    com.pluxity.aiot.alarm.dto.SubscriptionConResponse(
-                        temperature = 28.0, // 조건 충족
-                        humidity = null,
-                        timestamp = "20250115T103000",
-                        period = 60,
-                        fireAlarm = null,
-                        angleX = null,
-                        angleY = null,
-                    )
-
-                processor.process("NOTI_FILTER_DEVICE_001", savedDeviceType, site.id!!, sensorData)
-
-                Then("notificationEnabled=false이므로 EventHistory 생성 안 됨 및 Feature.eventStatus 변경 없음") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId("NOTI_FILTER_DEVICE_001")
-                    eventHistories shouldHaveSize 0
-
-                    val updatedFeature = featureRepository.findById(feature.id!!).get()
-                    updatedFeature.eventStatus shouldBe "NORMAL"
-                }
-            }
-
-            When("isPeriodic = true, months 필터링 - 현재 월이 아니면 이벤트 처리 안 됨") {
-                val tempProfile =
-                    getOrCreateProfile(
-                        fieldKey = "Temperature",
-                        fieldType = DeviceProfile.FieldType.Float,
-                    )
-
-                val deviceType =
-                    DeviceType(
-                        objectId = "PERIODIC_FILTER_E2E_001",
-                        description = "주기 필터 테스트",
-                        version = "1.0",
-                    )
-
-                val deviceProfileType =
-                    DeviceProfileType(
-                        deviceProfile = tempProfile,
-                        deviceType = deviceType,
-                    )
-                deviceType.deviceProfileTypes.add(deviceProfileType)
-
-                // isPeriodic = true, months = [1,2,3] (현재 월이 10월이므로 필터링됨)
-                val eventSetting =
-                    EventSetting(
-                        deviceProfileType = deviceProfileType,
-                        eventEnabled = true,
-                        isOriginal = true,
-                        isPeriodic = true,
-                    )
-                eventSetting.months = mutableSetOf(1, 2, 3) // 1~3월만 활성화
-                deviceProfileType.addEventSetting(eventSetting)
-
-                val deviceEvent =
-                    DeviceEvent(
-                        name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
-                    )
-                deviceEvent.updateDeviceType(deviceType)
-
-                val condition =
-                    EventCondition(
-                        deviceEvent = deviceEvent,
-                        value = "25.0,30.0",
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        notificationEnabled = true,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 경고",
-                        order = 1,
-                    )
-                condition.changeMinMax(25.0, 30.0)
-                eventSetting.addCondition(condition)
-
-                val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
-                val site = siteRepository.saveAndFlush(SiteFixture.create(name = "주기 필터 시설"))
-                val feature =
-                    featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceId = "PERIODIC_FILTER_DEVICE_001",
-                            objectId = "PERIODIC_FILTER_E2E_001",
-                            deviceType = savedDeviceType,
-                            site = site,
-                        ),
-                    )
-
-                val processor =
-                    TemperatureHumidityProcessor(
-                        sseServiceMock,
-                        eventHistoryRepository,
-                        actionHistoryService,
-                        featureRepository,
-                        writeApiMock,
-                    )
-
-                val sensorData =
-                    com.pluxity.aiot.alarm.dto.SubscriptionConResponse(
-                        temperature = 28.0, // 조건 충족
-                        humidity = null,
-                        timestamp = "20250115T103000",
-                        period = 60,
-                        fireAlarm = null,
-                        angleX = null,
-                        angleY = null,
-                    )
-
-                processor.process("PERIODIC_FILTER_DEVICE_001", savedDeviceType, site.id!!, sensorData)
-
-                Then("현재 월이 10월이고 months=[1,2,3]이므로 EventHistory 생성 안 됨 및 Feature.eventStatus 변경 없음") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId("PERIODIC_FILTER_DEVICE_001")
-                    eventHistories shouldHaveSize 0
-
-                    val updatedFeature = featureRepository.findById(feature.id!!).get()
-                    updatedFeature.eventStatus shouldBe "NORMAL"
                 }
             }
         }

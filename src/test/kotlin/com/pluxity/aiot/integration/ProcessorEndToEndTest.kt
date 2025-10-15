@@ -8,11 +8,11 @@ import com.pluxity.aiot.alarm.service.processor.impl.DisplacementGaugeProcessor
 import com.pluxity.aiot.alarm.service.processor.impl.FireAlarmProcessor
 import com.pluxity.aiot.alarm.service.processor.impl.TemperatureHumidityProcessor
 import com.pluxity.aiot.config.TestSecurityConfig
-import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.DeviceProfileFixture
-import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.fixture.FeatureFixture
+import com.pluxity.aiot.fixture.SiteFixture
+import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -85,12 +85,13 @@ class ProcessorEndToEndTest(
         Given("2-1. TemperatureHumidityProcessor End-to-End") {
             When("Temperature 28.0°C - BETWEEN(25.0~30.0) WARNING 조건 충족") {
                 // DeviceProfile 조회 또는 생성
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    description = "온도",
-                    fieldUnit = "℃",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        description = "온도",
+                        fieldUnit = "℃",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // DeviceType 생성
                 val deviceType =
@@ -201,12 +202,13 @@ class ProcessorEndToEndTest(
 
             When("Humidity 85.0% - BETWEEN(0.0~100.0) DANGER 조건 충족 (Auto 조치)") {
                 // DeviceProfile 조회 또는 생성
-                val humidityProfile = getOrCreateProfile(
-                    fieldKey = "Humidity",
-                    description = "습도",
-                    fieldUnit = "%",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val humidityProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Humidity",
+                        description = "습도",
+                        fieldUnit = "%",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // DeviceType 생성
                 val deviceType =
@@ -306,12 +308,13 @@ class ProcessorEndToEndTest(
         Given("2-2. FireAlarmProcessor End-to-End") {
             When("FireAlarm true - EQUALS true DANGER 조건 충족") {
                 // DeviceProfile 조회 또는 생성 (Boolean)
-                val fireAlarmProfile = getOrCreateProfile(
-                    fieldKey = "Fire Alarm",
-                    description = "화재감지",
-                    fieldUnit = "boolean",
-                    fieldType = DeviceProfile.FieldType.Boolean,
-                )
+                val fireAlarmProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Fire Alarm",
+                        description = "화재감지",
+                        fieldUnit = "boolean",
+                        fieldType = DeviceProfile.FieldType.Boolean,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -406,12 +409,13 @@ class ProcessorEndToEndTest(
             }
 
             When("FireAlarm true - MANUAL 조치 케이스") {
-                val fireAlarmProfile = getOrCreateProfile(
-                    fieldKey = "Fire Alarm",
-                    description = "화재감지",
-                    fieldUnit = "boolean",
-                    fieldType = DeviceProfile.FieldType.Boolean,
-                )
+                val fireAlarmProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Fire Alarm",
+                        description = "화재감지",
+                        fieldUnit = "boolean",
+                        fieldType = DeviceProfile.FieldType.Boolean,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -457,13 +461,13 @@ class ProcessorEndToEndTest(
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "화재 MANUAL 시설"))
                 featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceId = "FIRE_MANUAL_DEVICE_001",
-                            objectId = "FIRE_MANUAL_E2E_001",
-                            deviceType = savedDeviceType,
-                            site = site,
-                        ),
-                    )
+                    FeatureFixture.create(
+                        deviceId = "FIRE_MANUAL_DEVICE_001",
+                        objectId = "FIRE_MANUAL_E2E_001",
+                        deviceType = savedDeviceType,
+                        site = site,
+                    ),
+                )
 
                 val processor =
                     FireAlarmProcessor(
@@ -501,12 +505,13 @@ class ProcessorEndToEndTest(
         Given("2-3. DisplacementGaugeProcessor End-to-End") {
             When("AngleX 96.0° - BETWEEN 특수 로직 (90° ± 5°)") {
                 // DeviceProfile 조회 또는 생성
-                val angleXProfile = getOrCreateProfile(
-                    fieldKey = "AngleX",
-                    description = "X축 각도",
-                    fieldUnit = "°",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val angleXProfile =
+                    getOrCreateProfile(
+                        fieldKey = "AngleX",
+                        description = "X축 각도",
+                        fieldUnit = "°",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -603,12 +608,13 @@ class ProcessorEndToEndTest(
             }
 
             When("AngleY -3.5° - BETWEEN 특수 로직 (0° ± 3°)") {
-                val angleYProfile = getOrCreateProfile(
-                    fieldKey = "AngleY",
-                    description = "Y축 각도",
-                    fieldUnit = "°",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val angleYProfile =
+                    getOrCreateProfile(
+                        fieldKey = "AngleY",
+                        description = "Y축 각도",
+                        fieldUnit = "°",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -706,28 +712,31 @@ class ProcessorEndToEndTest(
         Given("2-4. 다중 센서 동시 처리") {
             When("Temperature + Humidity + AngleX 동시 전송 - 각각 다른 조건 충족") {
                 // Temperature DeviceProfile 조회 또는 생성
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    description = "온도",
-                    fieldUnit = "℃",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        description = "온도",
+                        fieldUnit = "℃",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // Humidity DeviceProfile 조회 또는 생성
-                val humidityProfile = getOrCreateProfile(
-                    fieldKey = "Humidity",
-                    description = "습도",
-                    fieldUnit = "%",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val humidityProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Humidity",
+                        description = "습도",
+                        fieldUnit = "%",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // AngleX DeviceProfile 조회 또는 생성
-                val angleXProfile = getOrCreateProfile(
-                    fieldKey = "AngleX",
-                    description = "X축 각도",
-                    fieldUnit = "°",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val angleXProfile =
+                    getOrCreateProfile(
+                        fieldKey = "AngleX",
+                        description = "X축 각도",
+                        fieldUnit = "°",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // DeviceType 생성
                 val deviceType =
@@ -939,12 +948,13 @@ class ProcessorEndToEndTest(
                 )
 
                 // DiscomfortIndex DeviceProfile 조회 또는 생성
-                val discomfortProfile = getOrCreateProfile(
-                    fieldKey = "DiscomfortIndex",
-                    description = "불쾌지수",
-                    fieldUnit = "",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val discomfortProfile =
+                    getOrCreateProfile(
+                        fieldKey = "DiscomfortIndex",
+                        description = "불쾌지수",
+                        fieldUnit = "",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 // DeviceType 생성
                 val deviceType =
@@ -1043,10 +1053,11 @@ class ProcessorEndToEndTest(
 
         Given("2-6. Notification Interval 복합 시나리오") {
             When("MANUAL 조치 - 5분 Interval, 재발생 시간에 따른 상태 변화") {
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -1094,13 +1105,13 @@ class ProcessorEndToEndTest(
                 val savedDeviceType = deviceTypeRepository.saveAndFlush(deviceType)
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Interval 시설"))
                 featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceId = "INTERVAL_DEVICE_001",
-                            objectId = "INTERVAL_E2E_001",
-                            deviceType = savedDeviceType,
-                            site = site,
-                        ),
-                    )
+                    FeatureFixture.create(
+                        deviceId = "INTERVAL_DEVICE_001",
+                        objectId = "INTERVAL_E2E_001",
+                        deviceType = savedDeviceType,
+                        site = site,
+                    ),
+                )
 
                 val processor =
                     TemperatureHumidityProcessor(
@@ -1139,10 +1150,11 @@ class ProcessorEndToEndTest(
 
         Given("2-7. Filter Chain 복합 검증") {
             When("eventEnabled = false - 이벤트 처리 안 됨") {
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -1232,10 +1244,11 @@ class ProcessorEndToEndTest(
             }
 
             When("notificationEnabled = false - 조건 충족해도 알림 발생 안 함") {
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(
@@ -1324,10 +1337,11 @@ class ProcessorEndToEndTest(
             }
 
             When("isPeriodic = true, months 필터링 - 현재 월이 아니면 이벤트 처리 안 됨") {
-                val tempProfile = getOrCreateProfile(
-                    fieldKey = "Temperature",
-                    fieldType = DeviceProfile.FieldType.Float,
-                )
+                val tempProfile =
+                    getOrCreateProfile(
+                        fieldKey = "Temperature",
+                        fieldType = DeviceProfile.FieldType.Float,
+                    )
 
                 val deviceType =
                     DeviceType(

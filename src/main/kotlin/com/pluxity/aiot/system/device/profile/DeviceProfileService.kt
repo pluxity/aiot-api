@@ -1,10 +1,10 @@
 package com.pluxity.aiot.system.device.profile
 
+import com.pluxity.aiot.alarm.type.DeviceProfileEnum
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileRequest
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
-import com.pluxity.aiot.system.device.profile.dto.toDeviceProfileResponse
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -32,7 +32,8 @@ class DeviceProfileService(
         return deviceProfileRepository.save(deviceProfile).id!!
     }
 
-    fun findAll(): List<DeviceProfileResponse> = deviceProfileRepository.findAll().map { it.toDeviceProfileResponse() }
+    fun findAll(): List<DeviceProfileResponse> = DeviceProfileEnum.getAllResponses()
+    fun findEnumById(id: Long): DeviceProfileResponse = DeviceProfileEnum.findById(id).toResponse()
 
     private fun findById(id: Long): DeviceProfile =
         deviceProfileRepository.findByIdOrNull(id)

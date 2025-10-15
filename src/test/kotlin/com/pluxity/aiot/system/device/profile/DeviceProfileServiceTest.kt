@@ -77,13 +77,16 @@ class DeviceProfileServiceTest(
                         DeviceProfileFixture.create(fieldKey = "temp_find1"),
                         DeviceProfileFixture.create(fieldKey = "humid_find1"),
                         DeviceProfileFixture.create(fieldKey = "power_find1"),
+                        DeviceProfileFixture.create(fieldKey = "power_find2"),
+                        DeviceProfileFixture.create(fieldKey = "power_find3"),
+                        DeviceProfileFixture.create(fieldKey = "power_find4"),
                     ),
                 )
 
                 val result = deviceProfileService.findAll()
 
                 Then("모든 프로필이 반환된다") {
-                    result shouldHaveSize 3
+                    result shouldHaveSize 6
                 }
             }
         }

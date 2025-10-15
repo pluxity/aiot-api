@@ -1,29 +1,85 @@
 package com.pluxity.aiot.alarm.type
 
+import com.pluxity.aiot.system.device.profile.DeviceProfile
+import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
+
 enum class SensorType(
+    val id: Long,
     val objectId: String,
     val description: String,
+    val version: String,
     val measureName: String = "",
+    val deviceProfiles: List<DeviceProfileEnum>
 ) {
-    RIVER_MONITOR("34950", "하천모니터링복합센서"),
-    FLOOD("34952", "침수감지"),
-    EDGE_DEVICE("34953", "엣지 디바이스 이벤트"),
-    TEMPERATURE_HUMIDITY("34954", "온습도계", "temperature_humidity"),
-    SLOPE("34955", "경사"),
-    FIRE("34956", "화재 감지", "fire_alarm"),
-    DISPLACEMENT_GAUGE("34957", "DISPLACEMENT_GAUGE", "displacement_gauge"),
-    SUMMARY2("34958", "Summary2"),
-    VIBRATION("34959", "진동계"),
-    FORCE_PROTOCOL("34960", "Force Protocol"),
-    FORCE_TEST_MODE("34961", "Force Test Mode"),
-    TX_BUFFER_MODE("34962", "TxBufferMode"),
-    CCTV("34963", "CCTV"),
-    SPEAKER("34964", "스피커"),
+//    RIVER_MONITOR("34950", "하천모니터링복합센서"),
+//    FLOOD("34952", "침수감지"),
+//    EDGE_DEVICE("34953", "엣지 디바이스 이벤트"),
+    TEMPERATURE_HUMIDITY(1, "34954", "온습도계", "1.0", "temperature_humidity",
+        listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY)),
+
+//    SLOPE("34955", "경사"),
+    FIRE(2, "34956", "화재 감지", "1.0", "fire_alarm",
+        listOf(DeviceProfileEnum.FIRE_ALARM)),
+    DISPLACEMENT_GAUGE(3, "34957", "DISPLACEMENT_GAUGE", "1.0", "displacement_gauge",
+        listOf(DeviceProfileEnum.ANGLE_X, DeviceProfileEnum.ANGLE_Y)),
+//    SUMMARY2("34958", "Summary2"),
+//    VIBRATION("34959", "진동계"),
+//    FORCE_PROTOCOL("34960", "Force Protocol"),
+//    FORCE_TEST_MODE("34961", "Force Test Mode"),
+//    TX_BUFFER_MODE("34962", "TxBufferMode"),
+//    CCTV("34963", "CCTV"),
+//    SPEAKER("34964", "스피커"),
     ;
 
     companion object {
         fun fromObjectId(objectId: String) =
             entries.find { it.objectId == objectId }
                 ?: throw IllegalArgumentException("Unknown objectId: $objectId")
+    }
+}
+
+// DeviceProfile 상수 정의
+enum class DeviceProfileEnum(
+    val id: Long,
+    val description: String,
+    val fieldKey: String,
+    val fieldType: DeviceProfile.FieldType,
+    val unit: String?,
+) {
+    TEMPERATURE(1, "온도", "Temperature", DeviceProfile.FieldType.Float, "°C"),
+    HUMIDITY(2, "습도", "Humidity", DeviceProfile.FieldType.Float, "%"),
+    FIRE_ALARM(3, "화재감지", "Fire Alarm", DeviceProfile.FieldType.Boolean, ""),
+    DISCOMFORT_INDEX(4, "불쾌지수", "DiscomfortIndex", DeviceProfile.FieldType.Float, ""),
+    ANGLE_X(5, "X축 각도", "Angle-X", DeviceProfile.FieldType.Float, "°"),
+    ANGLE_Y(6, "Y축 각도", "Angle-Y", DeviceProfile.FieldType.Float, "°"),
+    ;
+
+    fun toResponse() =
+        DeviceProfileResponse(
+            id = this.id,
+            fieldKey = this.fieldKey,
+            description = this.description,
+            fieldUnit = this.unit,
+            fieldType = this.fieldType,
+        )
+
+    fun toEntity() =
+        DeviceProfile(
+            id = this.id,
+            fieldKey = this.fieldKey,
+            description = this.description,
+            fieldUnit = this.unit,
+            fieldType = this.fieldType
+        )
+
+    companion object {
+
+        private val map = entries.associateBy(DeviceProfileEnum::id)
+
+        fun findById(id: Long) = map[id] ?: throw IllegalArgumentException("Unknown id: $id")
+
+        fun getAllResponses() = entries.map { it.toResponse() }
+
+        fun toEntity(id: Long) = findById(id).toEntity()
     }
 }

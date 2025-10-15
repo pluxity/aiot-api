@@ -34,16 +34,6 @@ class DeviceType(
     @OneToMany(mappedBy = "deviceType", cascade = [CascadeType.ALL])
     var features: MutableSet<Feature> = mutableSetOf()
 
-    fun update(
-        objectId: String,
-        description: String?,
-        version: String?,
-    ) {
-        this.objectId = objectId
-        this.description = description
-        this.version = version
-    }
-
     fun removeDeviceProfile(deviceProfile: DeviceProfile?) {
         deviceProfileTypes.removeIf { it.deviceProfile == deviceProfile }
     }

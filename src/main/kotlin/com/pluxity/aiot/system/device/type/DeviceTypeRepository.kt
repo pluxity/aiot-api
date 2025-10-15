@@ -9,8 +9,7 @@ interface DeviceTypeRepository : JpaRepository<DeviceType, Long> {
         attributePaths = [
             "deviceProfileTypes",
             "deviceProfileTypes.deviceProfile",
-            "deviceProfileTypes.eventSettings.conditions",
-            "deviceProfileTypes.eventSettings.months",
+            "deviceProfileTypes.conditions",
             "deviceEvents",
         ],
     )

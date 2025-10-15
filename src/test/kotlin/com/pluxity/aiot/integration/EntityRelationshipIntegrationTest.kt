@@ -2,28 +2,16 @@ package com.pluxity.aiot.integration
 
 import com.pluxity.aiot.config.TestSecurityConfig
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.fixture.DeviceProfileFixture
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeService
-import com.pluxity.aiot.system.device.type.dto.DeviceEventRequest
-import com.pluxity.aiot.system.device.type.dto.DeviceProfileTypeRequest
-import com.pluxity.aiot.system.device.type.dto.DeviceTypeRequest
-import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.setting.EventSettingRepository
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
-import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
@@ -42,7 +30,6 @@ class EntityRelationshipIntegrationTest(
     private val deviceTypeRepository: DeviceTypeRepository,
     private val deviceTypeService: DeviceTypeService,
     private val deviceEventRepository: DeviceEventRepository,
-    private val eventSettingRepository: EventSettingRepository,
     private val siteRepository: SiteRepository,
     private val featureRepository: FeatureRepository,
 ) : BehaviorSpec({

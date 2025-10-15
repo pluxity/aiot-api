@@ -233,40 +233,34 @@ interface SensorDataProcessor {
         deviceType.deviceProfileTypes
             .filter { profileType -> fieldKey == profileType.deviceProfile?.fieldKey }
             .forEach { profileType ->
-                profileType.eventSettings
-                    .filter { it.eventEnabled }
-                    .filter {
-                        !it.isPeriodic || it.months?.contains(LocalDate.now().monthValue) == true
-                    }.forEach { eventSetting ->
-                        eventSetting.conditions
-                            .filter { condition ->
-                                condition.deviceEvent.deviceLevel != DeviceEvent.DeviceLevel.NORMAL
-                            }.filter { it.notificationEnabled }
-                            .forEach { condition ->
-                                if (isConditionMet(condition, value)) {
-                                    anyConditionMet[0] = true
+                profileType.conditions
+                    .filter { condition ->
+                        condition.deviceEvent.deviceLevel != DeviceEvent.DeviceLevel.NORMAL
+                    }.filter { it.notificationEnabled }
+                    .forEach { condition ->
+                        if (isConditionMet(condition, value)) {
+                            anyConditionMet[0] = true
 
-                                    // 비동기 이벤트 처리 작업 추가
-                                    val eventTask =
-                                        CompletableFuture.runAsync {
-                                            processEvent(
-                                                deviceId,
-                                                deviceType,
-                                                fieldKey,
-                                                value,
-                                                profileType,
-                                                condition,
-                                                feature,
-                                                parsedDate,
-                                                sseService,
-                                                eventHistoryRepository,
-                                                actionHistoryService,
-                                                featureRepository,
-                                            )
-                                        }
-                                    eventProcessingTasks.add(eventTask)
+                            // 비동기 이벤트 처리 작업 추가
+                            val eventTask =
+                                CompletableFuture.runAsync {
+                                    processEvent(
+                                        deviceId,
+                                        deviceType,
+                                        fieldKey,
+                                        value,
+                                        profileType,
+                                        condition,
+                                        feature,
+                                        parsedDate,
+                                        sseService,
+                                        eventHistoryRepository,
+                                        actionHistoryService,
+                                        featureRepository,
+                                    )
                                 }
-                            }
+                            eventProcessingTasks.add(eventTask)
+                        }
                     }
             }
 
@@ -317,8 +311,7 @@ interface SensorDataProcessor {
         value: Double,
     ): Boolean {
         val fieldKey: String? =
-            condition.eventSetting
-                ?.deviceProfileType
+            condition.deviceProfileType
                 ?.deviceProfile
                 ?.fieldKey
         if (fieldKey != null && (fieldKey == ANGLE_X || fieldKey == ANGLE_Y)) {

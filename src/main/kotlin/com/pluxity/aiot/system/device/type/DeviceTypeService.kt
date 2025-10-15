@@ -22,9 +22,6 @@ import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.system.device.type.dto.toDeviceTypeResponse
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
-import com.pluxity.aiot.system.event.setting.EventSetting
-import com.pluxity.aiot.system.event.setting.EventSettingHistoryRepository
-import com.pluxity.aiot.system.event.setting.EventSettingRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.persistence.EntityManager
 import org.springframework.data.repository.findByIdOrNull
@@ -36,9 +33,7 @@ private val log = KotlinLogging.logger {}
 @Service
 class DeviceTypeService(
     private val deviceTypeRepository: DeviceTypeRepository,
-    private val eventSettingRepository: EventSettingRepository,
     private val deviceEventRepository: DeviceEventRepository,
-    private val eventSettingHistoryRepository: EventSettingHistoryRepository,
     private val eventConditionRepository: EventConditionRepository,
     private val sensorDataHandler: SensorDataHandler,
     private val em: EntityManager,
@@ -171,38 +166,28 @@ class DeviceTypeService(
                     .filterNot { dpt -> requestedProfileIds.contains(dpt.deviceProfile?.id) }
 
             for (dpt in toRemove) {
-                val eventSettings = eventSettingRepository.findAllByDeviceProfileTypeId(dpt.id!!)
-                eventSettings.forEach { eventSetting: EventSetting ->
-                    // 먼저 이력 삭제
-                    eventSettingHistoryRepository.deleteAllByEventSettingId(eventSetting.id!!)
-                }
-                // 그 다음 이벤트 설정 삭제
-                eventSettingRepository.deleteAll(eventSettings)
                 deviceType.removeDeviceProfile(dpt.deviceProfile)
             }
 
-            // 2. 업데이트: 기존 연관 프로필의 EventSetting 조건 업데이트
+            // 2. 업데이트: 기존 연관 프로필의 EventCondition 조건 업데이트
             for (dpt in deviceType.deviceProfileTypes) {
                 val profileId = dpt.deviceProfile?.id
                 if (requestedProfileIds.contains(profileId)) {
                     val profileSettings = profileSettingsMap[profileId]
-                    val eventSettings = eventSettingRepository.findAllByDeviceProfileTypeId(dpt.id!!)
-                    eventSettings.forEach { eventSetting: EventSetting ->
-                        eventSetting.conditions.forEach { condition ->
-                            condition.changeMinMax(profileSettings?.minValue, profileSettings?.maxValue)
-                            condition.update(
-                                condition.value,
-                                condition.operator,
-                                condition.notificationEnabled,
-                                condition.locationTrackingEnabled,
-                                condition.soundEnabled,
-                                condition.fireEffectEnabled,
-                                condition.controlType,
-                                condition.guideMessage,
-                                condition.notificationIntervalMinutes,
-                                condition.order,
-                            )
-                        }
+                    dpt.conditions.forEach { condition ->
+                        condition.changeMinMax(profileSettings?.minValue, profileSettings?.maxValue)
+                        condition.update(
+                            condition.value,
+                            condition.operator,
+                            condition.notificationEnabled,
+                            condition.locationTrackingEnabled,
+                            condition.soundEnabled,
+                            condition.fireEffectEnabled,
+                            condition.controlType,
+                            condition.guideMessage,
+                            condition.notificationIntervalMinutes,
+                            condition.order,
+                        )
                     }
                 }
             }
@@ -218,13 +203,6 @@ class DeviceTypeService(
                     em.flush()
 
                     val profileSettings: DeviceProfileTypeRequest? = profileSettingsMap[profileId]
-
-                    val eventSetting =
-                        EventSetting(
-                            deviceProfileType = dpt,
-                            eventEnabled = false,
-                            isOriginal = true,
-                        )
 
                     deviceType.deviceEvents.forEach { event: DeviceEvent ->
                         val condition =
@@ -246,11 +224,8 @@ class DeviceTypeService(
                                 minValue = profileSettings?.minValue,
                                 maxValue = profileSettings?.maxValue,
                             )
-                        eventSetting.addCondition(condition)
+                        dpt.addCondition(condition)
                     }
-
-                    dpt.addEventSetting(eventSetting)
-                    eventSettingRepository.save(eventSetting)
                 }
             }
         }

@@ -1,23 +1,10 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.fixture.DeviceProfileFixture
-import com.pluxity.aiot.fixture.DeviceTypeFixture
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
-import com.pluxity.aiot.system.device.type.dto.DeviceEventRequest
-import com.pluxity.aiot.system.device.type.dto.DeviceProfileTypeRequest
-import com.pluxity.aiot.system.device.type.dto.DeviceTypeRequest
-import com.pluxity.aiot.system.event.setting.EventSettingRepository
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
-import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
@@ -30,7 +17,6 @@ class DeviceTypeServiceTest(
     private val deviceTypeRepository: DeviceTypeRepository,
     private val deviceProfileRepository: DeviceProfileRepository,
     private val deviceEventRepository: DeviceEventRepository,
-    private val eventSettingRepository: EventSettingRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)

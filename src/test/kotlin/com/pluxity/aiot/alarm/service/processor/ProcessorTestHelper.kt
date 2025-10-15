@@ -16,7 +16,6 @@ import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.setting.EventSetting
 
 /**
  * 센서 데이터 Processor 테스트를 위한 공통 헬퍼 클래스
@@ -90,16 +89,7 @@ abstract class ProcessorTestHelper(
             )
         deviceType.deviceProfileTypes.add(deviceProfileType)
 
-        // 3. EventSetting 생성 및 연결
-        val eventSetting =
-            EventSetting(
-                deviceProfileType = deviceProfileType,
-                eventEnabled = true,
-                isOriginal = true,
-            )
-        deviceProfileType.addEventSetting(eventSetting)
-
-        // 4. DeviceEvent 생성
+        // 3. DeviceEvent 생성
         val deviceEvent =
             DeviceEvent(
                 name = eventName,
@@ -107,7 +97,7 @@ abstract class ProcessorTestHelper(
             )
         deviceEvent.updateDeviceType(deviceType)
 
-        // 5. EventCondition 생성 및 연결
+        // 4. EventCondition 생성 및 연결
         val finalConditionValue =
             conditionValue ?: when (operator) {
                 EventCondition.ConditionOperator.BETWEEN -> {
@@ -135,7 +125,7 @@ abstract class ProcessorTestHelper(
             condition.changeMinMax(minValue, maxValue)
         }
 
-        eventSetting.addCondition(condition)
+        deviceProfileType.addCondition(condition)
 
         // 6. DeviceType 저장 (CASCADE)
         val savedDeviceType = deviceTypeRepository.save(deviceType)
@@ -177,7 +167,7 @@ abstract class ProcessorTestHelper(
         )
 
     /**
-     * eventEnabled = false로 설정된 DeviceType 생성
+     * notificationEnabled = false로 설정된 DeviceType 생성
      */
     fun setupDeviceWithDisabledEvent(
         objectId: String,
@@ -192,9 +182,6 @@ abstract class ProcessorTestHelper(
         val deviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
         val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
         deviceType.deviceProfileTypes.add(deviceProfileType)
-
-        val eventSetting = EventSetting(deviceProfileType = deviceProfileType, eventEnabled = false, isOriginal = true)
-        deviceProfileType.addEventSetting(eventSetting)
 
         val deviceEvent = DeviceEvent(name = eventName, deviceLevel = eventLevel)
         deviceEvent.updateDeviceType(deviceType)
@@ -211,7 +198,7 @@ abstract class ProcessorTestHelper(
                 deviceEvent = deviceEvent,
                 value = conditionValue,
                 operator = operator,
-                notificationEnabled = true,
+                notificationEnabled = false, // Disabled
                 controlType = EventCondition.ControlType.MANUAL,
                 guideMessage = "테스트",
                 order = 1,
@@ -221,7 +208,7 @@ abstract class ProcessorTestHelper(
             condition.changeMinMax(minValue, maxValue)
         }
 
-        eventSetting.addCondition(condition)
+        deviceProfileType.addCondition(condition)
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
@@ -251,9 +238,6 @@ abstract class ProcessorTestHelper(
         val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
         deviceType.deviceProfileTypes.add(deviceProfileType)
 
-        val eventSetting = EventSetting(deviceProfileType = deviceProfileType, eventEnabled = true, isOriginal = true)
-        deviceProfileType.addEventSetting(eventSetting)
-
         conditions.forEachIndexed { index, spec ->
             val deviceEvent = DeviceEvent(name = spec.eventName, deviceLevel = spec.eventLevel)
             deviceEvent.updateDeviceType(deviceType)
@@ -281,7 +265,7 @@ abstract class ProcessorTestHelper(
                 condition.changeMinMax(spec.minValue, spec.maxValue)
             }
 
-            eventSetting.addCondition(condition)
+            deviceProfileType.addCondition(condition)
         }
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)

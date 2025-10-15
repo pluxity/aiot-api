@@ -1,7 +1,7 @@
 package com.pluxity.aiot.system.event.condition
 
 import com.pluxity.aiot.system.device.event.DeviceEvent
-import com.pluxity.aiot.system.event.setting.EventSetting
+import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -42,8 +42,8 @@ class EventCondition(
     var order: Int? = null,
 ) {
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_setting_id")
-    var eventSetting: EventSetting? = null
+    @JoinColumn(name = "device_profile_type_id")
+    var deviceProfileType: DeviceProfileType? = null
 
     init {
         if (order == null) {
@@ -51,10 +51,10 @@ class EventCondition(
         }
     }
 
-    fun addEventSetting(eventSetting: EventSetting?) {
-        this.eventSetting?.conditions?.remove(this)
-        this.eventSetting = eventSetting
-        eventSetting?.conditions?.add(this)
+    fun addDeviceProfileType(deviceProfileType: DeviceProfileType?) {
+        this.deviceProfileType?.conditions?.remove(this)
+        this.deviceProfileType = deviceProfileType
+        deviceProfileType?.conditions?.add(this)
     }
 
     fun update(

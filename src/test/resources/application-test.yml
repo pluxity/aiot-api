@@ -52,6 +52,10 @@ influx:
   org: test-org
   bucket: test-bucket
 
+mediamtx:
+  api-url: http://localhost:9997
+  view-url: http://localhost:8889
+
 file:
   storage-strategy: local
   local:

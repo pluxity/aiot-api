@@ -99,7 +99,10 @@ class EntityRelationshipIntegrationTest(
             When("Boolean 타입 DeviceProfile로 생성하면") {
                 val profile =
                     deviceProfileRepository.saveAndFlush(
-                        DeviceProfileFixture.create(fieldKey = "fire_int_1", fieldType = com.pluxity.aiot.system.device.profile.DeviceProfile.FieldType.Boolean),
+                        DeviceProfileFixture.create(
+                            fieldKey = "fire_int_1",
+                            fieldType = com.pluxity.aiot.system.device.profile.DeviceProfile.FieldType.Boolean,
+                        ),
                     )
                 val request =
                     DeviceTypeRequest(
@@ -166,7 +169,11 @@ class EntityRelationshipIntegrationTest(
             When("Site와 Feature를 DeviceType과 연결하면") {
                 // 기존 FeatureServiceTest 로직 재사용
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Building A"))
-                val deviceType = deviceTypeRepository.saveAndFlush(com.pluxity.aiot.fixture.DeviceTypeFixture.create(objectId = "TYPE_INT_001"))
+                val deviceType =
+                    deviceTypeRepository.saveAndFlush(
+                        com.pluxity.aiot.fixture.DeviceTypeFixture
+                            .create(objectId = "TYPE_INT_001"),
+                    )
                 val feature =
                     featureRepository.saveAndFlush(
                         FeatureFixture.create(
@@ -191,24 +198,28 @@ class EntityRelationshipIntegrationTest(
             When("여러 Feature를 같은 DeviceType에 연결하면") {
                 val site1 = siteRepository.saveAndFlush(SiteFixture.create(name = "Building B"))
                 val site2 = siteRepository.saveAndFlush(SiteFixture.create(name = "Building C"))
-                val deviceType = deviceTypeRepository.saveAndFlush(com.pluxity.aiot.fixture.DeviceTypeFixture.create(objectId = "TYPE_MULTI_FEATURE"))
+                val deviceType =
+                    deviceTypeRepository.saveAndFlush(
+                        com.pluxity.aiot.fixture.DeviceTypeFixture
+                            .create(objectId = "TYPE_MULTI_FEATURE"),
+                    )
 
                 featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceType = deviceType,
-                            site = site1,
-                            deviceId = "DEVICE_MULTI_001",
-                            objectId = "TYPE_MULTI_FEATURE",
-                        ),
-                    )
+                    FeatureFixture.create(
+                        deviceType = deviceType,
+                        site = site1,
+                        deviceId = "DEVICE_MULTI_001",
+                        objectId = "TYPE_MULTI_FEATURE",
+                    ),
+                )
                 featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceType = deviceType,
-                            site = site2,
-                            deviceId = "DEVICE_MULTI_002",
-                            objectId = "TYPE_MULTI_FEATURE",
-                        ),
-                    )
+                    FeatureFixture.create(
+                        deviceType = deviceType,
+                        site = site2,
+                        deviceId = "DEVICE_MULTI_002",
+                        objectId = "TYPE_MULTI_FEATURE",
+                    ),
+                )
 
                 Then("DeviceType.features 컬렉션에 2개 포함") {
                     val savedDeviceType = deviceTypeRepository.findByIdWithAssociations(deviceType.id!!)!!
@@ -361,7 +372,11 @@ class EntityRelationshipIntegrationTest(
             }
 
             When("DeviceType 삭제하면 Feature도 cascade 삭제된다") {
-                val deviceType = deviceTypeRepository.saveAndFlush(com.pluxity.aiot.fixture.DeviceTypeFixture.create(objectId = "TYPE_DELETE_FEATURE"))
+                val deviceType =
+                    deviceTypeRepository.saveAndFlush(
+                        com.pluxity.aiot.fixture.DeviceTypeFixture
+                            .create(objectId = "TYPE_DELETE_FEATURE"),
+                    )
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Building B"))
                 val feature =
                     featureRepository.saveAndFlush(
@@ -383,7 +398,11 @@ class EntityRelationshipIntegrationTest(
 
             When("Site를 삭제하면") {
                 val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Building C"))
-                val deviceType = deviceTypeRepository.saveAndFlush(com.pluxity.aiot.fixture.DeviceTypeFixture.create(objectId = "TYPE_SITE_DELETE"))
+                val deviceType =
+                    deviceTypeRepository.saveAndFlush(
+                        com.pluxity.aiot.fixture.DeviceTypeFixture
+                            .create(objectId = "TYPE_SITE_DELETE"),
+                    )
                 val feature =
                     featureRepository.saveAndFlush(
                         FeatureFixture.create(
@@ -405,7 +424,11 @@ class EntityRelationshipIntegrationTest(
                 Then("Site는 삭제되고 Feature는 유지되며 site = null") {
                     siteRepository.findById(siteId).isPresent shouldBe false
                     featureRepository.findById(featureId).isPresent shouldBe true
-                    featureRepository.findById(featureId).get().site.shouldBeNull()
+                    featureRepository
+                        .findById(featureId)
+                        .get()
+                        .site
+                        .shouldBeNull()
                 }
             }
         }

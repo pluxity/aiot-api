@@ -119,6 +119,9 @@ enum class ErrorCode(
     NOT_FOUND_ASSIGN_DEVICE_CATEGORY(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스에 할당된 카테고리를 찾을 수 없습니다."),
 
     INVALID_RESOURCE_IDS_INCLUDED(HttpStatus.BAD_REQUEST, "요청한 리소스 ID %s 는 유효하지 않습니다."),
+    MEDIAMTX_ADD_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
+    MEDIAMTX_PATCH_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
+    MEDIAMTX_DELETE_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
     ;
 
     override fun getHttpStatus(): HttpStatus = httpStatus

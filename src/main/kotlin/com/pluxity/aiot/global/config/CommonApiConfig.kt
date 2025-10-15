@@ -84,4 +84,12 @@ class CommonApiConfig {
             .group("7. 디바이스 연동 설정 API")
             .pathsToMatch("/mobius/**", "/device-profiles/**")
             .build()
+
+    @Bean
+    fun cctvApiByPath(): GroupedOpenApi =
+        GroupedOpenApi
+            .builder()
+            .group("8. Cctv 관리 API")
+            .pathsToMatch("/cctvs/**")
+            .build()
 }

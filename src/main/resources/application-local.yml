@@ -21,10 +21,14 @@ spring:
         default_batch_fetch_size: 100
 
 influx:
-  url: http://localhost:8086
-  token: vUpUrqBmhMXfZ-SY5sLYdMssqJUWx1XkvDPVjp0IdZfozgLAwcI53KN4YvhRYdH-vAkD-0vcZGMrGIH5p-56ig==
+  url: http://dev.pluxity.com:8086
+  token: kg04O5mxWTYM--k28CKYgNChc4pv0C3s1yx1VuUjp7kxoyzQDtkeT6M22af2A6RwXRAdbpEucV2GTqXN_iYlGQ==
   org: pluxity
   bucket: aiot-bucket
+
+mediamtx:
+  api-url: http://${MEDIAMTX_URL:192.168.4.8}:9997
+  view-url: http://${MEDIAMTX_URL:192.168.4.8}:8889
 
 file:
   storage-strategy: s3

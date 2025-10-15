@@ -1,0 +1,24 @@
+package com.pluxity.aiot.cctv.dto
+
+import com.pluxity.aiot.cctv.Cctv
+import com.pluxity.aiot.site.dto.SiteResponse
+import com.pluxity.aiot.site.dto.toSiteResponse
+
+data class CctvResponse(
+    val id: Long,
+    val name: String,
+    val viewUrl: String? = null,
+    val lon: Double?,
+    val lat: Double?,
+    val site: SiteResponse? = null,
+)
+
+fun Cctv.toCctvResponse(viewUrl: String) =
+    CctvResponse(
+        id = this.id!!,
+        name = this.name,
+        viewUrl = this.mtxName?.let { "$viewUrl/${this.mtxName}" },
+        lon = this.longitude,
+        lat = this.latitude,
+        site = this.site?.toSiteResponse(),
+    )

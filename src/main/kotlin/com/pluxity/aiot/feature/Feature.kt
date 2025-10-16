@@ -76,7 +76,7 @@ class Feature(
     ) {
         this.longitude = longitude
         this.latitude = latitude
-        this.batteryLevel = batteryLevel
+        updateBatteryLevel(batteryLevel)
         // Point 객체 생성 (SRID 4326 사용)
         val gf = GeometryFactory(PrecisionModel(), 4326)
         this.geom = gf.createPoint(Coordinate(longitude, latitude))
@@ -93,5 +93,9 @@ class Feature(
 
     fun updateName(name: String) {
         this.name = name
+    }
+
+    fun updateBatteryLevel(batteryLevel: Int?) {
+        this.batteryLevel = batteryLevel
     }
 }

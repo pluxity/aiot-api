@@ -44,7 +44,7 @@ class FeatureService(
                                 searchCondition?.deviceTypeId?.let { path(DeviceType::id).equal(it) },
                                 searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),
-                        )
+                        ).orderBy(path(Feature::site).asc())
                 }.filterNotNull()
 
         val fileMap =

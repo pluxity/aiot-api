@@ -62,7 +62,7 @@ enum class DeviceProfileEnum(
     val description: String,
     val fieldKey: String,
     val fieldType: DeviceProfile.FieldType,
-    val unit: String?,
+    val unit: String,
 ) {
     TEMPERATURE(1, "온도", "Temperature", DeviceProfile.FieldType.Float, "°C"),
     HUMIDITY(2, "습도", "Humidity", DeviceProfile.FieldType.Float, "%"),

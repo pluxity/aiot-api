@@ -1,6 +1,7 @@
 package com.pluxity.aiot.data.dto
 
 import com.influxdb.annotations.Column
+import com.pluxity.aiot.alarm.type.DeviceProfileEnum
 import java.time.Instant
 
 data class ClimateSensorData(
@@ -50,11 +51,11 @@ inline fun <T> List<T>.buildListMetricMap(
 
 // 공통 메트릭 정의
 object SensorMetrics {
-    val TEMPERATURE = MetricDefinition("temperature", "℃")
-    val HUMIDITY = MetricDefinition("humidity", "%")
-    val DISCOMFORT_INDEX = MetricDefinition("discomfortIndex", "")
-    val ANGLE_X = MetricDefinition("angleX", "°")
-    val ANGLE_Y = MetricDefinition("angleY", "°")
+    val TEMPERATURE = MetricDefinition(DeviceProfileEnum.TEMPERATURE.fieldKey, DeviceProfileEnum.TEMPERATURE.unit)
+    val HUMIDITY = MetricDefinition(DeviceProfileEnum.HUMIDITY.fieldKey, DeviceProfileEnum.HUMIDITY.unit)
+    val DISCOMFORT_INDEX = MetricDefinition(DeviceProfileEnum.DISCOMFORT_INDEX.fieldKey, DeviceProfileEnum.DISCOMFORT_INDEX.unit)
+    val ANGLE_X = MetricDefinition(DeviceProfileEnum.ANGLE_X.fieldKey, DeviceProfileEnum.ANGLE_X.unit)
+    val ANGLE_Y = MetricDefinition(DeviceProfileEnum.ANGLE_Y.fieldKey, DeviceProfileEnum.ANGLE_Y.unit)
 
     val CLIMATE = listOf(TEMPERATURE, HUMIDITY, DISCOMFORT_INDEX)
     val DISPLACEMENT_GAUGE = listOf(ANGLE_X, ANGLE_Y)
@@ -84,9 +85,9 @@ fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DataResp
 private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> =
     buildMetricMap(this, SensorMetrics.CLIMATE) { definition ->
         when (definition.key) {
-            "temperature" -> temperature
-            "humidity" -> humidity
-            "discomfortIndex" -> discomfortIndex
+            DeviceProfileEnum.TEMPERATURE.fieldKey -> temperature
+            DeviceProfileEnum.HUMIDITY.fieldKey -> humidity
+            DeviceProfileEnum.DISCOMFORT_INDEX.fieldKey -> discomfortIndex
             else -> null
         }
     }
@@ -94,8 +95,8 @@ private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> =
 private fun DisplacementGaugeSensorData.toMetricMap(): Map<String, MetricData> =
     buildMetricMap(this, SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
         when (definition.key) {
-            "angleX" -> angleX
-            "angleY" -> angleY
+            DeviceProfileEnum.ANGLE_X.fieldKey -> angleX
+            DeviceProfileEnum.ANGLE_Y.fieldKey -> angleY
             else -> null
         }
     }

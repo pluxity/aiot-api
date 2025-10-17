@@ -4,6 +4,7 @@ import com.influxdb.annotations.Column
 import com.pluxity.aiot.alarm.type.DeviceProfileEnum
 import com.pluxity.aiot.alarm.type.SensorType
 import java.time.Instant
+import java.time.ZoneId
 
 data class ClimateSensorData(
     @Column(name = "_time") val time: Instant? = null,
@@ -66,7 +67,7 @@ private fun createDeviceDataResponse(
 
     return DataResponse(
         meta = meta,
-        timestamp = time.toString(),
+        timestamp = time.atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime().toString(),
         metrics = metricMap,
     )
 }

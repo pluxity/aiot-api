@@ -23,9 +23,8 @@ spring:
       hibernate:
         default_batch_fetch_size: 100
 
-aiot:
-  subscription:
-    url: ${SUBSCRIPTION_URL:}
+domain:
+  url: ${API_URL:}
 
 influx:
   url: http://${INFLUX_HOST:localhost}:8086

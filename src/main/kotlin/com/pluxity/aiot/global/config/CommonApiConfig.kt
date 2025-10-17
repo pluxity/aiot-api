@@ -1,16 +1,20 @@
 package com.pluxity.aiot.global.config
 
+import com.pluxity.aiot.global.properties.ServerDomainProperties
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.info.License
+import io.swagger.v3.oas.models.servers.Server
 import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class CommonApiConfig {
+class CommonApiConfig(
+    private val properties: ServerDomainProperties,
+) {
     @Bean
     @ConditionalOnMissingBean(OpenAPI::class)
     fun commonOpenAPI(): OpenAPI =
@@ -26,6 +30,10 @@ class CommonApiConfig {
                             .name("Apache 2.0")
                             .url("http://www.apache.org/licenses/LICENSE-2.0.html"),
                     ),
+            ).servers(
+                listOf(
+                    Server().url(properties.url),
+                ),
             )
 
     @Bean

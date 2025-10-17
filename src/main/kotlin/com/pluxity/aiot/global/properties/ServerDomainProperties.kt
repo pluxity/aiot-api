@@ -2,7 +2,7 @@ package com.pluxity.aiot.global.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-@ConfigurationProperties(prefix = "aiot.subscription")
-data class SubscriptionProperties(
+@ConfigurationProperties(prefix = "domain")
+data class ServerDomainProperties(
     val url: String = "",
 )

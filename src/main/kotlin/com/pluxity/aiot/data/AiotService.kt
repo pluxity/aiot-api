@@ -17,7 +17,7 @@ import com.pluxity.aiot.global.config.NgrokConfig
 import com.pluxity.aiot.global.config.WebClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.properties.SubscriptionProperties
+import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.mobius.MobiusConfigService
@@ -54,7 +54,7 @@ class AiotService(
     private val siteRepository: SiteRepository,
     mobiusConfigService: MobiusConfigService,
     webClientFactory: WebClientFactory,
-    private val subscriptionProperties: SubscriptionProperties,
+    private val serverDomainProperties: ServerDomainProperties,
 ) {
     @Autowired(required = false)
     private val ngrokConfig: NgrokConfig? = null
@@ -387,7 +387,7 @@ class AiotService(
                 } ?: ""
             }
             else -> {
-                subscriptionProperties.url
+                serverDomainProperties.url
                     .takeIf { it.isNotBlank() }
                     ?.also { log.info { "Using configured subscription URL: $it" } }
                     ?: "http://$ipv4:$serverPort".also {

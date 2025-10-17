@@ -20,6 +20,9 @@ spring:
       hibernate:
         default_batch_fetch_size: 100
 
+domain:
+  url: ${API_URL:http://localhost:8080}
+
 influx:
   url: http://dev.pluxity.com:8086
   token: kg04O5mxWTYM--k28CKYgNChc4pv0C3s1yx1VuUjp7kxoyzQDtkeT6M22af2A6RwXRAdbpEucV2GTqXN_iYlGQ==

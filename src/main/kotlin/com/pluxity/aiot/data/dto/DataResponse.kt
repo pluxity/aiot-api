@@ -40,5 +40,5 @@ data class ListQueryInfo(
 
 data class ListMetricData(
     val unit: String,
-    val values: List<Double>,
+    val values: List<Double?>,
 )

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.alarm.type
 
+import com.pluxity.aiot.data.dto.MetricDefinition
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
 
@@ -20,7 +21,7 @@ enum class SensorType(
         "온습도계",
         "1.0",
         "temperature_humidity",
-        listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY),
+        listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY, DeviceProfileEnum.DISCOMFORT_INDEX),
     ),
 
 //    SLOPE("34955", "경사"),
@@ -71,6 +72,8 @@ enum class DeviceProfileEnum(
     ANGLE_X(5, "X축 각도", "Angle-X", DeviceProfile.FieldType.Float, "°"),
     ANGLE_Y(6, "Y축 각도", "Angle-Y", DeviceProfile.FieldType.Float, "°"),
     ;
+
+    fun toMetricDefinition() = MetricDefinition(fieldKey, unit)
 
     fun toResponse() =
         DeviceProfileResponse(

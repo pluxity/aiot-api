@@ -13,6 +13,8 @@ import com.pluxity.aiot.data.dto.ListMetricData
 import com.pluxity.aiot.data.dto.ListQueryInfo
 import com.pluxity.aiot.data.dto.SensorMetrics
 import com.pluxity.aiot.data.dto.buildListMetricMap
+import com.pluxity.aiot.data.dto.climateValueExtractor
+import com.pluxity.aiot.data.dto.displacementGaugeValueExtractor
 import com.pluxity.aiot.data.dto.toDeviceDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.feature.FeatureService
@@ -147,15 +149,7 @@ class DataService(
     ): ListDataResponse {
         val data = getClimateData(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
-        val metrics =
-            data.buildListMetricMap(SensorMetrics.CLIMATE) { definition ->
-                when (definition.key) {
-                    "temperature" -> temperature!!
-                    "humidity" -> humidity!!
-                    "discomfortIndex" -> discomfortIndex!!
-                    else -> 0.0
-                }
-            }
+        val metrics = data.buildListMetricMap(SensorMetrics.CLIMATE, climateValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -167,14 +161,7 @@ class DataService(
     ): ListDataResponse {
         val data = getDisplacementGauge(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
-        val metrics =
-            data.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE) { definition ->
-                when (definition.key) {
-                    "angleX" -> angleX!!
-                    "angleY" -> angleY!!
-                    else -> 0.0
-                }
-            }
+        val metrics = data.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE, displacementGaugeValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 

@@ -2,7 +2,6 @@ package com.pluxity.aiot.fixture
 
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.site.Site
-import com.pluxity.aiot.system.device.type.DeviceType
 import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Point
@@ -13,7 +12,6 @@ object FeatureFixture {
 
     fun create(
         id: Long? = null,
-        deviceType: DeviceType? = null,
         deviceId: String = "DEVICE_001",
         objectId: String = "SENSOR_001",
         name: String? = "Test Device",
@@ -28,7 +26,6 @@ object FeatureFixture {
         val point = geom ?: (longitude?.let { lon -> latitude?.let { lat -> gf.createPoint(Coordinate(lon, lat)) } })
         return Feature(
             id = id,
-            deviceType = deviceType,
             deviceId = deviceId,
             objectId = objectId,
             name = name,

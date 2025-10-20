@@ -2,7 +2,6 @@ package com.pluxity.aiot.feature
 
 import com.pluxity.aiot.global.entity.BaseEntity
 import com.pluxity.aiot.site.Site
-import com.pluxity.aiot.system.device.type.DeviceType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -23,9 +22,6 @@ class Feature(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
     var id: Long? = null,
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "device_type_id")
-    var deviceType: DeviceType? = null,
     @Column(nullable = false, unique = true)
     var deviceId: String,
     @Column(nullable = false)
@@ -46,24 +42,14 @@ class Feature(
     @Column
     private var subscriptionTime: LocalDateTime? = null,
 ) : BaseEntity() {
-    fun changeDeviceType(deviceType: DeviceType?) {
-        this.deviceType = deviceType
-    }
-
-    fun updateDeviceType(deviceType: DeviceType) {
-        this.deviceType = deviceType
-    }
-
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive
     }
 
     fun updateInfo(
-        deviceType: DeviceType?,
         name: String,
         objectId: String,
     ) {
-        this.deviceType = deviceType
         this.name = name
         this.objectId = objectId
     }

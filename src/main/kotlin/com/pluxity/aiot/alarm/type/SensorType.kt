@@ -10,6 +10,7 @@ enum class SensorType(
     val description: String,
     val version: String,
     val measureName: String = "",
+    val abbreviation: AbbreviationData,
     val deviceProfiles: List<DeviceProfileEnum>,
 ) {
 //    RIVER_MONITOR("34950", "하천모니터링복합센서"),
@@ -21,6 +22,7 @@ enum class SensorType(
         "온습도계",
         "1.0",
         "temperature_humidity",
+        AbbreviationData("thm", "온습도계"),
         listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY, DeviceProfileEnum.DISCOMFORT_INDEX),
     ),
 
@@ -31,6 +33,7 @@ enum class SensorType(
         "화재 감지",
         "1.0",
         "fire_alarm",
+        AbbreviationData("fir", "화재감지기"),
         listOf(DeviceProfileEnum.FIRE_ALARM),
     ),
     DISPLACEMENT_GAUGE(
@@ -39,6 +42,7 @@ enum class SensorType(
         "DISPLACEMENT_GAUGE",
         "1.0",
         "displacement_gauge",
+        AbbreviationData("tst", "변위계"),
         listOf(DeviceProfileEnum.ANGLE_X, DeviceProfileEnum.ANGLE_Y),
     ),
 //    SUMMARY2("34958", "Summary2"),
@@ -103,3 +107,8 @@ enum class DeviceProfileEnum(
         fun toEntity(id: Long) = findById(id).toEntity()
     }
 }
+
+data class AbbreviationData(
+    var abbreviationKey: String,
+    var fullName: String,
+)

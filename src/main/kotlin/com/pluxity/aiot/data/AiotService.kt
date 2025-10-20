@@ -1,9 +1,8 @@
 package com.pluxity.aiot.data
 
-import com.pluxity.aiot.abbreviation.Abbreviation
-import com.pluxity.aiot.abbreviation.AbbreviationRepository
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
 import com.pluxity.aiot.alarm.dto.SubscriptionRepListResponse
+import com.pluxity.aiot.alarm.type.AbbreviationData
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.dto.LocationData
 import com.pluxity.aiot.data.dto.MobiusBatteryResponse
@@ -19,7 +18,6 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.mobius.MobiusConfigService
 import com.pluxity.aiot.system.mobius.MobiusUrlUpdatedEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -48,9 +46,7 @@ private val log = KotlinLogging.logger {}
 
 @Service
 class AiotService(
-    private val deviceTypeRepository: DeviceTypeRepository,
     private val featureRepository: FeatureRepository,
-    private val abbreviationRepository: AbbreviationRepository,
     private val siteRepository: SiteRepository,
     mobiusConfigService: MobiusConfigService,
     webClientFactory: WebClientFactory,
@@ -171,8 +167,7 @@ class AiotService(
     }
 
     suspend fun fetchAllMobiusSensorPaths(existFeatures: List<Feature>): List<Feature> {
-        val deviceTypes = deviceTypeRepository.findAll()
-        val objectIds = deviceTypes.map { it.objectId }
+        val objectIds = SensorType.entries.map { it.objectId }
         val res =
             client
                 .get()
@@ -192,15 +187,13 @@ class AiotService(
         val existFeatureMap = existFeatures.associateBy { it.deviceId }
 
         val ret = mutableMapOf<String, Feature>()
-        val abbreviations = abbreviationRepository.findByIsActiveTrue()
 
-        val deviceTypeMap = deviceTypes.associateBy { it.objectId }
         paths.forEach { path ->
             val splitPaths = path.split("/")
             val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
             val objectId = sensorId.take(5)
-            val deviceType = deviceTypeMap[objectId]
-            val parsedName = parseDeviceId(deviceId, abbreviations)
+            val deviceType = SensorType.fromObjectId(objectId)
+            val parsedName = parseDeviceId(deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
 
             ret[deviceId] = existFeatureMap[deviceId]?.apply {
                 updateInfo(parsedName, sensorId)
@@ -222,7 +215,7 @@ class AiotService(
      */
     fun parseDeviceId(
         deviceId: String,
-        abbreviations: List<Abbreviation>,
+        abbrMap: Map<String, AbbreviationData>,
     ): String {
         // -, _, 공백을 모두 -로 치환
         val normalizedId = deviceId.replace("[\\s_]", "-")
@@ -233,12 +226,6 @@ class AiotService(
         val result = StringBuilder()
         var hasValidPart = false
         var numericSuffix = ""
-
-        // 약어를 Map으로 변환 (대소문자 무시)
-        val abbrMap =
-            abbreviations
-                .filter { it.isActive }
-                .associateBy { it.abbreviationKey.lowercase() }
 
         // 마지막 부분이 숫자인지 확인하여 식별자로 저장
         if (parts.isNotEmpty()) {

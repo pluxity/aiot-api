@@ -65,21 +65,8 @@ interface SensorDataProcessor {
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
     ) {
-        var minValue = 0.0
-        var maxValue = 0.0
-
-        val conditionValue: String = condition.value
-        if (!"true".equals(conditionValue, ignoreCase = true) && !"false".equals(conditionValue, ignoreCase = true)) {
-            try {
-                val range = conditionValue.split(",")
-                minValue = range[0].toDouble()
-                maxValue = if (range.size > 1) range[1].toDouble() else minValue
-            } catch (e: NumberFormatException) {
-                log.warn(e) { "조건값 파싱 오류: $conditionValue. 기본값 0.0 사용" }
-            } catch (e: ArrayIndexOutOfBoundsException) {
-                log.warn(e) { "조건값 파싱 오류: $conditionValue. 기본값 0.0 사용" }
-            }
-        }
+        val minValue = condition.minValue?.toDoubleOrNull() ?: 0.0
+        val maxValue = condition.maxValue?.toDoubleOrNull() ?: 0.0
 
         val eventName: String = condition.deviceEvent.name
 
@@ -111,42 +98,12 @@ interface SensorDataProcessor {
                     occurredAt = parsedDate,
                     minValue = minValue,
                     maxValue = maxValue,
-                    guideMessage = condition.guideMessage,
                 ),
             )
 
-        val isAutoResponse = condition.isAutoResponseEnabled()
 
-        // 조치 이력 처리 및 EventHistory 업데이트
-        if (isAutoResponse && isWithinNotificationInterval) {
-            // 6.1 조치가 자동이면서 무시 시간 안에 있으면 -> 무시(자동) 으로 조치 이력 저장, 무시 열은 true
-            actionHistoryService.createAutomaticAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.IGNORED,
-                true,
-            )
-
-            eventHistory.changeActionResult("AUTOMATIC_IGNORED")
-            eventHistoryRepository.save(eventHistory)
-
-            log.info { "Auto response - ignored due to notification interval: $notificationKey" }
-            return // 이벤트 발행하지 않고 종료
-        } else if (isAutoResponse && !isWithinNotificationInterval) {
-            // 6.2 조치가 자동이면서 무시 시간 밖에 있으면 -> 자동 대응으로 저장, 무시 열은 false
-            actionHistoryService.createAutomaticAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.COMPLETED,
-                false,
-            )
-
-            eventHistory.changeActionResult("AUTOMATIC_COMPLETED")
-            eventHistoryRepository.save(eventHistory)
-        } else if (!isAutoResponse && isWithinNotificationInterval) {
-            // 6.3 조치가 수동이면서 무시 시간 안에 있으면 -> 수동대응 (무시)으로 조치 이력 저장, 무시 열은 true
+        if (condition.needControl && isWithinNotificationInterval) {
+            // 6.1 조치가 수동이면서 무시 시간 안에 있으면 -> 수동대응 (무시)으로 조치 이력 저장, 무시 열은 true
             actionHistoryService.createManualAction(
                 deviceId,
                 eventName,
@@ -161,8 +118,8 @@ interface SensorDataProcessor {
 
             log.info { "Manual response - ignored due to notification interval: $notificationKey" }
             return // 이벤트 발행하지 않고 종료
-        } else {
-            // 6.4 그 외의 경우에는 -> 수동 대응(조치전)으로 이벤트 히스토리 저장
+        } else if (condition.needControl && !isWithinNotificationInterval) {
+            // 6.2 그 외의 경우에는 -> 수동 대응(조치전)으로 이벤트 히스토리 저장
             actionHistoryService.createManualAction(
                 deviceId,
                 eventName,
@@ -175,6 +132,7 @@ interface SensorDataProcessor {
             eventHistory.changeActionResult("MANUAL_PENDING")
             eventHistoryRepository.save(eventHistory)
         }
+
         // 현재 시간 업데이트 (알림 발생 시점 기록)
         lastNotificationMap[notificationKey] = now
 
@@ -198,9 +156,6 @@ interface SensorDataProcessor {
                 minValue = minValue,
                 maxValue = maxValue,
                 notificationEnabled = condition.notificationEnabled,
-                locationTrackingEnabled = condition.locationTrackingEnabled,
-                soundEnabled = condition.soundEnabled,
-                guideMessage = condition.guideMessage!!,
                 actionResult = eventHistory.actionResult,
             ),
         )
@@ -232,12 +187,13 @@ interface SensorDataProcessor {
         deviceType.deviceProfileTypes
             .filter { profileType -> fieldKey == profileType.deviceProfile?.fieldKey }
             .forEach { profileType ->
-                profileType.conditions
+                deviceType.deviceEvents
+                    .flatMap { event -> event.eventConditions }
                     .filter { condition ->
                         condition.deviceEvent.deviceLevel != DeviceEvent.DeviceLevel.NORMAL
                     }.filter { it.notificationEnabled }
                     .forEach { condition ->
-                        if (isConditionMet(condition, value)) {
+                        if (isConditionMet(condition, value, fieldKey)) {
                             anyConditionMet[0] = true
 
                             // 비동기 이벤트 처리 작업 추가
@@ -308,60 +264,58 @@ interface SensorDataProcessor {
     fun isConditionMet(
         condition: EventCondition,
         value: Double,
+        fieldKey: String,
     ): Boolean {
-        val fieldKey: String? =
-            condition.deviceProfileType
-                ?.deviceProfile
-                ?.fieldKey
-        if (fieldKey != null && (fieldKey == ANGLE_X || fieldKey == ANGLE_Y)) {
-            // 각도계 센서(X축, Y축)의 특별 처리: "오차값,중앙값" 형태를 "중앙값 ± 오차" 범위로 해석
-            if (condition.operator === EventCondition.ConditionOperator.BETWEEN && condition.operator != null) {
+        // 각도계 센서(X축, Y축)의 특별 처리 - minValue와 maxValue가 둘 다 있을 때만
+        if (fieldKey == ANGLE_X || fieldKey == ANGLE_Y) {
+            if (!condition.isBoolean && condition.minValue != null && condition.maxValue != null) {
                 try {
-                    val parts = condition.value.split(",")
-                    if (parts.size == 2) {
-                        val errorRange = parts[0].toDouble()
-                        val centerValue = (if (fieldKey == ANGLE_X) 90 else 0).toDouble()
+                    val errorRange = condition.minValue!!.toDouble()
+                    val centerValue = condition.maxValue!!.toDouble()
 
-                        // 중앙값 ± 오차 범위 계산
-                        val minRange = centerValue - errorRange
-                        val maxRange = centerValue + errorRange
+                    // 중앙값 ± 오차 범위 계산
+                    val minRange = centerValue - errorRange
+                    val maxRange = centerValue + errorRange
 
-                        // 실제 값이 (중앙값-오차) ~ (중앙값+오차) 범위 내에 있는지 확인
-                        return value <= minRange || value >= maxRange
-                    }
+                    // 실제 값이 (중앙값-오차) ~ (중앙값+오차) 범위 밖에 있는지 확인
+                    return value <= minRange || value >= maxRange
                 } catch (e: NumberFormatException) {
-                    log.warn(e) { "각도계 조건값 파싱 오류: $condition.value" }
+                    log.warn(e) { "각도계 조건값 파싱 오류: minValue=${condition.minValue}, maxValue=${condition.maxValue}" }
                 }
             }
         }
 
-        if (condition.operator === EventCondition.ConditionOperator.BETWEEN) {
-            if (condition.minValue != null && condition.maxValue != null) {
-                if (value >= condition.minValue!! && value <= condition.maxValue!!) {
-                    val range = condition.value.split(",")
-                    if (range.size == 2) {
-                        val min = range[0].toDouble()
-                        val max = range[1].toDouble()
-                        return value in min..max
-                    }
-                }
-            }
-        } else if (condition.operator === EventCondition.ConditionOperator.GREATER_THAN) {
-            return value > condition.value.toDouble()
-        } else if (condition.operator === EventCondition.ConditionOperator.LESS_THAN) {
-            return value < condition.value.toDouble()
-        } else if (condition.operator === EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL) {
-            return value >= condition.value.toDouble()
-        } else if (condition.operator === EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL) {
-            return value <= condition.value.toDouble()
-        } else if (condition.operator === EventCondition.ConditionOperator.EQUALS) {
-            val conditionValue: String = condition.value
+        // Boolean 타입 조건 처리
+        if (condition.isBoolean) {
+            val conditionValue = condition.minValue ?: "true" // 기본값은 true
             if ("true".equals(conditionValue, ignoreCase = true) || "false".equals(conditionValue, ignoreCase = true)) {
                 val booleanAsDouble = if ("true".equals(conditionValue, ignoreCase = true)) 1.0 else 0.0
                 return abs(value - booleanAsDouble) < 0.001 // 부동소수점 비교를 위한 오차 범위 설정
             }
-            return value.equals(conditionValue.toDouble())
+            return false
         }
-        return false
+
+        // 일반 숫자 비교
+        val min = condition.minValue?.toDoubleOrNull()
+        val max = condition.maxValue?.toDoubleOrNull()
+
+        return when {
+            // minValue와 maxValue가 모두 있는 경우
+            min != null && max != null -> {
+                if (abs(min - max) < 0.001) {
+                    // 같은 값이면 EQUALS
+                    abs(value - min) < 0.001
+                } else {
+                    // 다른 값이면 BETWEEN
+                    value in min..max
+                }
+            }
+            // minValue만 있는 경우: GREATER_THAN_OR_EQUAL
+            min != null && max == null -> value >= min
+            // maxValue만 있는 경우: LESS_THAN_OR_EQUAL
+            min == null && max != null -> value <= max
+            // 둘 다 없으면 false
+            else -> false
+        }
     }
 }

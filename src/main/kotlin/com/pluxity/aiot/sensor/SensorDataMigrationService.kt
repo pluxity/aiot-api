@@ -288,9 +288,6 @@ class SensorDataMigrationService(
                 minValue = 0.0,
                 maxValue = 0.0,
                 notificationEnabled = false,
-                locationTrackingEnabled = false,
-                soundEnabled = false,
-                guideMessage = "디바이스 연결 상태 및 네트워크를 확인하세요.",
                 actionResult = "SYSTEM_ALERT",
             )
 

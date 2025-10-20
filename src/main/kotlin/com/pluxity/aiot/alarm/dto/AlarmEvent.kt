@@ -17,8 +17,5 @@ data class AlarmEvent(
     val minValue: Double,
     val maxValue: Double,
     val notificationEnabled: Boolean,
-    val locationTrackingEnabled: Boolean,
-    val soundEnabled: Boolean,
-    val guideMessage: String,
     val actionResult: String,
 )

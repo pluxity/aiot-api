@@ -47,11 +47,7 @@ class FeatureService(
                         ).orderBy(path(Feature::site).asc())
                 }.filterNotNull()
 
-        val fileMap =
-            fileService.getFileMapByIds(deviceEventRepository.findAll()) {
-                listOfNotNull(it.iconId)
-            }
-        return features.map { it.toFeatureResponse(fileMap) }
+        return features.map { it.toFeatureResponse() }
     }
 
     @Transactional
@@ -85,11 +81,7 @@ class FeatureService(
                 deviceId,
             )
 
-        val fileMap =
-            fileService.getFileMapByIds(deviceEventRepository.findAll()) {
-                listOfNotNull(it.iconId)
-            }
-        return feature.toFeatureResponse(fileMap)
+        return feature.toFeatureResponse()
     }
 
     private fun findById(id: Long) = featureRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, id)

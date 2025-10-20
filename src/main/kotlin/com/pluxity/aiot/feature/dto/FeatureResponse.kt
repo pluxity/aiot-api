@@ -21,10 +21,10 @@ data class FeatureResponse(
     val siteResponse: SiteResponse?,
 )
 
-fun Feature.toFeatureResponse(fileMap: Map<Long, FileResponse>) =
+fun Feature.toFeatureResponse() =
     FeatureResponse(
         id = this.id!!,
-        deviceType = this.deviceType!!.toDeviceTypeResponse(fileMap),
+        deviceType = this.deviceType!!.toDeviceTypeResponse(),
         deviceId = this.deviceId,
         objectId = this.objectId,
         name = this.name!!,

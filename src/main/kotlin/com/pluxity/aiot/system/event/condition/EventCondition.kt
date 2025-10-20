@@ -1,7 +1,6 @@
 package com.pluxity.aiot.system.event.condition
 
 import com.pluxity.aiot.system.device.event.DeviceEvent
-import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -21,75 +20,45 @@ class EventCondition(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "device_event_id")
     val deviceEvent: DeviceEvent,
-    @Enumerated(EnumType.STRING)
-    var operator: ConditionOperator? = null,
+    @Column(name = "is_active")
+    var isActivate: Boolean = false,
+    var needControl: Boolean = false,
+    var isBoolean: Boolean = false,
     @Column(name = "min_value")
-    var minValue: Double? = null,
+    var minValue: String? = null,
     @Column(name = "max_value")
-    var maxValue: Double? = null,
-    var value: String,
+    var maxValue: String? = null,
     var notificationEnabled: Boolean = false,
-    var locationTrackingEnabled: Boolean = false,
-    var soundEnabled: Boolean = false,
-    var fireEffectEnabled: Boolean = false,
-    @Enumerated(EnumType.STRING)
-    var controlType: ControlType? = ControlType.AUTO,
-    @Column(length = 500)
-    var guideMessage: String? = null,
     @Column(name = "notification_interval_minutes")
     var notificationIntervalMinutes: Int = 0,
     @Column(name = "condition_order")
     var order: Int? = null,
 ) {
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "device_profile_type_id")
-    var deviceProfileType: DeviceProfileType? = null
-
     init {
         if (order == null) {
             this.order = getDefaultOrderByDeviceLevel()
         }
     }
 
-    fun addDeviceProfileType(deviceProfileType: DeviceProfileType?) {
-        this.deviceProfileType?.conditions?.remove(this)
-        this.deviceProfileType = deviceProfileType
-        deviceProfileType?.conditions?.add(this)
-    }
-
     fun update(
-        value: String,
-        operator: ConditionOperator?,
+        isActivate: Boolean,
+        needControl: Boolean,
+        isBoolean: Boolean,
+        minValue: String?,
+        maxValue: String?,
         notificationEnabled: Boolean,
-        locationTrackingEnabled: Boolean,
-        soundEnabled: Boolean,
-        fireEffectEnabled: Boolean,
-        controlType: ControlType?,
-        guideMessage: String?,
         notificationIntervalMinutes: Int?,
         order: Int?,
     ) {
-        this.value = value
-        this.operator = operator
+        this.isActivate = isActivate
+        this.needControl = needControl
+        this.isBoolean = isBoolean
+        this.minValue = minValue
+        this.maxValue = maxValue
         this.notificationEnabled = notificationEnabled
-        this.locationTrackingEnabled = locationTrackingEnabled
-        this.soundEnabled = soundEnabled
-        this.fireEffectEnabled = fireEffectEnabled
-        this.controlType = controlType
-        this.guideMessage = guideMessage
         this.notificationIntervalMinutes = notificationIntervalMinutes ?: 0
         this.order = order ?: this.order
     }
-
-    fun changeMinMax(
-        minValue: Double?,
-        maxValue: Double?,
-    ) {
-        this.minValue = minValue
-        this.maxValue = maxValue
-    }
-
-    fun isAutoResponseEnabled(): Boolean = this.controlType == ControlType.AUTO
 
     private fun getDefaultOrderByDeviceLevel(): Int {
         if (this.deviceEvent.deviceLevel == null) {
@@ -106,19 +75,4 @@ class EventCondition(
         }
     }
 
-    enum class ConditionOperator {
-        EQUALS,
-        BETWEEN,
-        GREATER_THAN,
-        LESS_THAN,
-        GREATER_THAN_OR_EQUAL,
-        LESS_THAN_OR_EQUAL,
-    }
-
-    enum class ControlType(
-        val description: String,
-    ) {
-        AUTO("자동제어"),
-        MANUAL("수동제어"),
-    }
 }

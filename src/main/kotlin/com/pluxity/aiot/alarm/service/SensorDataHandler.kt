@@ -2,6 +2,7 @@ package com.pluxity.aiot.alarm.service
 
 import com.pluxity.aiot.alarm.dto.SubscriptionSgnResponse
 import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
@@ -12,17 +13,20 @@ private val log = KotlinLogging.logger {}
 
 @Component
 class SensorDataHandler(
-    deviceTypeRepository: DeviceTypeRepository,
     processors: List<SensorDataProcessor>,
     private val featureRepository: FeatureRepository,
+    private val deviceTypeRepository: DeviceTypeRepository,
 ) {
     private val processorMap: Map<String, SensorDataProcessor> =
         processors.associateBy { it.getObjectId() }
 
-    private val deviceTypeCache =
-        deviceTypeRepository
-            .findAll()
-            .associateBy { it.objectId }
+    private val deviceTypeCache: MutableMap<String, DeviceType> =
+        SensorType.entries
+            .mapNotNull { sensorType ->
+                deviceTypeRepository.findByObjectId(sensorType.objectId)?.let { deviceType ->
+                    sensorType.objectId to deviceType
+                }
+            }.toMap()
             .toMutableMap()
 
     fun handleData(sgn: SubscriptionSgnResponse) {

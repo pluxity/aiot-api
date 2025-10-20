@@ -13,11 +13,11 @@ data class DeviceTypeResponse(
     var events: List<DeviceEventResponse>,
 )
 
-fun DeviceType.toDeviceTypeResponse(fileMap: Map<Long, FileResponse>) =
+fun DeviceType.toDeviceTypeResponse() =
     DeviceTypeResponse(
         id = this.id!!,
         objectId = this.objectId,
         description = this.description!!,
         version = this.version!!,
-        events = this.deviceEvents.map { it.toDeviceEventInfo(fileMap) },
+        events = this.deviceEvents.map { it.toDeviceEventInfo() },
     )

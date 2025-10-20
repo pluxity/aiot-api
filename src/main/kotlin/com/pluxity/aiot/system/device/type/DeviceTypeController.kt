@@ -3,7 +3,6 @@ package com.pluxity.aiot.system.device.type
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
-import com.pluxity.aiot.system.device.type.dto.DeviceTypeRequest
 import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -14,8 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -107,49 +104,4 @@ class DeviceTypeController(
         @PathVariable id: Long,
     ): ResponseEntity<DataResponseBody<List<DeviceProfileResponse>>> =
         ResponseEntity.ok(DataResponseBody(deviceTypeService.findProfilesByDeviceTypeId(id)))
-
-    @Operation(summary = "디바이스 종류 정보 수정", description = "디바이스 종류 정보를 수정합니다")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "204", description = "정보 수정 성공"),
-            ApiResponse(
-                responseCode = "400",
-                description = "잘못된 요청",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "디바이스 종류 정보를 찾을 수 없음",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "500",
-                description = "서버 오류",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-        ],
-    )
-    @PutMapping("/{id}")
-    fun update(
-        @PathVariable id: Long,
-        @RequestBody request: DeviceTypeRequest,
-    ): ResponseEntity<Void> {
-        deviceTypeService.update(id, request)
-        return ResponseEntity.ok().build()
-    }
 }

@@ -89,22 +89,21 @@ class FeatureServiceTest(
 
             When("objectId로 필터링하면") {
                 // 사전 조건
-                val objectId = "TYPE_FILTER_001"
 
                 featureRepository.saveAll(
                     listOf(
-                        FeatureFixture.create(deviceId = "DEVICE_TYPE_001", objectId = objectId),
-                        FeatureFixture.create(deviceId = "DEVICE_TYPE_002", objectId = "TYPE_FILTER_001"),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_001", objectId = "test1"),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_002", objectId = "test1"),
                         FeatureFixture.create(deviceId = "DEVICE_TYPE_003", objectId = "TYPE_FILTER_002"),
                     ),
                 )
 
-                val searchCondition = FeatureSearchCondition(objectId = objectId)
+                val searchCondition = FeatureSearchCondition(objectId = "test1")
                 val result = featureService.findAll(searchCondition)
 
                 Then("해당 DeviceType의 Feature만 반환된다") {
                     result shouldHaveSize 2
-                    result.all { it.objectId == objectId } shouldBe true
+                    result.all { it.objectId == "test1" } shouldBe true
                 }
             }
 
@@ -137,8 +136,8 @@ class FeatureServiceTest(
                 val result = featureService.findAll(searchCondition)
 
                 Then("활성화된 Feature만 반환된다") {
-                    result.filter { it.objectId.startsWith("OBJ_ACTIVE") || it.objectId.startsWith("OBJ_INACTIVE") } shouldHaveSize 2
-                    result.filter { it.objectId.startsWith("OBJ_ACTIVE") }.all { it.isActive } shouldBe true
+                    result.filter { it.deviceId.startsWith("DEVICE_ACTIVE") || it.deviceId.startsWith("DEVICE_INACTIVE") } shouldHaveSize 2
+                    result.filter { it.deviceId.startsWith("DEVICE_INACTIVE") }.all { it.isActive } shouldBe true
                 }
             }
 

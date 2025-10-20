@@ -142,7 +142,6 @@ class ProcessorEndToEndTest(
                             deviceId = "TEMP_DEVICE_001",
                             objectId = "TEMP_E2E_001",
                             name = "온도 센서",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -243,7 +242,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "HUMIDITY_DEVICE_001",
                             objectId = "HUMIDITY_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -339,7 +337,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "FIRE_DEVICE_001",
                             objectId = "FIRE_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -430,7 +427,6 @@ class ProcessorEndToEndTest(
                     FeatureFixture.create(
                         deviceId = "FIRE_MANUAL_DEVICE_001",
                         objectId = "FIRE_MANUAL_E2E_001",
-                        deviceType = savedDeviceType,
                         site = site,
                     ),
                 )
@@ -522,7 +518,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "ANGLE_DEVICE_001",
                             objectId = "ANGLE_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -616,7 +611,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "ANGLE_Y_DEVICE_001",
                             objectId = "ANGLE_Y_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -787,7 +781,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "MULTI_DEVICE_001",
                             objectId = "MULTI_SENSOR_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -925,7 +918,6 @@ class ProcessorEndToEndTest(
                         FeatureFixture.create(
                             deviceId = "DISCOMFORT_DEVICE_001",
                             objectId = "DISCOMFORT_E2E_001",
-                            deviceType = savedDeviceType,
                             site = site,
                         ),
                     )
@@ -1018,7 +1010,6 @@ class ProcessorEndToEndTest(
                     FeatureFixture.create(
                         deviceId = "INTERVAL_DEVICE_001",
                         objectId = "INTERVAL_E2E_001",
-                        deviceType = savedDeviceType,
                         site = site,
                     ),
                 )

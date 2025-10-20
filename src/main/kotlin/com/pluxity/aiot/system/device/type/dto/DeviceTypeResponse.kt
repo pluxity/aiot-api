@@ -1,23 +1,21 @@
 package com.pluxity.aiot.system.device.type.dto
 
-import com.pluxity.aiot.file.dto.FileResponse
-import com.pluxity.aiot.system.device.event.dto.DeviceEventResponse
-import com.pluxity.aiot.system.device.event.dto.toDeviceEventInfo
-import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
 
 data class DeviceTypeResponse(
     var id: Long,
     var objectId: String,
     var description: String,
     var version: String,
-    var events: List<DeviceEventResponse>,
+    var profiles: List<DeviceProfileResponse>,
 )
 
-fun DeviceType.toDeviceTypeResponse(fileMap: Map<Long, FileResponse>) =
+fun SensorType.toDeviceTypeResponse() =
     DeviceTypeResponse(
-        id = this.id!!,
+        id = this.id,
         objectId = this.objectId,
-        description = this.description!!,
-        version = this.version!!,
-        events = this.deviceEvents.map { it.toDeviceEventInfo(fileMap) },
+        description = this.description,
+        version = this.version,
+        profiles = this.deviceProfiles.map { it.toResponse() },
     )

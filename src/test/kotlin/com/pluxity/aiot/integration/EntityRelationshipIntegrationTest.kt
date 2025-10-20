@@ -2,8 +2,6 @@ package com.pluxity.aiot.integration
 
 import com.pluxity.aiot.config.TestSecurityConfig
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.fixture.FeatureFixture
-import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -12,7 +10,6 @@ import com.pluxity.aiot.system.device.type.DeviceTypeService
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
-import io.kotest.matchers.shouldBe
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
@@ -48,69 +45,6 @@ class EntityRelationshipIntegrationTest(
         //     DeviceType의 create 메서드가 제거되어 이 테스트는 더 이상 유효하지 않습니다.
         //     DeviceType은 사전 정의된 데이터로 관리되며, update만 가능합니다.
         // }
-
-        Given("1-2. Site → Feature → DeviceType 양방향 관계") {
-            When("Site와 Feature를 DeviceType과 연결하면") {
-                // 기존 FeatureServiceTest 로직 재사용
-                val site = siteRepository.saveAndFlush(SiteFixture.create(name = "Building A"))
-                val deviceType =
-                    deviceTypeRepository.saveAndFlush(
-                        com.pluxity.aiot.fixture.DeviceTypeFixture
-                            .create(objectId = "TYPE_INT_001"),
-                    )
-                val feature =
-                    featureRepository.saveAndFlush(
-                        FeatureFixture.create(
-                            deviceType = deviceType,
-                            site = site,
-                            deviceId = "DEVICE_INT_001",
-                            objectId = "TYPE_INT_001",
-                        ),
-                    )
-
-                Then("Feature.deviceType 양방향 관계가 설정된다") {
-                    feature.deviceType?.id shouldBe deviceType.id
-                    val savedDeviceType = deviceTypeRepository.findByIdWithAssociations(deviceType.id!!)!!
-                    savedDeviceType.features.any { it.id == feature.id } shouldBe true
-
-                    feature.site?.id shouldBe site.id
-                    val savedSite = siteRepository.findById(site.id!!).get()
-                    savedSite.features.any { it.id == feature.id } shouldBe true
-                }
-            }
-
-            When("여러 Feature를 같은 DeviceType에 연결하면") {
-                val site1 = siteRepository.saveAndFlush(SiteFixture.create(name = "Building B"))
-                val site2 = siteRepository.saveAndFlush(SiteFixture.create(name = "Building C"))
-                val deviceType =
-                    deviceTypeRepository.saveAndFlush(
-                        com.pluxity.aiot.fixture.DeviceTypeFixture
-                            .create(objectId = "TYPE_MULTI_FEATURE"),
-                    )
-
-                featureRepository.saveAndFlush(
-                    FeatureFixture.create(
-                        deviceType = deviceType,
-                        site = site1,
-                        deviceId = "DEVICE_MULTI_001",
-                        objectId = "TYPE_MULTI_FEATURE",
-                    ),
-                )
-                featureRepository.saveAndFlush(
-                    FeatureFixture.create(
-                        deviceType = deviceType,
-                        site = site2,
-                        deviceId = "DEVICE_MULTI_002",
-                        objectId = "TYPE_MULTI_FEATURE",
-                    ),
-                )
-
-                Then("DeviceType.features 컬렉션에 2개 포함") {
-                    val savedDeviceType = deviceTypeRepository.findByIdWithAssociations(deviceType.id!!)!!
-                    savedDeviceType.features.filter { it.objectId == "TYPE_MULTI_FEATURE" }.size shouldBe 2
-                }
-            }
-        }
 
         // Given("1-3. 복합 업데이트 - minValue/maxValue 전파") {
         //     DeviceType의 create 메서드가 제거되어 이 섹션의 테스트들은 더 이상 유효하지 않습니다.

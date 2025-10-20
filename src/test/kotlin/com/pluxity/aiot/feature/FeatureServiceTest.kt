@@ -35,14 +35,11 @@ class FeatureServiceTest(
             featureRepository.deleteAll()
             When("전체 Feature를 조회하면") {
                 // 사전 조건: 데이터 준비
-                val deviceType1 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_001"))
-                val deviceType2 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_002"))
-
                 featureRepository.saveAll(
                     listOf(
-                        FeatureFixture.create(deviceType = deviceType1, deviceId = "DEVICE_001", objectId = "TYPE_001", name = "Device 1"),
-                        FeatureFixture.create(deviceType = deviceType2, deviceId = "DEVICE_002", objectId = "TYPE_002", name = "Device 2"),
-                        FeatureFixture.create(deviceType = deviceType1, deviceId = "DEVICE_003", objectId = "TYPE_001", name = "Device 3"),
+                        FeatureFixture.create(deviceId = "DEVICE_001", objectId = "TYPE_001", name = "Device 1"),
+                        FeatureFixture.create(deviceId = "DEVICE_002", objectId = "TYPE_002", name = "Device 2"),
+                        FeatureFixture.create(deviceId = "DEVICE_003", objectId = "TYPE_001", name = "Device 3"),
                     ),
                 )
 
@@ -57,26 +54,22 @@ class FeatureServiceTest(
                 // 사전 조건: Site와 Feature 생성
                 val site1 = siteRepository.save(SiteFixture.create(name = "Site 1"))
                 val site2 = siteRepository.save(SiteFixture.create(name = "Site 2"))
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_FAC_001"))
 
                 featureRepository.saveAll(
                     listOf(
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             site = site1,
                             deviceId = "DEVICE_FAC_001",
                             objectId = "OBJ_FAC_001",
                             name = "Device Fac 1",
                         ),
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             site = site1,
                             deviceId = "DEVICE_FAC_002",
                             objectId = "OBJ_FAC_002",
                             name = "Device Fac 2",
                         ),
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             site = site2,
                             deviceId = "DEVICE_FAC_003",
                             objectId = "OBJ_FAC_003",
@@ -94,49 +87,44 @@ class FeatureServiceTest(
                 }
             }
 
-            When("deviceTypeId로 필터링하면") {
+            When("objectId로 필터링하면") {
                 // 사전 조건
-                val deviceType1 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_FILTER_001"))
-                val deviceType2 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_FILTER_002"))
+                val objectId = "TYPE_FILTER_001"
 
                 featureRepository.saveAll(
                     listOf(
-                        FeatureFixture.create(deviceType = deviceType1, deviceId = "DEVICE_TYPE_001", objectId = "TYPE_FILTER_001"),
-                        FeatureFixture.create(deviceType = deviceType1, deviceId = "DEVICE_TYPE_002", objectId = "TYPE_FILTER_001"),
-                        FeatureFixture.create(deviceType = deviceType2, deviceId = "DEVICE_TYPE_003", objectId = "TYPE_FILTER_002"),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_001", objectId = objectId),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_002", objectId = "TYPE_FILTER_001"),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_003", objectId = "TYPE_FILTER_002"),
                     ),
                 )
 
-                val searchCondition = FeatureSearchCondition(deviceTypeId = deviceType1.id!!)
+                val searchCondition = FeatureSearchCondition(objectId = objectId)
                 val result = featureService.findAll(searchCondition)
 
                 Then("해당 DeviceType의 Feature만 반환된다") {
                     result shouldHaveSize 2
-                    result.all { it.deviceType.id == deviceType1.id } shouldBe true
+                    result.all { it.objectId == objectId } shouldBe true
                 }
             }
 
             When("isActive로 필터링하면") {
                 // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_ACTIVE_FILTER"))
                 featureRepository.saveAll(
                     listOf(
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_ACTIVE_001",
                             objectId = "OBJ_ACTIVE_001",
                             name = "Active 1",
                             isActive = true,
                         ),
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_ACTIVE_002",
                             objectId = "OBJ_ACTIVE_002",
                             name = "Active 2",
                             isActive = true,
                         ),
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_INACTIVE_001",
                             objectId = "OBJ_INACTIVE_001",
                             name = "Inactive 1",
@@ -156,17 +144,14 @@ class FeatureServiceTest(
 
             When("deviceId로 필터링하면") {
                 // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_SEARCH"))
                 featureRepository.saveAll(
                     listOf(
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_SEARCH_001",
                             objectId = "OBJ_SEARCH_001",
                             name = "Search 1",
                         ),
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_SEARCH_002",
                             objectId = "OBJ_SEARCH_002",
                             name = "Search 2",
@@ -185,23 +170,6 @@ class FeatureServiceTest(
         }
 
         Given("Feature 업데이트 기능") {
-            When("DeviceType을 변경하면") {
-                // 사전 조건
-                val deviceType1 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_UPDATE_001"))
-                val deviceType2 = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_UPDATE_002"))
-                val feature =
-                    featureRepository.save(
-                        FeatureFixture.create(deviceType = deviceType1, deviceId = "DEVICE_UPDATE_001", objectId = "TYPE_UPDATE_001"),
-                    )
-
-                val updateRequest = FeatureUpdateRequest(deviceTypeId = deviceType2.id!!, isActive = true)
-                featureService.updateFeature(feature.id!!, updateRequest)
-
-                Then("DeviceType이 변경된다") {
-                    val updated = featureRepository.findById(feature.id!!).get()
-                    updated.deviceType?.id shouldBe deviceType2.id
-                }
-            }
 
             When("isActive를 변경하면") {
                 // 사전 조건
@@ -209,7 +177,6 @@ class FeatureServiceTest(
                 val feature =
                     featureRepository.save(
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_ACTIVE_UPDATE",
                             objectId = "TYPE_ACTIVE_001",
                             isActive = true,
@@ -236,26 +203,6 @@ class FeatureServiceTest(
 
                 Then("NOT_FOUND_FEATURE 예외가 발생한다") {
                     exception.errorCode shouldBe ErrorCode.NOT_FOUND_FEATURE
-                }
-            }
-
-            When("존재하지 않는 DeviceType으로 업데이트하면") {
-                // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_EXIST"))
-                val feature =
-                    featureRepository.save(
-                        FeatureFixture.create(deviceType = deviceType, deviceId = "DEVICE_INVALID_TYPE", objectId = "TYPE_EXIST"),
-                    )
-
-                val updateRequest = FeatureUpdateRequest(deviceTypeId = 999999L, isActive = true)
-
-                val exception =
-                    shouldThrow<CustomException> {
-                        featureService.updateFeature(feature.id!!, updateRequest)
-                    }
-
-                Then("NOT_FOUND_DEVICE_TYPE 예외가 발생한다") {
-                    exception.errorCode shouldBe ErrorCode.NOT_FOUND_DEVICE_TYPE
                 }
             }
         }
@@ -291,11 +238,9 @@ class FeatureServiceTest(
         Given("Feature deviceId 조회 기능") {
             When("존재하는 deviceId로 조회하면") {
                 // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_DEVICE_ID"))
                 val feature =
                     featureRepository.save(
                         FeatureFixture.create(
-                            deviceType = deviceType,
                             deviceId = "DEVICE_ID_001",
                             objectId = "TYPE_DEVICE_ID",
                             name = "Device by ID",

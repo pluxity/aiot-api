@@ -1,6 +1,5 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
@@ -30,9 +29,6 @@ class DeviceType(
 
     @OneToMany(mappedBy = "deviceType", cascade = [CascadeType.ALL], orphanRemoval = true)
     var deviceEvents: MutableSet<DeviceEvent> = mutableSetOf()
-
-    @OneToMany(mappedBy = "deviceType", cascade = [CascadeType.ALL])
-    var features: MutableSet<Feature> = mutableSetOf()
 
     fun removeDeviceProfile(deviceProfile: DeviceProfile?) {
         deviceProfileTypes.removeIf { it.deviceProfile == deviceProfile }
@@ -72,19 +68,5 @@ class DeviceType(
         }
         // 남은 이벤트들은 제거 (더 이상 사용되지 않는 이벤트)
         currentEvents.values.forEach(Consumer { o: DeviceEvent? -> deviceEvents.remove(o) })
-    }
-
-    fun addFeature(feature: Feature) {
-        this.features.add(feature)
-        if (feature.deviceType !== this) {
-            feature.changeDeviceType(this)
-        }
-    }
-
-    fun removeFeature(feature: Feature) {
-        this.features.remove(feature)
-        if (feature.deviceType === this) {
-            feature.changeDeviceType(null)
-        }
     }
 }

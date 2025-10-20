@@ -137,7 +137,6 @@ abstract class ProcessorTestHelper(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
-                deviceType = savedDeviceType,
                 site = site,
             ),
         )
@@ -217,7 +216,6 @@ abstract class ProcessorTestHelper(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
-                deviceType = savedDeviceType,
                 site = site,
             ),
         )
@@ -275,7 +273,6 @@ abstract class ProcessorTestHelper(
                 deviceId = deviceId,
                 objectId = objectId,
                 name = "$objectId 센서",
-                deviceType = savedDeviceType,
                 site = site,
             ),
         )

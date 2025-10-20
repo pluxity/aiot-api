@@ -10,7 +10,6 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.system.device.event.DeviceEventRepository
-import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
@@ -35,13 +34,12 @@ class FeatureService(
                         .from(
                             entity(Feature::class),
                             leftFetchJoin(Feature::site),
-                            leftFetchJoin(Feature::deviceType),
                         ).where(
                             and(
                                 searchCondition?.siteId?.let { path(Site::id).equal(it) },
                                 searchCondition?.deviceId?.takeIf { it.isNotBlank() }?.let { path(Feature::deviceId).equal(it) },
                                 searchCondition?.name?.takeIf { it.isNotBlank() }?.let { path(Feature::name).equal(it) },
-                                searchCondition?.deviceTypeId?.let { path(DeviceType::id).equal(it) },
+                                searchCondition?.objectId?.let { path(Feature::objectId).equal(it) },
                                 searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),
                         ).orderBy(path(Feature::site).asc())
@@ -51,7 +49,7 @@ class FeatureService(
             fileService.getFileMapByIds(deviceEventRepository.findAll()) {
                 listOfNotNull(it.iconId)
             }
-        return features.map { it.toFeatureResponse(fileMap) }
+        return features.map { it.toFeatureResponse() }
     }
 
     @Transactional
@@ -60,10 +58,6 @@ class FeatureService(
         request: FeatureUpdateRequest,
     ) {
         val feature = findById(id)
-        if (feature.deviceType?.id != request.deviceTypeId) {
-            val deviceType = deviceTypeService.findById(request.deviceTypeId)
-            feature.updateDeviceType(deviceType)
-        }
         feature.updateActive(request.isActive)
     }
 
@@ -89,7 +83,7 @@ class FeatureService(
             fileService.getFileMapByIds(deviceEventRepository.findAll()) {
                 listOfNotNull(it.iconId)
             }
-        return feature.toFeatureResponse(fileMap)
+        return feature.toFeatureResponse()
     }
 
     private fun findById(id: Long) = featureRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, id)

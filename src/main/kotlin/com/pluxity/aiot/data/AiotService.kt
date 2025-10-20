@@ -203,9 +203,8 @@ class AiotService(
             val parsedName = parseDeviceId(deviceId, abbreviations)
 
             ret[deviceId] = existFeatureMap[deviceId]?.apply {
-                updateInfo(deviceType, parsedName, sensorId)
+                updateInfo(parsedName, sensorId)
             } ?: Feature(
-                deviceType = deviceType,
                 deviceId = deviceId,
                 name = parsedName,
                 objectId = sensorId,

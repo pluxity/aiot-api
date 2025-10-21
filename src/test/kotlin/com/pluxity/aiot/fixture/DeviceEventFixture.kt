@@ -7,13 +7,11 @@ object DeviceEventFixture {
     fun create(
         id: Long? = null,
         name: String = "Normal",
-        deviceLevel: DeviceEvent.DeviceLevel = DeviceEvent.DeviceLevel.NORMAL,
         deviceType: DeviceType? = null,
     ): DeviceEvent =
         DeviceEvent(
             id = id,
             name = name,
-            deviceLevel = deviceLevel,
             deviceType = deviceType,
         )
 }

@@ -4,9 +4,11 @@ import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
+import com.pluxity.aiot.alarm.service.processor.convertLegacyConditionParams
 import com.pluxity.aiot.alarm.service.processor.impl.DisplacementGaugeProcessor
 import com.pluxity.aiot.alarm.service.processor.impl.FireAlarmProcessor
 import com.pluxity.aiot.alarm.service.processor.impl.TemperatureHumidityProcessor
+import com.pluxity.aiot.alarm.service.processor.mapDeviceEventLevelToConditionLevel
 import com.pluxity.aiot.config.TestSecurityConfig
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.DeviceProfileFixture
@@ -19,6 +21,7 @@ import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.EventCondition
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
@@ -112,19 +115,23 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
                 // EventCondition 생성 (BETWEEN 25.0~30.0)
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(false, "25.0", "30.0")
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.WARNING)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "25.0",
-                        maxValue = "30.0",
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 5,
                         order = 1,
@@ -216,18 +223,22 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "HumidityDanger",
-                        deviceLevel = DeviceEvent.DeviceLevel.DANGER,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(false, "80.0", "100.0")
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.DANGER)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "80.0",
-                        maxValue = "100.0",
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 10,
                         order = 1,
@@ -309,18 +320,22 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "FireDetected",
-                        deviceLevel = DeviceEvent.DeviceLevel.DANGER,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(true, "true", null)
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.DANGER)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = true,
-                        minValue = "true",
-                        maxValue = null,
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 1,
                         order = 1,
@@ -402,18 +417,22 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "FireDetected",
-                        deviceLevel = DeviceEvent.DeviceLevel.DANGER,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(true, "true", null)
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.DANGER)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = true,
-                        minValue = "true",
-                        maxValue = null,
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -491,19 +510,23 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "AngleXCaution",
-                        deviceLevel = DeviceEvent.DeviceLevel.CAUTION,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
                 // AngleX: 오차 5°, 중앙값 90° → value = "5.0,90.0"
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(false, "5.0", "90.0")
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.CAUTION)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "5.0",
-                        maxValue = "90.0",
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 5,
                         order = 1,
@@ -585,19 +608,23 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "AngleYCaution",
-                        deviceLevel = DeviceEvent.DeviceLevel.CAUTION,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
                 // AngleY: 오차 3°, 중앙값 0° → value = "3.0,0.0"
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(false, "3.0", "0.0")
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.CAUTION)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "3.0",
-                        maxValue = "0.0",
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -701,18 +728,27 @@ class ProcessorEndToEndTest(
                 val tempDeviceEvent =
                     DeviceEvent(
                         name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
                     )
                 tempDeviceEvent.updateDeviceType(deviceType)
 
+                val (tempDataType, tempOperator, tempNumericValue1, tempNumericValue2, tempBooleanValue) =
+                    convertLegacyConditionParams(
+                        false,
+                        "25.0",
+                        "30.0",
+                    )
+                val tempLevel = mapDeviceEventLevelToConditionLevel(ConditionLevel.WARNING)
                 val tempCondition =
                     EventCondition(
                         deviceEvent = tempDeviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "25.0",
-                        maxValue = "30.0",
+                        level = tempLevel,
+                        dataType = tempDataType,
+                        operator = tempOperator,
+                        numericValue1 = tempNumericValue1,
+                        numericValue2 = tempNumericValue2,
+                        booleanValue = tempBooleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -730,18 +766,23 @@ class ProcessorEndToEndTest(
                 val humidityDeviceEvent =
                     DeviceEvent(
                         name = "HumidityDanger",
-                        deviceLevel = DeviceEvent.DeviceLevel.DANGER,
                     )
                 humidityDeviceEvent.updateDeviceType(deviceType)
 
+                val (humidityDataType, humidityOperator, humidityNumericValue1, humidityNumericValue2, humidityBooleanValue) =
+                    convertLegacyConditionParams(false, "80.0", "100.0")
+                val humidityLevel = mapDeviceEventLevelToConditionLevel(ConditionLevel.DANGER)
                 val humidityCondition =
                     EventCondition(
                         deviceEvent = humidityDeviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "80.0",
-                        maxValue = "100.0",
+                        level = humidityLevel,
+                        dataType = humidityDataType,
+                        operator = humidityOperator,
+                        numericValue1 = humidityNumericValue1,
+                        numericValue2 = humidityNumericValue2,
+                        booleanValue = humidityBooleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -759,18 +800,23 @@ class ProcessorEndToEndTest(
                 val angleXDeviceEvent =
                     DeviceEvent(
                         name = "AngleXCaution",
-                        deviceLevel = DeviceEvent.DeviceLevel.CAUTION,
                     )
                 angleXDeviceEvent.updateDeviceType(deviceType)
 
+                val (angleXDataType, angleXOperator, angleXNumericValue1, angleXNumericValue2, angleXBooleanValue) =
+                    convertLegacyConditionParams(false, "5.0", "90.0")
+                val angleXLevel = mapDeviceEventLevelToConditionLevel(ConditionLevel.CAUTION)
                 val angleXCondition =
                     EventCondition(
                         deviceEvent = angleXDeviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "5.0",
-                        maxValue = "90.0",
+                        level = angleXLevel,
+                        dataType = angleXDataType,
+                        operator = angleXOperator,
+                        numericValue1 = angleXNumericValue1,
+                        numericValue2 = angleXNumericValue2,
+                        booleanValue = angleXBooleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -893,19 +939,24 @@ class ProcessorEndToEndTest(
                 val discomfortDeviceEvent =
                     DeviceEvent(
                         name = "DiscomfortCaution",
-                        deviceLevel = DeviceEvent.DeviceLevel.CAUTION,
                     )
                 discomfortDeviceEvent.updateDeviceType(deviceType)
 
                 // DI >= 75 조건
+                val (discomfortDataType, discomfortOperator, discomfortNumericValue1, discomfortNumericValue2, discomfortBooleanValue) =
+                    convertLegacyConditionParams(false, "75.0", null)
+                val discomfortLevel = mapDeviceEventLevelToConditionLevel(ConditionLevel.CAUTION)
                 val discomfortCondition =
                     EventCondition(
                         deviceEvent = discomfortDeviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "75.0",
-                        maxValue = null,
+                        level = discomfortLevel,
+                        dataType = discomfortDataType,
+                        operator = discomfortOperator,
+                        numericValue1 = discomfortNumericValue1,
+                        numericValue2 = discomfortNumericValue2,
+                        booleanValue = discomfortBooleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 0,
                         order = 1,
@@ -987,18 +1038,22 @@ class ProcessorEndToEndTest(
                 val deviceEvent =
                     DeviceEvent(
                         name = "TempWarning",
-                        deviceLevel = DeviceEvent.DeviceLevel.WARNING,
                     )
                 deviceEvent.updateDeviceType(deviceType)
 
+                val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(false, "25.0", "30.0")
+                val level = mapDeviceEventLevelToConditionLevel(ConditionLevel.WARNING)
                 val condition =
                     EventCondition(
                         deviceEvent = deviceEvent,
                         isActivate = true,
                         needControl = true,
-                        isBoolean = false,
-                        minValue = "25.0",
-                        maxValue = "30.0",
+                        level = level,
+                        dataType = dataType,
+                        operator = operator,
+                        numericValue1 = numericValue1,
+                        numericValue2 = numericValue2,
+                        booleanValue = booleanValue,
                         notificationEnabled = true,
                         notificationIntervalMinutes = 5,
                         order = 1,

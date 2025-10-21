@@ -9,7 +9,7 @@ import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.properties.InfluxdbProperties
-import com.pluxity.aiot.system.device.event.DeviceEvent
+import com.pluxity.aiot.system.event.condition.ConditionLevel
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -41,7 +41,7 @@ class FeatureScheduler(
         val features = featureRepository.findAll()
         features.forEach { feature ->
             if (isDeviceDisconnected(feature, oneHourAgo)) {
-                feature.updateEventStatus(DeviceEvent.DeviceLevel.DISCONNECTED.toString())
+                feature.updateEventStatus(ConditionLevel.DISCONNECTED.toString())
             }
         }
     }

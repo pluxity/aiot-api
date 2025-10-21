@@ -38,12 +38,11 @@ class FireAlarmProcessor(
         data: SubscriptionConResponse,
     ) {
         data.fireAlarm?.let {
-            val value = if (data.fireAlarm) 1.0 else 0.0
             processEventConditions(
                 deviceId = deviceId,
                 deviceType = deviceType,
                 fieldKey = FIRE_ALARM,
-                value = value,
+                value = it, // Boolean 값 그대로 전달
                 timestamp = data.timestamp,
                 sseService = sseService,
                 eventHistoryRepository = eventHistoryRepository,

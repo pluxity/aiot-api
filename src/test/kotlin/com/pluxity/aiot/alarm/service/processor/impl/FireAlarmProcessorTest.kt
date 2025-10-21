@@ -6,9 +6,9 @@ import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.ConditionLevel
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -61,7 +61,7 @@ class FireAlarmProcessorTest(
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
                         eventName = "FireDetected",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
                         needControl = true,
@@ -92,7 +92,7 @@ class FireAlarmProcessorTest(
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
                         eventName = "FireDetected",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
                         needControl = false,
@@ -125,7 +125,7 @@ class FireAlarmProcessorTest(
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
                         eventName = "FireNormal",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "false",
                         maxValue = null,
                         needControl = true,
@@ -158,7 +158,7 @@ class FireAlarmProcessorTest(
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
                         eventName = "FireAlarm",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
                         needControl = false,
@@ -184,66 +184,7 @@ class FireAlarmProcessorTest(
             }
         }
 
-        Given("화재 감지 센서: Boolean 부동소수점 오차 테스트") {
-            When("fireAlarm 값이 0.9995 (거의 1.0) - true로 인식") {
-                val deviceId = "FIRE_FLOAT_001"
-
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "fire_float1",
-                        deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
-                        eventName = "FireDetected",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
-                        minValue = null,
-                        maxValue = null,
-                        needControl = false,
-                        isBoolean = true,
-                    )
-
-                // fireAlarm을 직접 설정할 수 없으므로 createSensorData 대신 직접 조건 테스트
-                val processor = helper.createProcessor()
-                val condition =
-                    setup.deviceType.deviceEvents
-                        .flatMap { it.eventConditions }
-                        .first()
-
-                // 0.9995는 1.0과의 차이가 0.001 미만 (0.0005)이므로 true로 인식되어야 함
-                val isConditionMet = processor.isConditionMet(condition, 0.9995, "Fire Alarm")
-
-                Then("부동소수점 오차 범위 내에서 true로 인식된다") {
-                    isConditionMet shouldBe true
-                }
-            }
-
-            When("fireAlarm 값이 0.002 (거의 0.0) - false로 인식") {
-                val deviceId = "FIRE_FLOAT_002"
-
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "fire_float2",
-                        deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
-                        eventName = "FireNormal",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = null,
-                        maxValue = null,
-                        needControl = true,
-                        isBoolean = true,
-                    )
-
-                val processor = helper.createProcessor()
-                val condition =
-                    setup.deviceType.deviceEvents
-                        .flatMap { it.eventConditions }
-                        .first()
-
-                // 0.002는 0.0과의 차이가 0.001보다 크므로 false로 인식되지 않아야 함
-                val isConditionMet = processor.isConditionMet(condition, 0.002, "Fire Alarm")
-
-                Then("부동소수점 오차 범위를 초과하여 false로 인식되지 않는다") {
-                    isConditionMet shouldBe false
-                }
-            }
-        }
+        // 기존 테스트: "화재 감지 센서: Boolean 부동소수점 오차 테스트"
+        // 새로운 구조에서는 Boolean 값을 직접 사용하므로 부동소수점 오차 테스트가 불필요함
+        // Boolean은 true/false만 존재하므로 제거됨
     })

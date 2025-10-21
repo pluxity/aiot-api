@@ -12,6 +12,9 @@ import com.pluxity.aiot.data.measure.DisplacementGauge
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.DataType
+import com.pluxity.aiot.system.event.condition.EventCondition
+import com.pluxity.aiot.system.event.condition.Operator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 
@@ -101,5 +104,39 @@ class DisplacementGaugeProcessor(
                 )
             writeApi.writeMeasurement(WritePrecision.S, displacementGauge)
         }
+    }
+
+    /**
+     * 각도계 센서(AngleX, AngleY)의 특수한 BETWEEN 처리를 위한 override
+     * - numericValue1: 오차 범위 (errorRange)
+     * - numericValue2: 중앙값 (centerValue)
+     * - 조건: 실제 값이 (중앙값 - 오차범위) ~ (중앙값 + 오차범위) 범위를 벗어나면 true
+     */
+    override fun isConditionMet(
+        condition: EventCondition,
+        value: Any,
+        fieldKey: String,
+    ): Boolean {
+        // 각도계 센서(AngleX, AngleY)이고 BETWEEN 연산자인 경우 특수 처리
+        if ((fieldKey == ANGLE_X || fieldKey == ANGLE_Y) &&
+            value is Double &&
+            condition.dataType == DataType.NUMERIC &&
+            condition.operator == Operator.BETWEEN &&
+            condition.numericValue1 != null &&
+            condition.numericValue2 != null
+        ) {
+            val errorRange = condition.numericValue1!!
+            val centerValue = condition.numericValue2!!
+
+            // 중앙값 ± 오차 범위 계산
+            val minRange = centerValue - errorRange
+            val maxRange = centerValue + errorRange
+
+            // 실제 값이 (중앙값-오차) ~ (중앙값+오차) 범위 밖에 있는지 확인
+            return value <= minRange || value >= maxRange
+        }
+
+        // 일반적인 처리는 부모 인터페이스의 기본 구현 사용
+        return super.isConditionMet(condition, value, fieldKey)
     }
 }

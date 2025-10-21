@@ -60,7 +60,7 @@ class EntityRelationshipIntegrationTest(
                         objectId = "SENSOR_UPDATE_INT",
                         description = "Sensor",
                         version = "1.0",
-                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null)),
+                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null)),
                         deviceProfileTypes = listOf(DeviceProfileTypeRequest(profile.id!!, 0.0, 100.0)),
                     )
                 val createdId = deviceTypeService.create(createRequest)
@@ -93,7 +93,7 @@ class EntityRelationshipIntegrationTest(
                         objectId = "SENSOR_ADD_EVENT",
                         description = "Sensor",
                         version = "1.0",
-                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null)),
+                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null)),
                         deviceProfileTypes = listOf(DeviceProfileTypeRequest(profile.id!!, 0.0, 100.0)),
                     )
                 val createdId = deviceTypeService.create(createRequest)
@@ -108,8 +108,8 @@ class EntityRelationshipIntegrationTest(
                         version = "1.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(normalEventId, "Normal", DeviceEvent.DeviceLevel.NORMAL, null),
-                                DeviceEventRequest(null, "Warning", DeviceEvent.DeviceLevel.WARNING, null),
+                                DeviceEventRequest(normalEventId, "Normal", EventCondition.ConditionLevel.NORMAL, null),
+                                DeviceEventRequest(null, "Warning", EventCondition.ConditionLevel.WARNING, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -129,7 +129,7 @@ class EntityRelationshipIntegrationTest(
                         objectId = "SENSOR_ADD_PROFILE",
                         description = "Sensor",
                         version = "1.0",
-                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null)),
+                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null)),
                         deviceProfileTypes = listOf(DeviceProfileTypeRequest(tempProfile.id!!, 0.0, 100.0)),
                     )
                 val createdId = deviceTypeService.create(createRequest)
@@ -179,7 +179,7 @@ class EntityRelationshipIntegrationTest(
                         objectId = "SENSOR_DELETE_INT",
                         description = "Sensor",
                         version = "1.0",
-                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null)),
+                        deviceEvents = listOf(DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null)),
                         deviceProfileTypes = listOf(DeviceProfileTypeRequest(profile.id!!, 0.0, 100.0)),
                     )
                 val createdId = deviceTypeService.create(createRequest)

@@ -59,7 +59,7 @@ class DeviceEventService(
                 deviceType.deviceEvents.find { it.id == request.id }
                     ?: throw CustomException(ErrorCode.NOT_FOUND_DEVICE_EVENT, request.id)
 
-            event.update(request.name, request.deviceLevel)
+            event.update(request.name)
 
             // EventCondition 수정
             val conditionRequest = request.eventConditionRequest
@@ -71,9 +71,12 @@ class DeviceEventService(
                 condition.update(
                     isActivate = conditionRequest.isActivate,
                     needControl = conditionRequest.needControl,
-                    isBoolean = conditionRequest.isBoolean,
-                    minValue = conditionRequest.minValue,
-                    maxValue = conditionRequest.maxValue,
+                    level = conditionRequest.level,
+                    dataType = conditionRequest.dataType,
+                    operator = conditionRequest.operator,
+                    numericValue1 = conditionRequest.numericValue1,
+                    numericValue2 = conditionRequest.numericValue2,
+                    booleanValue = conditionRequest.booleanValue,
                     notificationEnabled = conditionRequest.notificationEnabled,
                     notificationIntervalMinutes = conditionRequest.notificationIntervalMinutes,
                     order = conditionRequest.order,
@@ -90,7 +93,6 @@ class DeviceEventService(
             event =
                 DeviceEvent(
                     name = request.name,
-                    deviceLevel = request.deviceLevel,
                 )
 
             deviceType.addDeviceEvent(event)
@@ -103,9 +105,12 @@ class DeviceEventService(
                     deviceEvent = event,
                     isActivate = conditionRequest.isActivate,
                     needControl = conditionRequest.needControl,
-                    isBoolean = conditionRequest.isBoolean,
-                    minValue = conditionRequest.minValue,
-                    maxValue = conditionRequest.maxValue,
+                    level = conditionRequest.level,
+                    dataType = conditionRequest.dataType,
+                    operator = conditionRequest.operator,
+                    numericValue1 = conditionRequest.numericValue1,
+                    numericValue2 = conditionRequest.numericValue2,
+                    booleanValue = conditionRequest.booleanValue,
                     notificationEnabled = conditionRequest.notificationEnabled,
                     notificationIntervalMinutes = conditionRequest.notificationIntervalMinutes ?: 0,
                     order = conditionRequest.order,

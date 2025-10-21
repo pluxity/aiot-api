@@ -7,10 +7,10 @@ import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.ConditionLevel
 
 /**
  * TemperatureHumidityProcessor 테스트를 위한 헬퍼 클래스
@@ -77,7 +77,7 @@ class TemperatureHumidityProcessorTestHelper(
         objectId: String,
         deviceId: String,
         eventName: String,
-        eventLevel: DeviceEvent.DeviceLevel,
+        eventLevel: ConditionLevel,
         minValue: Double,
         maxValue: Double,
         needControl: Boolean = true,

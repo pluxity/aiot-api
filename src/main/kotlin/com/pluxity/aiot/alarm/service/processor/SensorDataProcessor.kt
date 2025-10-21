@@ -7,24 +7,23 @@ import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
-import com.pluxity.aiot.alarm.service.processor.impl.DisplacementGaugeProcessor.Companion.ANGLE_X
-import com.pluxity.aiot.alarm.service.processor.impl.DisplacementGaugeProcessor.Companion.ANGLE_Y
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.ConditionLevel
+import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
+import com.pluxity.aiot.system.event.condition.Operator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import kotlin.math.abs
 
 private val log = KotlinLogging.logger {}
 
@@ -65,13 +64,13 @@ interface SensorDataProcessor {
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
     ) {
-        val minValue = condition.minValue?.toDoubleOrNull() ?: 0.0
-        val maxValue = condition.maxValue?.toDoubleOrNull() ?: 0.0
+        val minValue = condition.numericValue1 ?: 0.0
+        val maxValue = condition.numericValue2 ?: 0.0
 
         val eventName: String = condition.deviceEvent.name
 
         // Feature의 이벤트 상태 업데이트
-        updateFeatureEventStatus(feature, condition.deviceEvent.deviceLevel.toString(), featureRepository)
+        updateFeatureEventStatus(feature, condition.level.toString(), featureRepository)
 
         // 알림 간격 확인
         val notificationKey = "$deviceId:$eventName"
@@ -166,7 +165,7 @@ interface SensorDataProcessor {
         deviceId: String,
         deviceType: DeviceType,
         fieldKey: String,
-        value: Double,
+        value: Any,
         timestamp: String,
         sseService: SseService,
         eventHistoryRepository: EventHistoryRepository,
@@ -189,11 +188,19 @@ interface SensorDataProcessor {
                 deviceType.deviceEvents
                     .flatMap { event -> event.eventConditions }
                     .filter { condition ->
-                        condition.deviceEvent.deviceLevel != DeviceEvent.DeviceLevel.NORMAL
+                        condition.level != ConditionLevel.NORMAL
                     }.filter { it.notificationEnabled }
                     .forEach { condition ->
                         if (isConditionMet(condition, value, fieldKey)) {
                             anyConditionMet[0] = true
+
+                            // value를 Double로 변환 (EventHistory 저장용)
+                            val doubleValue =
+                                when (value) {
+                                    is Number -> value.toDouble()
+                                    is Boolean -> if (value) 1.0 else 0.0
+                                    else -> 0.0
+                                }
 
                             // 비동기 이벤트 처리 작업 추가
                             val eventTask =
@@ -202,7 +209,7 @@ interface SensorDataProcessor {
                                         deviceId,
                                         deviceType,
                                         fieldKey,
-                                        value,
+                                        doubleValue,
                                         profileType,
                                         condition,
                                         feature,
@@ -223,7 +230,7 @@ interface SensorDataProcessor {
 
         // 조건을 만족하는 이벤트가 없으면 NORMAL 상태로 설정
         if (!anyConditionMet[0] && feature != null) {
-            updateFeatureEventStatus(feature, DeviceEvent.DeviceLevel.NORMAL.toString(), featureRepository)
+            updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)
         }
     }
 
@@ -262,59 +269,52 @@ interface SensorDataProcessor {
 
     fun isConditionMet(
         condition: EventCondition,
-        value: Double,
-        fieldKey: String,
+        incomingValue: Any,
     ): Boolean {
-        // 각도계 센서(X축, Y축)의 특별 처리 - minValue와 maxValue가 둘 다 있을 때만
-        if (fieldKey == ANGLE_X || fieldKey == ANGLE_Y) {
-            if (!condition.isBoolean && condition.minValue != null && condition.maxValue != null) {
-                try {
-                    val errorRange = condition.minValue!!.toDouble()
-                    val centerValue = condition.maxValue!!.toDouble()
+        return when (condition.dataType) {
+            DataType.NUMERIC -> {
+                val value =
+                    when (incomingValue) {
+                        is Number -> incomingValue.toDouble()
+                        else -> return false
+                    }
+                val v1 = condition.numericValue1 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue1)
 
-                    // 중앙값 ± 오차 범위 계산
-                    val minRange = centerValue - errorRange
-                    val maxRange = centerValue + errorRange
-
-                    // 실제 값이 (중앙값-오차) ~ (중앙값+오차) 범위 밖에 있는지 확인
-                    return value <= minRange || value >= maxRange
-                } catch (e: NumberFormatException) {
-                    log.warn(e) { "각도계 조건값 파싱 오류: minValue=${condition.minValue}, maxValue=${condition.maxValue}" }
+                when (condition.operator) {
+                    Operator.GREATER_THAN -> value > v1
+                    Operator.GREATER_OR_EQUAL -> value >= v1
+                    Operator.LESS_THAN -> value < v1
+                    Operator.LESS_OR_EQUAL -> value <= v1
+                    Operator.EQUAL -> value == v1
+                    Operator.NOT_EQUAL -> value != v1
+                    Operator.BETWEEN -> {
+                        val v2 = condition.numericValue2 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
+                        value in v1..v2
+                    }
+                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)
                 }
             }
-        }
+            DataType.BOOLEAN -> {
+                val value = incomingValue as? Boolean ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, incomingValue)
+                val bv = condition.booleanValue ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, condition.booleanValue)
 
-        // Boolean 타입 조건 처리
-        if (condition.isBoolean) {
-            val conditionValue = condition.minValue ?: "true" // 기본값은 true
-            if ("true".equals(conditionValue, ignoreCase = true) || "false".equals(conditionValue, ignoreCase = true)) {
-                val booleanAsDouble = if ("true".equals(conditionValue, ignoreCase = true)) 1.0 else 0.0
-                return abs(value - booleanAsDouble) < 0.001 // 부동소수점 비교를 위한 오차 범위 설정
-            }
-            return false
-        }
-
-        // 일반 숫자 비교
-        val min = condition.minValue?.toDoubleOrNull()
-        val max = condition.maxValue?.toDoubleOrNull()
-
-        return when {
-            // minValue와 maxValue가 모두 있는 경우
-            min != null && max != null -> {
-                if (abs(min - max) < 0.001) {
-                    // 같은 값이면 EQUALS
-                    abs(value - min) < 0.001
-                } else {
-                    // 다른 값이면 BETWEEN
-                    value in min..max
+                when (condition.operator) {
+                    Operator.EQUAL -> value == bv
+                    Operator.NOT_EQUAL -> value != bv
+                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)
                 }
             }
-            // minValue만 있는 경우: GREATER_THAN_OR_EQUAL
-            min != null && max == null -> value >= min
-            // maxValue만 있는 경우: LESS_THAN_OR_EQUAL
-            min == null && max != null -> value <= max
-            // 둘 다 없으면 false
-            else -> false
         }
     }
+
+    /**
+     * 조건 충족 여부를 확인하는 메서드 (fieldKey 포함)
+     * - 일반적으로는 fieldKey를 무시하고 isConditionMet(condition, value)를 호출
+     * - 특수한 센서(예: DisplacementGauge)는 이 메서드를 override하여 fieldKey 기반 처리 가능
+     */
+    fun isConditionMet(
+        condition: EventCondition,
+        value: Any,
+        fieldKey: String,
+    ): Boolean = isConditionMet(condition, value)
 }

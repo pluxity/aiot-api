@@ -57,8 +57,8 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null),
-                                DeviceEventRequest(null, "Warning", DeviceEvent.DeviceLevel.WARNING, null),
+                                DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null),
+                                DeviceEventRequest(null, "Warning", EventCondition.ConditionLevel.WARNING, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -111,8 +111,8 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null),
-                                DeviceEventRequest(null, "Warning", DeviceEvent.DeviceLevel.WARNING, null),
+                                DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null),
+                                DeviceEventRequest(null, "Warning", EventCondition.ConditionLevel.WARNING, null),
                             ),
                         deviceProfileTypes =
                             listOf(
@@ -269,7 +269,7 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "NormalUpdate2", DeviceEvent.DeviceLevel.NORMAL, null),
+                                DeviceEventRequest(null, "NormalUpdate2", EventCondition.ConditionLevel.NORMAL, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -289,8 +289,8 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(normalEventId, "NormalUpdate2", DeviceEvent.DeviceLevel.NORMAL, null),
-                                DeviceEventRequest(null, "WarningUpdate2", DeviceEvent.DeviceLevel.WARNING, null),
+                                DeviceEventRequest(normalEventId, "NormalUpdate2", EventCondition.ConditionLevel.NORMAL, null),
+                                DeviceEventRequest(null, "WarningUpdate2", EventCondition.ConditionLevel.WARNING, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -312,8 +312,8 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "NormalUpdate3", DeviceEvent.DeviceLevel.NORMAL, null),
-                                DeviceEventRequest(null, "WarningUpdate3", DeviceEvent.DeviceLevel.WARNING, null),
+                                DeviceEventRequest(null, "NormalUpdate3", EventCondition.ConditionLevel.NORMAL, null),
+                                DeviceEventRequest(null, "WarningUpdate3", EventCondition.ConditionLevel.WARNING, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -328,7 +328,7 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(normalEventId, "NormalUpdate3", DeviceEvent.DeviceLevel.NORMAL, null),
+                                DeviceEventRequest(normalEventId, "NormalUpdate3", EventCondition.ConditionLevel.NORMAL, null),
                             ),
                         deviceProfileTypes = null,
                     )
@@ -353,7 +353,7 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null),
+                                DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null),
                             ),
                         deviceProfileTypes =
                             listOf(
@@ -398,7 +398,7 @@ class DeviceTypeServiceTest(
                         version = "1.0.0",
                         deviceEvents =
                             listOf(
-                                DeviceEventRequest(null, "Normal", DeviceEvent.DeviceLevel.NORMAL, null),
+                                DeviceEventRequest(null, "Normal", EventCondition.ConditionLevel.NORMAL, null),
                             ),
                         deviceProfileTypes =
                             listOf(

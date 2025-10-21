@@ -5,8 +5,6 @@ import com.pluxity.aiot.system.event.condition.EventCondition
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -24,9 +22,6 @@ class DeviceEvent(
     val id: Long? = null,
     @Column(name = "name", nullable = false)
     var name: String,
-    @Enumerated(EnumType.STRING)
-    @Column(name = "device_level")
-    var deviceLevel: DeviceLevel?,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "device_type_id")
     var deviceType: DeviceType? = null,
@@ -42,19 +37,7 @@ class DeviceEvent(
         }
     }
 
-    fun update(
-        name: String,
-        deviceLevel: DeviceLevel,
-    ) {
+    fun update(name: String) {
         this.name = name
-        this.deviceLevel = deviceLevel
-    }
-
-    enum class DeviceLevel {
-        NORMAL,
-        WARNING,
-        CAUTION,
-        DANGER,
-        DISCONNECTED,
     }
 }

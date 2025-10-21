@@ -15,7 +15,100 @@ import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import com.pluxity.aiot.system.device.type.DeviceType
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.ConditionLevel
+import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
+import com.pluxity.aiot.system.event.condition.Operator
+
+/**
+ * 기존 파라미터를 새로운 구조로 변환하는 헬퍼 데이터 클래스
+ */
+data class ConvertedConditionParams(
+    val dataType: DataType,
+    val operator: Operator,
+    val numericValue1: Double?,
+    val numericValue2: Double?,
+    val booleanValue: Boolean?,
+)
+
+/**
+ * 기존 isBoolean, minValue, maxValue를 새로운 구조로 변환
+ */
+fun convertLegacyConditionParams(
+    isBoolean: Boolean,
+    minValue: String?,
+    maxValue: String?,
+): ConvertedConditionParams =
+    if (isBoolean) {
+        // Boolean 타입의 경우
+        val boolValue = minValue?.toBoolean() ?: true
+        ConvertedConditionParams(
+            dataType = DataType.BOOLEAN,
+            operator = Operator.EQUAL,
+            numericValue1 = null,
+            numericValue2 = null,
+            booleanValue = boolValue,
+        )
+    } else {
+        // Numeric 타입의 경우
+        val min = minValue?.toDoubleOrNull()
+        val max = maxValue?.toDoubleOrNull()
+
+        when {
+            min != null && max != null -> {
+                // 두 값이 모두 있으면 BETWEEN
+                ConvertedConditionParams(
+                    dataType = DataType.NUMERIC,
+                    operator = Operator.BETWEEN,
+                    numericValue1 = min,
+                    numericValue2 = max,
+                    booleanValue = null,
+                )
+            }
+            min != null -> {
+                // minValue만 있으면 GREATER_OR_EQUAL
+                ConvertedConditionParams(
+                    dataType = DataType.NUMERIC,
+                    operator = Operator.GREATER_OR_EQUAL,
+                    numericValue1 = min,
+                    numericValue2 = null,
+                    booleanValue = null,
+                )
+            }
+            max != null -> {
+                // maxValue만 있으면 LESS_OR_EQUAL
+                ConvertedConditionParams(
+                    dataType = DataType.NUMERIC,
+                    operator = Operator.LESS_OR_EQUAL,
+                    numericValue1 = max,
+                    numericValue2 = null,
+                    booleanValue = null,
+                )
+            }
+            else -> {
+                // 기본값
+                ConvertedConditionParams(
+                    dataType = DataType.NUMERIC,
+                    operator = Operator.GREATER_OR_EQUAL,
+                    numericValue1 = 0.0,
+                    numericValue2 = null,
+                    booleanValue = null,
+                )
+            }
+        }
+    }
+
+/**
+ * EventCondition.ConditionLevel을 ConditionLevel로 변환
+ */
+fun mapDeviceEventLevelToConditionLevel(eventLevel: ConditionLevel): ConditionLevel =
+    when (eventLevel) {
+        ConditionLevel.NORMAL -> ConditionLevel.NORMAL
+        ConditionLevel.WARNING -> ConditionLevel.WARNING
+        ConditionLevel.CAUTION -> ConditionLevel.CAUTION
+        ConditionLevel.DANGER -> ConditionLevel.DANGER
+        ConditionLevel.DISCONNECTED -> ConditionLevel.DISCONNECTED
+    }
 
 /**
  * 센서 데이터 Processor 테스트를 위한 공통 헬퍼 클래스
@@ -64,7 +157,7 @@ abstract class ProcessorTestHelper(
         deviceId: String,
         profile: DeviceProfile,
         eventName: String,
-        eventLevel: DeviceEvent.DeviceLevel,
+        eventLevel: ConditionLevel,
         minValue: String? = null,
         maxValue: String? = null,
         needControl: Boolean = false,
@@ -91,19 +184,25 @@ abstract class ProcessorTestHelper(
         val deviceEvent =
             DeviceEvent(
                 name = eventName,
-                deviceLevel = eventLevel,
             )
         deviceEvent.updateDeviceType(deviceType)
 
         // 4. EventCondition 생성 및 연결
+        // 기존 파라미터를 새로운 구조로 변환
+        val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        val level = mapDeviceEventLevelToConditionLevel(eventLevel)
+
         val condition =
             EventCondition(
                 deviceEvent = deviceEvent,
                 isActivate = true,
                 needControl = needControl,
-                isBoolean = isBoolean,
-                minValue = minValue,
-                maxValue = maxValue,
+                level = level,
+                dataType = dataType,
+                operator = operator,
+                numericValue1 = numericValue1,
+                numericValue2 = numericValue2,
+                booleanValue = booleanValue,
                 notificationEnabled = true,
                 notificationIntervalMinutes = notificationIntervalMinutes,
                 order = 1,
@@ -156,7 +255,7 @@ abstract class ProcessorTestHelper(
         deviceId: String,
         profile: DeviceProfile,
         eventName: String,
-        eventLevel: DeviceEvent.DeviceLevel,
+        eventLevel: ConditionLevel,
         minValue: String?,
         maxValue: String?,
         isBoolean: Boolean = false,
@@ -165,17 +264,23 @@ abstract class ProcessorTestHelper(
         val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
         deviceType.deviceProfileTypes.add(deviceProfileType)
 
-        val deviceEvent = DeviceEvent(name = eventName, deviceLevel = eventLevel)
+        val deviceEvent = DeviceEvent(name = eventName)
         deviceEvent.updateDeviceType(deviceType)
+
+        val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
                 deviceEvent = deviceEvent,
                 isActivate = true,
                 needControl = true,
-                isBoolean = isBoolean,
-                minValue = minValue,
-                maxValue = maxValue,
+                level = level,
+                dataType = dataType,
+                operator = operator,
+                numericValue1 = numericValue1,
+                numericValue2 = numericValue2,
+                booleanValue = booleanValue,
                 notificationEnabled = false, // Disabled
                 notificationIntervalMinutes = 0,
                 order = 1,
@@ -210,17 +315,28 @@ abstract class ProcessorTestHelper(
         deviceType.deviceProfileTypes.add(deviceProfileType)
 
         conditions.forEachIndexed { index, spec ->
-            val deviceEvent = DeviceEvent(name = spec.eventName, deviceLevel = spec.eventLevel)
+            val deviceEvent = DeviceEvent(name = spec.eventName)
             deviceEvent.updateDeviceType(deviceType)
+
+            val (dataType, operator, numericValue1, numericValue2, booleanValue) =
+                convertLegacyConditionParams(
+                    spec.isBoolean,
+                    spec.minValue,
+                    spec.maxValue,
+                )
+            val level = mapDeviceEventLevelToConditionLevel(spec.eventLevel)
 
             val condition =
                 EventCondition(
                     deviceEvent = deviceEvent,
                     isActivate = true,
                     needControl = spec.needControl,
-                    isBoolean = spec.isBoolean,
-                    minValue = spec.minValue,
-                    maxValue = spec.maxValue,
+                    level = level,
+                    dataType = dataType,
+                    operator = operator,
+                    numericValue1 = numericValue1,
+                    numericValue2 = numericValue2,
+                    booleanValue = booleanValue,
                     notificationEnabled = spec.notificationEnabled,
                     notificationIntervalMinutes = spec.notificationIntervalMinutes,
                     order = index + 1,
@@ -244,7 +360,7 @@ abstract class ProcessorTestHelper(
 
     data class ConditionSpec(
         val eventName: String,
-        val eventLevel: DeviceEvent.DeviceLevel,
+        val eventLevel: ConditionLevel,
         val minValue: String?,
         val maxValue: String?,
         val needControl: Boolean = false,

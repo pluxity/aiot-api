@@ -6,9 +6,9 @@ import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.ConditionLevel
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -64,7 +64,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
                         needControl = false,
@@ -93,7 +93,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXDanger",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
                         needControl = true,
@@ -123,7 +123,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXOverRange",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         needControl = true,
@@ -153,7 +153,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         needControl = true,
@@ -189,7 +189,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
                         needControl = true,
@@ -219,7 +219,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
                         needControl = true,
@@ -250,7 +250,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
                         eventName = "AngleYDanger",
-                        eventLevel = DeviceEvent.DeviceLevel.DANGER,
+                        eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
                         needControl = true,
@@ -280,7 +280,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
                         needControl = true,
@@ -312,7 +312,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         needControl = false,
@@ -343,7 +343,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         needControl = true,
@@ -368,63 +368,9 @@ class DisplacementGaugeProcessorTest(
             }
         }
 
-        Given("AngleX/AngleY: 잘못된 value 형식 (NumberFormatException)") {
-            When("value가 \"invalid,90.0\" - 파싱 실패 시 정상 동작") {
-                val deviceId = "DISP_INVALID_001"
-
-                // 잘못된 value로 조건 설정
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "displacement_invalid1",
-                        deviceId = deviceId,
-                        profile = helper.angleXProfile,
-                        eventName = "AngleXWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = null,
-                        maxValue = null,
-                        needControl = true,
-                        isBoolean = false,
-                    )
-
-                val sensorData = helper.createSensorData(angleX = 85.0)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
-
-                Then("파싱 실패 시 조건이 충족되지 않아 이벤트가 발생하지 않는다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
-                }
-            }
-
-            When("value가 \"5.0\" (단일 값) - parts.size != 2") {
-                val deviceId = "DISP_SINGLE_VALUE_001"
-
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "displacement_single1",
-                        deviceId = deviceId,
-                        profile = helper.angleYProfile,
-                        eventName = "AngleYWarning",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = null,
-                        maxValue = null,
-                        needControl = false,
-                        isBoolean = false,
-                    )
-
-                val sensorData = helper.createSensorData(angleY = 3.5)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
-
-                Then("parts.size != 2이므로 특수 로직이 적용되지 않는다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    // 일반 BETWEEN 로직으로 처리되어 이벤트가 발생하지 않음
-                    eventHistories shouldHaveSize 0
-                }
-            }
-        }
+        // 기존 테스트: "AngleX/AngleY: 잘못된 value 형식 (NumberFormatException)"
+        // 새로운 구조에서는 numericValue1, numericValue2로 직접 저장되므로 파싱 에러가 발생하지 않음
+        // 따라서 이 테스트는 더 이상 의미가 없어 제거됨
 
         Given("DisplacementGauge: 일반 Operator 테스트 (GREATER_THAN)") {
             When("AngleX = 100.0° - GREATER_THAN 95.0 조건 충족") {
@@ -436,7 +382,7 @@ class DisplacementGaugeProcessorTest(
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXHigh",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
+                        eventLevel = ConditionLevel.WARNING,
                         minValue = "95.0",
                         maxValue = null,
                         needControl = true,

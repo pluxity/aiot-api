@@ -63,7 +63,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                         guideMessage = "온도가 높습니다",
                     )
 
@@ -84,7 +84,6 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.eventName shouldBe "TempWarning"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
-                    eventHistory.guideMessage shouldBe "온도가 높습니다"
                     eventHistory.actionResult shouldBe "MANUAL_PENDING"
                 }
             }
@@ -99,7 +98,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = 30.0,
                         maxValue = 40.0,
-                        controlType = EventCondition.ControlType.AUTO,
+                        needControl = true,
                         guideMessage = "온도가 매우 높습니다",
                     )
 
@@ -109,7 +108,7 @@ class TemperatureHumidityProcessorTest(
                 // 실행
                 processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
-                Then("EventHistory가 AUTOMATIC_COMPLETED로 저장된다") {
+                Then("EventHistory가 MANUAL_PENDING 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
 
@@ -119,7 +118,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.value shouldBe 35.0
                     eventHistory.minValue shouldBe 30.0
                     eventHistory.maxValue shouldBe 40.0
-                    eventHistory.actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistory.actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -133,7 +132,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 22.0)
@@ -153,8 +152,8 @@ class TemperatureHumidityProcessorTest(
             }
         }
 
-        Given("Operator: GREATER_THAN 테스트") {
-            When("온도 30.0°C - GREATER_THAN 25.0 조건 충족") {
+        Given("Operator: GREATER_THAN_OR_EQUAL 테스트 (minValue만 사용)") {
+            When("온도 30.0°C - GREATER_THAN_OR_EQUAL 25.0 조건 충족") {
                 val deviceId = "TH_GT_001"
                 val setup =
                     helper.setupDeviceWithCondition(
@@ -163,11 +162,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempHighGT",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
+                        minValue = "25.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도가 25도를 초과했습니다",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -183,7 +181,7 @@ class TemperatureHumidityProcessorTest(
                 }
             }
 
-            When("온도 25.0°C - GREATER_THAN 25.0 조건 미충족 (같은 값)") {
+            When("온도 25.0°C - GREATER_THAN_OR_EQUAL 25.0 조건 충족 (경계값)") {
                 val deviceId = "TH_GT_002"
                 val setup =
                     helper.setupDeviceWithCondition(
@@ -192,10 +190,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempHighGT2",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
+                        minValue = "25.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -203,66 +201,10 @@ class TemperatureHumidityProcessorTest(
 
                 processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
 
-                Then("EventHistory가 저장되지 않는다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
-                }
-            }
-        }
-
-        Given("Operator: LESS_THAN 테스트") {
-            When("온도 20.0°C - LESS_THAN 25.0 조건 충족") {
-                val deviceId = "TH_LT_001"
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_lt1",
-                        deviceId = deviceId,
-                        profile = helper.temperatureProfile,
-                        eventName = "TempLowLT",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = null,
-                        operator = EventCondition.ConditionOperator.LESS_THAN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도가 25도 미만입니다",
-                    )
-
-                val sensorData = helper.createSensorData(temperature = 20.0)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
-
-                Then("EventHistory가 저장된다") {
+                Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().value shouldBe 20.0
-                    eventHistories.first().eventName shouldBe "TempLowLT"
-                }
-            }
-
-            When("온도 25.0°C - LESS_THAN 25.0 조건 미충족 (같은 값)") {
-                val deviceId = "TH_LT_002"
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_lt2",
-                        deviceId = deviceId,
-                        profile = helper.temperatureProfile,
-                        eventName = "TempLowLT2",
-                        eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = null,
-                        operator = EventCondition.ConditionOperator.LESS_THAN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                    )
-
-                val sensorData = helper.createSensorData(temperature = 25.0)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
-
-                Then("EventHistory가 저장되지 않는다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
+                    eventHistories.first().value shouldBe 25.0
                 }
             }
         }
@@ -277,11 +219,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempHighGTE",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
+                        minValue = "25.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 25도 이상",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -305,11 +246,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempHighGTE2",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
+                        minValue = "25.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 25도 이상",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -333,10 +273,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempHighGTE3",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
+                        minValue = "25.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 20.0)
@@ -351,7 +291,7 @@ class TemperatureHumidityProcessorTest(
             }
         }
 
-        Given("Operator: LESS_THAN_OR_EQUAL 테스트") {
+        Given("Operator: LESS_THAN_OR_EQUAL 테스트 (maxValue만 사용)") {
             When("온도 20.0°C - LESS_THAN_OR_EQUAL 25.0 조건 충족") {
                 val deviceId = "TH_LTE_001"
                 val setup =
@@ -361,11 +301,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempLowLTE",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = null,
-                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 25도 이하",
+                        minValue = null,
+                        maxValue = "25.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 20.0)
@@ -380,7 +319,7 @@ class TemperatureHumidityProcessorTest(
                 }
             }
 
-            When("온도 25.0°C - LESS_THAN_OR_EQUAL 25.0 조건 충족 (같은 값)") {
+            When("온도 25.0°C - LESS_THAN_OR_EQUAL 25.0 조건 충족 (경계값)") {
                 val deviceId = "TH_LTE_002"
                 val setup =
                     helper.setupDeviceWithCondition(
@@ -389,11 +328,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempLowLTE2",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = null,
-                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "온도 25도 이하",
+                        minValue = null,
+                        maxValue = "25.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -417,10 +355,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempLowLTE3",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = null,
-                        operator = EventCondition.ConditionOperator.LESS_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        minValue = null,
+                        maxValue = "25.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -446,8 +384,9 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                         guideMessage = "온도가 높습니다",
+                        notificationIntervalMinutes = 5,
                     )
 
                 val processor = helper.createProcessor()
@@ -482,8 +421,9 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = 30.0,
                         maxValue = 40.0,
-                        controlType = EventCondition.ControlType.AUTO,
+                        needControl = true,
                         guideMessage = "온도가 매우 높습니다",
+                        notificationIntervalMinutes = 10,
                     )
 
                 val processor = helper.createProcessor()
@@ -501,10 +441,10 @@ class TemperatureHumidityProcessorTest(
                     eventHistories shouldHaveSize 2
 
                     val firstEvent = eventHistories.first { it.value == 35.0 }
-                    firstEvent.actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
 
                     val secondEvent = eventHistories.first { it.value == 36.0 }
-                    secondEvent.actionResult shouldBe "AUTOMATIC_IGNORED"
+                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
                 }
             }
         }
@@ -520,7 +460,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                         guideMessage = "경계값 테스트",
                     )
 
@@ -548,7 +488,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                         guideMessage = "경계값 테스트",
                     )
 
@@ -577,11 +517,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.humidityProfile,
                         eventName = "HumidityWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 60.0,
-                        maxValue = 70.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "습도가 높습니다",
+                        minValue = "60.0",
+                        maxValue = "70.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 65.0)
@@ -612,7 +551,7 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        controlType = EventCondition.ControlType.MANUAL,
+                        needControl = true,
                         guideMessage = "온도 주의",
                     )
 
@@ -651,11 +590,10 @@ class TemperatureHumidityProcessorTest(
                         profile = discomfortProfile,
                         eventName = "DiscomfortHigh",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 75.0,
+                        minValue = "75.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "불쾌지수가 높습니다",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 // 온도 30°C, 습도 70% -> DI = 0.81*30 + 0.01*70*(0.99*30-14.3) + 46.3 ≈ 78.8
@@ -672,7 +610,7 @@ class TemperatureHumidityProcessorTest(
                     val actualValue = eventHistories.first().value
                     actualValue.shouldNotBeNull()
                     (actualValue in 81.37..81.39) shouldBe true
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -694,11 +632,10 @@ class TemperatureHumidityProcessorTest(
                         profile = discomfortProfile,
                         eventName = "DiscomfortHigh",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 75.0,
+                        minValue = "75.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN_OR_EQUAL,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "불쾌지수 체크",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 // 온도 20°C, 습도 50% -> DI = 0.81*20 + 0.01*50*(0.99*20-14.3) + 46.3 ≈ 63.8
@@ -729,9 +666,9 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = 30.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
+                        minValue = "25.0",
+                        maxValue = "30.0",
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 28.0)
@@ -761,18 +698,16 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.temperatureProfile,
                         eventName = "TempWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = 30.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "알림 없음",
+                        minValue = "25.0",
+                        maxValue = "30.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 // notificationEnabled를 false로 변경
                 val condition =
-                    setup.deviceType.deviceProfileTypes
-                        .first()
-                        .conditions
+                    setup.deviceType.deviceEvents
+                        .flatMap { it.eventConditions }
                         .first()
                 condition.notificationEnabled = false
                 helper.deviceTypeRepository.save(setup.deviceType)
@@ -803,21 +738,19 @@ class TemperatureHumidityProcessorTest(
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
                                     eventName = "TempWarning",
                                     eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                                    minValue = 25.0,
-                                    maxValue = 30.0,
-                                    operator = EventCondition.ConditionOperator.BETWEEN,
-                                    controlType = EventCondition.ControlType.MANUAL,
-                                    guideMessage = "경고",
+                                    minValue = "25.0",
+                                    maxValue = "30.0",
+                                    needControl = true,
+                                    isBoolean = false,
                                     notificationIntervalMinutes = 5,
                                 ),
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
                                     eventName = "TempDanger",
                                     eventLevel = DeviceEvent.DeviceLevel.DANGER,
-                                    minValue = 28.0,
-                                    maxValue = 40.0,
-                                    operator = EventCondition.ConditionOperator.BETWEEN,
-                                    controlType = EventCondition.ControlType.AUTO,
-                                    guideMessage = "위험",
+                                    minValue = "28.0",
+                                    maxValue = "40.0",
+                                    needControl = true,
+                                    isBoolean = false,
                                     notificationIntervalMinutes = 10,
                                 ),
                             ),
@@ -834,7 +767,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistories shouldHaveSize 2
                     eventHistories.map { it.eventName }.toSet() shouldBe setOf("TempWarning", "TempDanger")
                     eventHistories.first { it.eventName == "TempWarning" }.actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories.first { it.eventName == "TempDanger" }.actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first { it.eventName == "TempDanger" }.actionResult shouldBe "MANUAL_PENDING"
                 }
             }
         }
@@ -850,11 +783,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.humidityProfile,
                         eventName = "HumidityExact80",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 80.0,
+                        minValue = "80.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "습도가 정확히 80%입니다",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 80.0)
@@ -880,11 +812,10 @@ class TemperatureHumidityProcessorTest(
                         profile = helper.humidityProfile,
                         eventName = "HumidityExact80_2",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 80.0,
+                        minValue = "80.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "습도가 정확히 80%입니다",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 75.0)

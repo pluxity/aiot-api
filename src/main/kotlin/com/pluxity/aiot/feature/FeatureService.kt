@@ -4,13 +4,9 @@ import com.pluxity.aiot.feature.dto.FeatureResponse
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.feature.dto.toFeatureResponse
-import com.pluxity.aiot.file.extensions.getFileMapByIds
-import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.site.Site
-import com.pluxity.aiot.system.device.event.DeviceEventRepository
-import com.pluxity.aiot.system.device.type.DeviceTypeService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -21,9 +17,6 @@ private val log = KotlinLogging.logger {}
 @Service
 class FeatureService(
     private val featureRepository: FeatureRepository,
-    private val deviceTypeService: DeviceTypeService,
-    private val fileService: FileService,
-    private val deviceEventRepository: DeviceEventRepository,
 ) {
     @Transactional(readOnly = true)
     fun findAll(searchCondition: FeatureSearchCondition? = null): List<FeatureResponse> {
@@ -45,10 +38,6 @@ class FeatureService(
                         ).orderBy(path(Feature::site).asc())
                 }.filterNotNull()
 
-        val fileMap =
-            fileService.getFileMapByIds(deviceEventRepository.findAll()) {
-                listOfNotNull(it.iconId)
-            }
         return features.map { it.toFeatureResponse() }
     }
 
@@ -79,10 +68,6 @@ class FeatureService(
                 deviceId,
             )
 
-        val fileMap =
-            fileService.getFileMapByIds(deviceEventRepository.findAll()) {
-                listOfNotNull(it.iconId)
-            }
         return feature.toFeatureResponse()
     }
 

@@ -65,10 +65,8 @@ class FireAlarmProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "화재가 감지되었습니다",
-                        conditionValue = "true",
+                        needControl = true,
+                        isBoolean = true,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = true)
@@ -82,7 +80,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "FireDetected"
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -98,10 +96,8 @@ class FireAlarmProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "화재 확인",
-                        conditionValue = "true",
+                        needControl = false,
+                        isBoolean = true,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = false)
@@ -131,12 +127,10 @@ class FireAlarmProcessorTest(
                         profile = helper.fireAlarmProfile,
                         eventName = "FireNormal",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = null,
+                        minValue = "false",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "화재 센서 정상",
-                        conditionValue = "false",
+                        needControl = true,
+                        isBoolean = true,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = false)
@@ -168,10 +162,8 @@ class FireAlarmProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "화재 발생",
-                        conditionValue = "true",
+                        needControl = false,
+                        isBoolean = true,
                         notificationIntervalMinutes = 5,
                     )
 
@@ -187,8 +179,8 @@ class FireAlarmProcessorTest(
                 Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
-                    eventHistories[0].actionResult shouldBe "AUTOMATIC_COMPLETED"
-                    eventHistories[1].actionResult shouldBe "AUTOMATIC_IGNORED"
+                    eventHistories[0].actionResult shouldBe ""
+                    eventHistories[1].actionResult shouldBe ""
                 }
             }
         }
@@ -206,22 +198,19 @@ class FireAlarmProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "화재 감지",
-                        conditionValue = "true",
+                        needControl = false,
+                        isBoolean = true,
                     )
 
                 // fireAlarm을 직접 설정할 수 없으므로 createSensorData 대신 직접 조건 테스트
                 val processor = helper.createProcessor()
                 val condition =
-                    setup.deviceType.deviceProfileTypes
-                        .first()
-                        .conditions
+                    setup.deviceType.deviceEvents
+                        .flatMap { it.eventConditions }
                         .first()
 
                 // 0.9995는 1.0과의 차이가 0.001 미만 (0.0005)이므로 true로 인식되어야 함
-                val isConditionMet = processor.isConditionMet(condition, 0.9995)
+                val isConditionMet = processor.isConditionMet(condition, 0.9995, "Fire Alarm")
 
                 Then("부동소수점 오차 범위 내에서 true로 인식된다") {
                     isConditionMet shouldBe true
@@ -240,21 +229,18 @@ class FireAlarmProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.EQUALS,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "정상",
-                        conditionValue = "false",
+                        needControl = true,
+                        isBoolean = true,
                     )
 
                 val processor = helper.createProcessor()
                 val condition =
-                    setup.deviceType.deviceProfileTypes
-                        .first()
-                        .conditions
+                    setup.deviceType.deviceEvents
+                        .flatMap { it.eventConditions }
                         .first()
 
                 // 0.002는 0.0과의 차이가 0.001보다 크므로 false로 인식되지 않아야 함
-                val isConditionMet = processor.isConditionMet(condition, 0.002)
+                val isConditionMet = processor.isConditionMet(condition, 0.002, "Fire Alarm")
 
                 Then("부동소수점 오차 범위를 초과하여 false로 인식되지 않는다") {
                     isConditionMet shouldBe false

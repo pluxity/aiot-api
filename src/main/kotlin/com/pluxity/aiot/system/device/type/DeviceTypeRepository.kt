@@ -9,11 +9,21 @@ interface DeviceTypeRepository : JpaRepository<DeviceType, Long> {
         attributePaths = [
             "deviceProfileTypes",
             "deviceProfileTypes.deviceProfile",
-            "deviceProfileTypes.conditions",
             "deviceEvents",
+            "deviceEvents.eventConditions",
         ],
     )
     override fun findAll(): List<DeviceType>
+
+    @EntityGraph(
+        attributePaths = [
+            "deviceProfileTypes",
+            "deviceProfileTypes.deviceProfile",
+            "deviceEvents",
+            "deviceEvents.eventConditions",
+        ],
+    )
+    fun findByObjectId(objectId: String): DeviceType?
 
     @EntityGraph(
         attributePaths = [

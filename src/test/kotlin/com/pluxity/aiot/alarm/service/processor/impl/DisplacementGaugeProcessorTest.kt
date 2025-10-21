@@ -66,11 +66,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 5.0, // 오차
-                        maxValue = 90.0, // 중앙값 (AngleX의 기본 중앙값)
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "X축 각도 이상",
+                        minValue = "5.0", // 오차
+                        maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
+                        needControl = false,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 85.0)
@@ -96,11 +95,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXDanger",
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
-                        minValue = 5.0,
-                        maxValue = 90.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "X축 각도 위험",
+                        minValue = "5.0",
+                        maxValue = "90.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 84.0)
@@ -127,11 +125,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXOverRange",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 5.0,
-                        maxValue = 90.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "X축 각도 초과",
+                        minValue = "5.0",
+                        maxValue = "90.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 96.0)
@@ -144,7 +141,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "AngleX"
                     eventHistories.first().value shouldBe 96.0
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -158,11 +155,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 5.0,
-                        maxValue = 90.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "X축 확인",
+                        minValue = "5.0",
+                        maxValue = "90.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 90.0)
@@ -195,11 +191,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 3.0, // 오차
-                        maxValue = 0.0, // 중앙값 (AngleY의 기본 중앙값)
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "Y축 각도 이상",
+                        minValue = "3.0", // 오차
+                        maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleY = -3.5)
@@ -212,7 +207,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "AngleY"
                     eventHistories.first().value shouldBe -3.5
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -226,11 +221,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 3.0,
-                        maxValue = 0.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "Y축 확인",
+                        minValue = "3.0",
+                        maxValue = "0.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleY = 0.0)
@@ -258,11 +252,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleYProfile,
                         eventName = "AngleYDanger",
                         eventLevel = DeviceEvent.DeviceLevel.DANGER,
-                        minValue = 3.0,
-                        maxValue = 0.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "Y축 각도 위험",
+                        minValue = "3.0",
+                        maxValue = "0.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleY = 3.5)
@@ -275,7 +268,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "AngleY"
                     eventHistories.first().value shouldBe 3.5
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
 
@@ -289,11 +282,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleYProfile,
                         eventName = "AngleYWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 3.0,
-                        maxValue = 0.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "Y축 확인",
+                        minValue = "3.0",
+                        maxValue = "0.0",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleY = -3.0)
@@ -322,11 +314,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 5.0,
-                        maxValue = 90.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "X축 이상",
+                        minValue = "5.0",
+                        maxValue = "90.0",
+                        needControl = false,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 95.0, angleY = 3.5)
@@ -354,11 +345,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXWarning",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 5.0,
-                        maxValue = 90.0,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "X축 이상",
+                        minValue = "5.0",
+                        maxValue = "90.0",
+                        needControl = true,
+                        isBoolean = false,
                         notificationIntervalMinutes = 5,
                     )
 
@@ -393,10 +383,8 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.MANUAL,
-                        guideMessage = "잘못된 형식",
-                        conditionValue = "invalid,90.0", // 잘못된 형식
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 85.0)
@@ -422,10 +410,8 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
                         minValue = null,
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.BETWEEN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "단일 값",
-                        conditionValue = "5.0", // 단일 값 (parts.size = 1)
+                        needControl = false,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleY = 3.5)
@@ -452,11 +438,10 @@ class DisplacementGaugeProcessorTest(
                         profile = helper.angleXProfile,
                         eventName = "AngleXHigh",
                         eventLevel = DeviceEvent.DeviceLevel.WARNING,
-                        minValue = 95.0,
+                        minValue = "95.0",
                         maxValue = null,
-                        operator = EventCondition.ConditionOperator.GREATER_THAN,
-                        controlType = EventCondition.ControlType.AUTO,
-                        guideMessage = "X축 각도 높음",
+                        needControl = true,
+                        isBoolean = false,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 100.0)
@@ -469,7 +454,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "AngleX"
                     eventHistories.first().value shouldBe 100.0
-                    eventHistories.first().actionResult shouldBe "AUTOMATIC_COMPLETED"
+                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
             }
         }

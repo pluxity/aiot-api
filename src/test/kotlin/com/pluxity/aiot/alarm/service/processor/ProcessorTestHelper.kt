@@ -65,13 +65,11 @@ abstract class ProcessorTestHelper(
         profile: DeviceProfile,
         eventName: String,
         eventLevel: DeviceEvent.DeviceLevel,
-        minValue: Double? = null,
-        maxValue: Double? = null,
-        operator: EventCondition.ConditionOperator,
-        controlType: EventCondition.ControlType,
-        guideMessage: String? = null,
-        notificationIntervalMinutes: Int = 5,
-        conditionValue: String? = null,
+        minValue: String? = null,
+        maxValue: String? = null,
+        needControl: Boolean = false,
+        isBoolean: Boolean = false,
+        notificationIntervalMinutes: Int = 0,
     ): TestSetup {
         // 1. DeviceType 생성
         val deviceType =
@@ -98,34 +96,19 @@ abstract class ProcessorTestHelper(
         deviceEvent.updateDeviceType(deviceType)
 
         // 4. EventCondition 생성 및 연결
-        val finalConditionValue =
-            conditionValue ?: when (operator) {
-                EventCondition.ConditionOperator.BETWEEN -> {
-                    requireNotNull(minValue) { "BETWEEN operator requires minValue" }
-                    requireNotNull(maxValue) { "BETWEEN operator requires maxValue" }
-                    "$minValue,$maxValue"
-                }
-                EventCondition.ConditionOperator.EQUALS -> minValue?.toString() ?: "true"
-                else -> minValue?.toString() ?: "0"
-            }
-
         val condition =
             EventCondition(
                 deviceEvent = deviceEvent,
-                value = finalConditionValue,
-                operator = operator,
+                isActivate = true,
+                needControl = needControl,
+                isBoolean = isBoolean,
+                minValue = minValue,
+                maxValue = maxValue,
                 notificationEnabled = true,
-                controlType = controlType,
-                guideMessage = guideMessage,
                 notificationIntervalMinutes = notificationIntervalMinutes,
                 order = 1,
             )
-
-        if (operator == EventCondition.ConditionOperator.BETWEEN) {
-            condition.changeMinMax(minValue, maxValue)
-        }
-
-        deviceProfileType.addCondition(condition)
+        deviceEvent.eventConditions.add(condition)
 
         // 6. DeviceType 저장 (CASCADE)
         val savedDeviceType = deviceTypeRepository.save(deviceType)
@@ -174,9 +157,9 @@ abstract class ProcessorTestHelper(
         profile: DeviceProfile,
         eventName: String,
         eventLevel: DeviceEvent.DeviceLevel,
-        minValue: Double?,
-        maxValue: Double?,
-        operator: EventCondition.ConditionOperator,
+        minValue: String?,
+        maxValue: String?,
+        isBoolean: Boolean = false,
     ): TestSetup {
         val deviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
         val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
@@ -185,29 +168,19 @@ abstract class ProcessorTestHelper(
         val deviceEvent = DeviceEvent(name = eventName, deviceLevel = eventLevel)
         deviceEvent.updateDeviceType(deviceType)
 
-        val conditionValue =
-            when (operator) {
-                EventCondition.ConditionOperator.BETWEEN -> "$minValue,$maxValue"
-                EventCondition.ConditionOperator.EQUALS -> minValue?.toString() ?: "true"
-                else -> minValue?.toString() ?: "0"
-            }
-
         val condition =
             EventCondition(
                 deviceEvent = deviceEvent,
-                value = conditionValue,
-                operator = operator,
+                isActivate = true,
+                needControl = true,
+                isBoolean = isBoolean,
+                minValue = minValue,
+                maxValue = maxValue,
                 notificationEnabled = false, // Disabled
-                controlType = EventCondition.ControlType.MANUAL,
-                guideMessage = "테스트",
+                notificationIntervalMinutes = 0,
                 order = 1,
             )
-
-        if (operator == EventCondition.ConditionOperator.BETWEEN) {
-            condition.changeMinMax(minValue, maxValue)
-        }
-
-        deviceProfileType.addCondition(condition)
+        deviceEvent.eventConditions.add(condition)
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
@@ -240,30 +213,19 @@ abstract class ProcessorTestHelper(
             val deviceEvent = DeviceEvent(name = spec.eventName, deviceLevel = spec.eventLevel)
             deviceEvent.updateDeviceType(deviceType)
 
-            val conditionValue =
-                when (spec.operator) {
-                    EventCondition.ConditionOperator.BETWEEN -> "${spec.minValue},${spec.maxValue}"
-                    EventCondition.ConditionOperator.EQUALS -> spec.minValue?.toString() ?: "true"
-                    else -> spec.minValue?.toString() ?: "0"
-                }
-
             val condition =
                 EventCondition(
                     deviceEvent = deviceEvent,
-                    value = conditionValue,
-                    operator = spec.operator,
+                    isActivate = true,
+                    needControl = spec.needControl,
+                    isBoolean = spec.isBoolean,
+                    minValue = spec.minValue,
+                    maxValue = spec.maxValue,
                     notificationEnabled = spec.notificationEnabled,
-                    controlType = spec.controlType,
-                    guideMessage = spec.guideMessage,
                     notificationIntervalMinutes = spec.notificationIntervalMinutes,
                     order = index + 1,
                 )
-
-            if (spec.operator == EventCondition.ConditionOperator.BETWEEN) {
-                condition.changeMinMax(spec.minValue, spec.maxValue)
-            }
-
-            deviceProfileType.addCondition(condition)
+            deviceEvent.eventConditions.add(condition)
         }
 
         val savedDeviceType = deviceTypeRepository.save(deviceType)
@@ -283,11 +245,10 @@ abstract class ProcessorTestHelper(
     data class ConditionSpec(
         val eventName: String,
         val eventLevel: DeviceEvent.DeviceLevel,
-        val minValue: Double?,
-        val maxValue: Double?,
-        val operator: EventCondition.ConditionOperator,
-        val controlType: EventCondition.ControlType,
-        val guideMessage: String? = null,
+        val minValue: String?,
+        val maxValue: String?,
+        val needControl: Boolean = false,
+        val isBoolean: Boolean = false,
         val notificationIntervalMinutes: Int = 5,
         val notificationEnabled: Boolean = true,
     )

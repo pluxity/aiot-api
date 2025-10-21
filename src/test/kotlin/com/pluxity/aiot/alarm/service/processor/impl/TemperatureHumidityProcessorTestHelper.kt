@@ -81,8 +81,9 @@ class TemperatureHumidityProcessorTestHelper(
         eventLevel: DeviceEvent.DeviceLevel,
         minValue: Double,
         maxValue: Double,
-        controlType: EventCondition.ControlType,
+        needControl: Boolean = true,
         guideMessage: String? = null,
+        notificationIntervalMinutes: Int = 0,
     ): TestSetup =
         setupDeviceWithCondition(
             objectId = objectId,
@@ -90,11 +91,11 @@ class TemperatureHumidityProcessorTestHelper(
             profile = temperatureProfile,
             eventName = eventName,
             eventLevel = eventLevel,
-            minValue = minValue,
-            maxValue = maxValue,
-            operator = EventCondition.ConditionOperator.BETWEEN,
-            controlType = controlType,
-            guideMessage = guideMessage,
+            minValue = minValue.toString(),
+            maxValue = maxValue.toString(),
+            needControl = needControl,
+            isBoolean = false,
+            notificationIntervalMinutes = notificationIntervalMinutes,
         )
 
     /**

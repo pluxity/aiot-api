@@ -1,6 +1,8 @@
 package com.pluxity.aiot.system.device.event
 
 import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.EventCondition
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -11,6 +13,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 
 @Entity
@@ -21,7 +24,6 @@ class DeviceEvent(
     val id: Long? = null,
     @Column(name = "name", nullable = false)
     var name: String,
-    var iconId: Long? = null,
     @Enumerated(EnumType.STRING)
     @Column(name = "device_level")
     var deviceLevel: DeviceLevel?,
@@ -29,6 +31,9 @@ class DeviceEvent(
     @JoinColumn(name = "device_type_id")
     var deviceType: DeviceType? = null,
 ) {
+    @OneToMany(mappedBy = "deviceEvent", cascade = [CascadeType.ALL], orphanRemoval = true)
+    val eventConditions: MutableSet<EventCondition> = mutableSetOf()
+
     fun updateDeviceType(deviceType: DeviceType) {
         this.deviceType?.deviceEvents?.remove(this)
         this.deviceType = deviceType
@@ -43,10 +48,6 @@ class DeviceEvent(
     ) {
         this.name = name
         this.deviceLevel = deviceLevel
-    }
-
-    fun updateIconId(iconId: Long?) {
-        this.iconId = iconId
     }
 
     enum class DeviceLevel {

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.feature
 
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.fixture.DeviceTypeFixture
@@ -37,9 +38,21 @@ class FeatureServiceTest(
                 // 사전 조건: 데이터 준비
                 featureRepository.saveAll(
                     listOf(
-                        FeatureFixture.create(deviceId = "DEVICE_001", objectId = "TYPE_001", name = "Device 1"),
-                        FeatureFixture.create(deviceId = "DEVICE_002", objectId = "TYPE_002", name = "Device 2"),
-                        FeatureFixture.create(deviceId = "DEVICE_003", objectId = "TYPE_001", name = "Device 3"),
+                        FeatureFixture.create(
+                            deviceId = "DEVICE_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
+                            name = "Device 1",
+                        ),
+                        FeatureFixture.create(
+                            deviceId = "DEVICE_002",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
+                            name = "Device 2",
+                        ),
+                        FeatureFixture.create(
+                            deviceId = "DEVICE_003",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
+                            name = "Device 3",
+                        ),
                     ),
                 )
 
@@ -60,19 +73,19 @@ class FeatureServiceTest(
                         FeatureFixture.create(
                             site = site1,
                             deviceId = "DEVICE_FAC_001",
-                            objectId = "OBJ_FAC_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Device Fac 1",
                         ),
                         FeatureFixture.create(
                             site = site1,
                             deviceId = "DEVICE_FAC_002",
-                            objectId = "OBJ_FAC_002",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Device Fac 2",
                         ),
                         FeatureFixture.create(
                             site = site2,
                             deviceId = "DEVICE_FAC_003",
-                            objectId = "OBJ_FAC_003",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Device Fac 3",
                         ),
                     ),
@@ -92,18 +105,18 @@ class FeatureServiceTest(
 
                 featureRepository.saveAll(
                     listOf(
-                        FeatureFixture.create(deviceId = "DEVICE_TYPE_001", objectId = "test1"),
-                        FeatureFixture.create(deviceId = "DEVICE_TYPE_002", objectId = "test1"),
-                        FeatureFixture.create(deviceId = "DEVICE_TYPE_003", objectId = "TYPE_FILTER_002"),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_001", objectId = SensorType.TEMPERATURE_HUMIDITY.objectId),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_002", objectId = SensorType.TEMPERATURE_HUMIDITY.objectId),
+                        FeatureFixture.create(deviceId = "DEVICE_TYPE_003", objectId = SensorType.FIRE.objectId),
                     ),
                 )
 
-                val searchCondition = FeatureSearchCondition(objectId = "test1")
+                val searchCondition = FeatureSearchCondition(objectId = SensorType.TEMPERATURE_HUMIDITY.objectId)
                 val result = featureService.findAll(searchCondition)
 
                 Then("해당 DeviceType의 Feature만 반환된다") {
                     result shouldHaveSize 2
-                    result.all { it.objectId == "test1" } shouldBe true
+                    result.all { it.objectId == SensorType.TEMPERATURE_HUMIDITY.objectId } shouldBe true
                 }
             }
 
@@ -113,19 +126,19 @@ class FeatureServiceTest(
                     listOf(
                         FeatureFixture.create(
                             deviceId = "DEVICE_ACTIVE_001",
-                            objectId = "OBJ_ACTIVE_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Active 1",
                             isActive = true,
                         ),
                         FeatureFixture.create(
                             deviceId = "DEVICE_ACTIVE_002",
-                            objectId = "OBJ_ACTIVE_002",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Active 2",
                             isActive = true,
                         ),
                         FeatureFixture.create(
                             deviceId = "DEVICE_INACTIVE_001",
-                            objectId = "OBJ_INACTIVE_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Inactive 1",
                             isActive = false,
                         ),
@@ -147,12 +160,12 @@ class FeatureServiceTest(
                     listOf(
                         FeatureFixture.create(
                             deviceId = "DEVICE_SEARCH_001",
-                            objectId = "OBJ_SEARCH_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Search 1",
                         ),
                         FeatureFixture.create(
                             deviceId = "DEVICE_SEARCH_002",
-                            objectId = "OBJ_SEARCH_002",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Search 2",
                         ),
                     ),
@@ -172,12 +185,12 @@ class FeatureServiceTest(
 
             When("isActive를 변경하면") {
                 // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_ACTIVE_001"))
+                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = SensorType.TEMPERATURE_HUMIDITY.objectId))
                 val feature =
                     featureRepository.save(
                         FeatureFixture.create(
                             deviceId = "DEVICE_ACTIVE_UPDATE",
-                            objectId = "TYPE_ACTIVE_001",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             isActive = true,
                         ),
                     )
@@ -211,7 +224,11 @@ class FeatureServiceTest(
                 // 사전 조건
                 val feature =
                     featureRepository.save(
-                        FeatureFixture.create(deviceId = "DEVICE_NAME_UPDATE", objectId = "OBJ_NAME_UPDATE", name = "Original Name"),
+                        FeatureFixture.create(
+                            deviceId = "DEVICE_NAME_UPDATE",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
+                            name = "Original Name",
+                        ),
                     )
 
                 featureService.updateFeatureName(feature.id!!, "Updated Name")
@@ -241,7 +258,7 @@ class FeatureServiceTest(
                     featureRepository.save(
                         FeatureFixture.create(
                             deviceId = "DEVICE_ID_001",
-                            objectId = "TYPE_DEVICE_ID",
+                            objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                             name = "Device by ID",
                         ),
                     )

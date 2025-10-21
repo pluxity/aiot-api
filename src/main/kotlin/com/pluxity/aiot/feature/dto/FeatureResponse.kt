@@ -1,8 +1,11 @@
 package com.pluxity.aiot.feature.dto
 
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.site.dto.SiteResponse
 import com.pluxity.aiot.site.dto.toSiteResponse
+import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
+import com.pluxity.aiot.system.device.type.dto.toDeviceTypeResponse
 
 data class FeatureResponse(
     val id: Long,
@@ -15,6 +18,7 @@ data class FeatureResponse(
     val eventStatus: String,
     val isActive: Boolean,
     val siteResponse: SiteResponse?,
+    val deviceTypeResponse: DeviceTypeResponse,
 )
 
 fun Feature.toFeatureResponse() =
@@ -29,4 +33,5 @@ fun Feature.toFeatureResponse() =
         eventStatus = this.eventStatus!!,
         isActive = this.isActive!!,
         siteResponse = this.site?.toSiteResponse(),
+        deviceTypeResponse = SensorType.fromObjectId(this.objectId.take(5)).toDeviceTypeResponse(),
     )

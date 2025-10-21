@@ -39,7 +39,7 @@ class FeatureService(
                                 searchCondition?.siteId?.let { path(Site::id).equal(it) },
                                 searchCondition?.deviceId?.takeIf { it.isNotBlank() }?.let { path(Feature::deviceId).equal(it) },
                                 searchCondition?.name?.takeIf { it.isNotBlank() }?.let { path(Feature::name).equal(it) },
-                                searchCondition?.objectId?.let { path(Feature::objectId).equal(it) },
+                                searchCondition?.objectId?.let { path(Feature::objectId).like("$it%") },
                                 searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),
                         ).orderBy(path(Feature::site).asc())

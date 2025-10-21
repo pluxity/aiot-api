@@ -1,6 +1,6 @@
 package com.pluxity.aiot.system.device.type.dto
 
-import com.pluxity.aiot.file.dto.FileResponse
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.system.device.event.dto.DeviceEventResponse
 import com.pluxity.aiot.system.device.event.dto.toDeviceEventInfo
 import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
@@ -15,12 +15,12 @@ data class DeviceTypeResponse(
     var profiles: List<DeviceProfileResponse>
 )
 
-fun DeviceType.toDeviceTypeResponse(fileMap: Map<Long, FileResponse>) =
+fun SensorType.toDeviceTypeResponse(deviceType: DeviceType?) =
     DeviceTypeResponse(
-        id = this.id!!,
+        id = this.id,
         objectId = this.objectId,
-        description = this.description!!,
-        version = this.version!!,
-        events = this.deviceEvents.map { it.toDeviceEventInfo(fileMap) },
+        description = this.description,
+        version = this.version,
+        events = deviceType?.deviceEvents?.map { it.toDeviceEventInfo() } ?: emptyList(),
         profiles = this.deviceProfiles.map { it.toResponse() },
     )

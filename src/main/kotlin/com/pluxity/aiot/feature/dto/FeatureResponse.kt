@@ -17,6 +17,7 @@ data class FeatureResponse(
     val batteryLevel: Int?,
     val eventStatus: String,
     val isActive: Boolean,
+    val height: Double?,
     val siteResponse: SiteResponse?,
     val deviceTypeResponse: DeviceTypeResponse,
 )
@@ -32,6 +33,7 @@ fun Feature.toFeatureResponse() =
         batteryLevel = this.batteryLevel,
         eventStatus = this.eventStatus!!,
         isActive = this.isActive!!,
+        height = this.height,
         siteResponse = this.site?.toSiteResponse(),
         deviceTypeResponse = SensorType.fromObjectId(this.objectId.take(5)).toDeviceTypeResponse(),
     )

@@ -847,7 +847,6 @@ class ProcessorEndToEndTest(
                     // DisplacementGaugeProcessor가 마지막에 처리되어 CAUTION으로 설정됨
 //                    val updatedFeature = featureRepository.findById(feature.id!!).get()
 //                    updatedFeature.eventStatus shouldBe "CAUTION"
-
                 }
             }
         }

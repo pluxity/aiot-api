@@ -10,6 +10,7 @@ data class CctvResponse(
     val viewUrl: String? = null,
     val lon: Double?,
     val lat: Double?,
+    val height: Double?,
     val site: SiteResponse? = null,
 )
 
@@ -20,5 +21,6 @@ fun Cctv.toCctvResponse(viewUrl: String) =
         viewUrl = this.mtxName?.let { "$viewUrl/${this.mtxName}" },
         lon = this.longitude,
         lat = this.latitude,
+        height = this.height,
         site = this.site?.toSiteResponse(),
     )

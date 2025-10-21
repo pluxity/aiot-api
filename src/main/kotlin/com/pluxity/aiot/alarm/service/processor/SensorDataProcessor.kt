@@ -101,7 +101,6 @@ interface SensorDataProcessor {
                 ),
             )
 
-
         if (condition.needControl && isWithinNotificationInterval) {
             // 6.1 조치가 수동이면서 무시 시간 안에 있으면 -> 수동대응 (무시)으로 조치 이력 저장, 무시 열은 true
             actionHistoryService.createManualAction(

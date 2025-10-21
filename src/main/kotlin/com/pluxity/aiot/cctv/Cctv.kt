@@ -26,6 +26,7 @@ class Cctv(
     var url: String?,
     var longitude: Double? = null,
     var latitude: Double? = null,
+    var height: Double? = null,
     @Column(columnDefinition = "geometry(Point, 4326)")
     var geom: Point? = null,
     @Column
@@ -54,8 +55,17 @@ class Cctv(
     fun updateCctv(
         name: String,
         url: String?,
+        height: Double?,
     ) {
         this.name = name
         this.url = url
+        this.height = height
+    }
+
+    fun updateLocationEmpty() {
+        this.longitude = null
+        this.latitude = null
+        this.geom = null
+        this.site = null
     }
 }

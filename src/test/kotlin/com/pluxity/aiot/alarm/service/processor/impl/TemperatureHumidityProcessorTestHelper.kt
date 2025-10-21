@@ -11,7 +11,6 @@ import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
-import com.pluxity.aiot.system.event.condition.EventCondition
 
 /**
  * TemperatureHumidityProcessor 테스트를 위한 헬퍼 클래스

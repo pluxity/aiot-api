@@ -7,13 +7,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class DeviceTypeService(
-    private val deviceTypeRepository: DeviceTypeRepository,
-) {
+class DeviceTypeService {
     @Transactional(readOnly = true)
-    fun findAll(): List<DeviceTypeResponse> =
-        SensorType.entries.map { sensorType ->
-            val deviceType = deviceTypeRepository.findByObjectId(sensorType.objectId)
-            sensorType.toDeviceTypeResponse(deviceType)
-        }
+    fun findAll(): List<DeviceTypeResponse> = SensorType.entries.map { it.toDeviceTypeResponse() }
 }

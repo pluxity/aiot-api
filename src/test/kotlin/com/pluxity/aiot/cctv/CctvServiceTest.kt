@@ -35,7 +35,7 @@ class CctvServiceTest :
         Given("CCTV 생성을 진행할 때") {
             When("유효한 요청으로 CCTV 생성 요청") {
                 val id = 1L
-                val createRequest = CctvRequest("cctv-name", "url", 127.1, 37.1)
+                val createRequest = CctvRequest("cctv-name", "url", 127.1, 37.1, 5.0)
 
                 every {
                     cctvRepository.save(any())
@@ -93,7 +93,7 @@ class CctvServiceTest :
                 } returns cctv
                 Then("정상 수정") {
                     val updateName = "updated Cctv"
-                    cctvService.update(cctv.id!!, CctvRequest(updateName, "", 0.0, 0.0))
+                    cctvService.update(cctv.id!!, CctvRequest(updateName, "", 0.0, 0.0, 5.0))
                     cctv.name shouldBe updateName
                 }
             }

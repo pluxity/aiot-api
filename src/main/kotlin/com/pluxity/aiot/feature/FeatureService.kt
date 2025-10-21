@@ -48,6 +48,7 @@ class FeatureService(
     ) {
         val feature = findById(id)
         feature.updateActive(request.isActive)
+        feature.updateHeight(request.height)
     }
 
     @Transactional

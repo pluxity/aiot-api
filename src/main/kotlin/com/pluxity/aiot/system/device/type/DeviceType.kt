@@ -32,5 +32,4 @@ class DeviceType(
         deviceEvents.add(event)
         event.updateDeviceType(this)
     }
-
 }

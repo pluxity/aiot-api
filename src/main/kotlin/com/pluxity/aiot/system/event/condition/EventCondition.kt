@@ -3,8 +3,6 @@ package com.pluxity.aiot.system.event.condition
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -74,5 +72,4 @@ class EventCondition(
             else -> 0
         }
     }
-
 }

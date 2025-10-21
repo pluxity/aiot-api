@@ -9,7 +9,6 @@ import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
-import com.pluxity.aiot.system.event.condition.EventCondition
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension

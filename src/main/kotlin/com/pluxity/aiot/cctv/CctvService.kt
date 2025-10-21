@@ -42,6 +42,7 @@ class CctvService(
                     url = request.url,
                     latitude = request.lat,
                     longitude = request.lon,
+                    height = request.height,
                     mtxName = mtxName,
                     site = site,
                 ),
@@ -74,11 +75,12 @@ class CctvService(
             }
             cctv.updateMtxName(mtxName)
         }
+        cctv.updateLocationEmpty()
         if (request.lon != null && request.lat != null) {
             val site = siteRepository.findFirstByPointInPolygon(request.lon, request.lat)
             cctv.updateLocationInfo(request.lon, request.lat, site)
         }
-        cctv.updateCctv(request.name, request.url)
+        cctv.updateCctv(request.name, request.url, request.height)
     }
 
     @Transactional

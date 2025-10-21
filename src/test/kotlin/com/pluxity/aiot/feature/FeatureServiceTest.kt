@@ -3,7 +3,6 @@ package com.pluxity.aiot.feature
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
-import com.pluxity.aiot.fixture.DeviceTypeFixture
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.constant.ErrorCode
@@ -185,7 +184,6 @@ class FeatureServiceTest(
 
             When("isActive를 변경하면") {
                 // 사전 조건
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = SensorType.TEMPERATURE_HUMIDITY.objectId))
                 val feature =
                     featureRepository.save(
                         FeatureFixture.create(
@@ -195,7 +193,7 @@ class FeatureServiceTest(
                         ),
                     )
 
-                val updateRequest = FeatureUpdateRequest(deviceTypeId = deviceType.id!!, isActive = false)
+                val updateRequest = FeatureUpdateRequest(isActive = false, height = 5.0)
                 featureService.updateFeature(feature.id!!, updateRequest)
 
                 Then("isActive가 변경된다") {
@@ -205,8 +203,7 @@ class FeatureServiceTest(
             }
 
             When("존재하지 않는 Feature를 업데이트하면") {
-                val deviceType = deviceTypeRepository.save(DeviceTypeFixture.create(objectId = "TYPE_NOT_FOUND"))
-                val updateRequest = FeatureUpdateRequest(deviceTypeId = deviceType.id!!, isActive = true)
+                val updateRequest = FeatureUpdateRequest(isActive = true, height = 5.0)
 
                 val exception =
                     shouldThrow<CustomException> {

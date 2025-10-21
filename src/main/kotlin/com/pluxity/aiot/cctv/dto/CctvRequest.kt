@@ -25,4 +25,6 @@ data class CctvRequest(
     val lon: Double?,
     @field:Schema(description = "위도", example = "37")
     val lat: Double?,
+    @field:Schema(description = "고도", example = "10")
+    val height: Double?,
 )

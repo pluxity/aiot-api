@@ -1,6 +1,5 @@
 package com.pluxity.aiot.system.event.setting.dto
 
-
 data class EventConditionRequest(
     val id: Long?,
     val isActivate: Boolean,

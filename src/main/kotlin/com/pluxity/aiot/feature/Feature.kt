@@ -29,6 +29,7 @@ class Feature(
     var name: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
+    var height: Double? = null,
     @Column(columnDefinition = "geometry(Point, 4326)")
     var geom: Point? = null,
     @Column
@@ -44,6 +45,10 @@ class Feature(
 ) : BaseEntity() {
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive
+    }
+
+    fun updateHeight(height: Double?) {
+        this.height = height
     }
 
     fun updateInfo(

@@ -11,7 +11,7 @@ import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.measure.FireAlarm
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 
@@ -23,6 +23,7 @@ class FireAlarmProcessor(
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
+    private val eventConditionRepository: EventConditionRepository,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
@@ -33,14 +34,13 @@ class FireAlarmProcessor(
 
     override fun process(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.fireAlarm?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                deviceType = deviceType,
+            processEventConditions(deviceId = deviceId,
+                sensorType = sensorType,
                 fieldKey = FIRE_ALARM,
                 value = it, // Boolean 값 그대로 전달
                 timestamp = data.timestamp,
@@ -48,6 +48,7 @@ class FireAlarmProcessor(
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
+                eventConditionRepository = eventConditionRepository,
             )
             log.debug { "Fire Alarm processed: $it" }
         }

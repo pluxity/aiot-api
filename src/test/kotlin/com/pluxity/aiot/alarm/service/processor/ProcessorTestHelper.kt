@@ -9,7 +9,6 @@ import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
@@ -19,6 +18,7 @@ import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.Operator
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 
 /**
  * 기존 파라미터를 새로운 구조로 변환하는 헬퍼 데이터 클래스
@@ -120,6 +120,7 @@ abstract class ProcessorTestHelper(
     val featureRepository: FeatureRepository,
     protected val eventHistoryRepository: EventHistoryRepository,
     protected val actionHistoryService: ActionHistoryService,
+    protected val eventConditionRepository: EventConditionRepository,
     protected val sseServiceMock: SseService,
     protected val writeApiMock: WriteApi,
 ) {
@@ -164,37 +165,32 @@ abstract class ProcessorTestHelper(
         isBoolean: Boolean = false,
         notificationIntervalMinutes: Int = 0,
     ): TestSetup {
-        // 1. DeviceType 생성
-        val deviceType =
-            DeviceType(
-                objectId = objectId,
-                description = "$objectId 설명",
-                version = "1.0",
-            )
+        // 1. DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
+        val deviceType = deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
+            ?: run {
+                val newDeviceType = DeviceType(
+                    objectId = objectId,
+                    description = "$objectId 설명",
+                    version = "1.0",
+                )
+                val deviceProfileType = DeviceProfileType(
+                    deviceProfile = profile,
+                    deviceType = newDeviceType,
+                )
+                newDeviceType.deviceProfileTypes.add(deviceProfileType)
+                deviceTypeRepository.save(newDeviceType)
+            }
 
-        // 2. DeviceProfileType 생성 및 연결
-        val deviceProfileType =
-            DeviceProfileType(
-                deviceProfile = profile,
-                deviceType = deviceType,
-            )
-        deviceType.deviceProfileTypes.add(deviceProfileType)
+        // 2. 기존 EventCondition 삭제 (테스트 격리 - 같은 objectId로 중복 생성 방지)
+        eventConditionRepository.deleteAllByObjectId(objectId)
 
-        // 3. DeviceEvent 생성
-        val deviceEvent =
-            DeviceEvent(
-                name = eventName,
-            )
-        deviceEvent.updateDeviceType(deviceType)
-
-        // 4. EventCondition 생성 및 연결
-        // 기존 파라미터를 새로운 구조로 변환
+        // 3. EventCondition 생성 및 저장
         val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
-                deviceEvent = deviceEvent,
+                objectId = objectId,
                 isActivate = true,
                 needControl = needControl,
                 level = level,
@@ -207,10 +203,11 @@ abstract class ProcessorTestHelper(
                 notificationIntervalMinutes = notificationIntervalMinutes,
                 order = 1,
             )
-        deviceEvent.eventConditions.add(condition)
+        eventConditionRepository.save(condition)
 
-        // 6. DeviceType 저장 (CASCADE)
-        val savedDeviceType = deviceTypeRepository.save(deviceType)
+        // 3. DeviceType는 이미 저장되어 있음
+        val savedDeviceType = deviceType
+
 
         // 7. Site & Feature 생성
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
@@ -260,19 +257,24 @@ abstract class ProcessorTestHelper(
         maxValue: String?,
         isBoolean: Boolean = false,
     ): TestSetup {
-        val deviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
-        val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
-        deviceType.deviceProfileTypes.add(deviceProfileType)
+        // DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
+        val deviceType = deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
+            ?: run {
+                val newDeviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
+                val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
+                newDeviceType.deviceProfileTypes.add(deviceProfileType)
+                deviceTypeRepository.save(newDeviceType)
+            }
 
-        val deviceEvent = DeviceEvent(name = eventName)
-        deviceEvent.updateDeviceType(deviceType)
+        // 기존 EventCondition 삭제 (테스트 격리)
+        eventConditionRepository.deleteAllByObjectId(objectId)
 
         val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
-                deviceEvent = deviceEvent,
+                objectId = objectId,
                 isActivate = true,
                 needControl = true,
                 level = level,
@@ -285,9 +287,9 @@ abstract class ProcessorTestHelper(
                 notificationIntervalMinutes = 0,
                 order = 1,
             )
-        deviceEvent.eventConditions.add(condition)
+        eventConditionRepository.save(condition)
 
-        val savedDeviceType = deviceTypeRepository.save(deviceType)
+        val savedDeviceType = deviceType
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
@@ -310,14 +312,19 @@ abstract class ProcessorTestHelper(
         profile: DeviceProfile,
         conditions: List<ConditionSpec>,
     ): TestSetup {
-        val deviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
-        val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = deviceType)
-        deviceType.deviceProfileTypes.add(deviceProfileType)
+        // DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
+        val deviceType = deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
+            ?: run {
+                val newDeviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
+                val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
+                newDeviceType.deviceProfileTypes.add(deviceProfileType)
+                deviceTypeRepository.save(newDeviceType)
+            }
+
+        // 기존 EventCondition 삭제 (테스트 격리)
+        eventConditionRepository.deleteAllByObjectId(objectId)
 
         conditions.forEachIndexed { index, spec ->
-            val deviceEvent = DeviceEvent(name = spec.eventName)
-            deviceEvent.updateDeviceType(deviceType)
-
             val (dataType, operator, numericValue1, numericValue2, booleanValue) =
                 convertLegacyConditionParams(
                     spec.isBoolean,
@@ -328,7 +335,7 @@ abstract class ProcessorTestHelper(
 
             val condition =
                 EventCondition(
-                    deviceEvent = deviceEvent,
+                    objectId = objectId,
                     isActivate = true,
                     needControl = spec.needControl,
                     level = level,
@@ -341,10 +348,10 @@ abstract class ProcessorTestHelper(
                     notificationIntervalMinutes = spec.notificationIntervalMinutes,
                     order = index + 1,
                 )
-            deviceEvent.eventConditions.add(condition)
+            eventConditionRepository.save(condition)
         }
 
-        val savedDeviceType = deviceTypeRepository.save(deviceType)
+        val savedDeviceType = deviceType
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(

@@ -1,16 +1,12 @@
 package com.pluxity.aiot.system.event.condition
 
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 
@@ -19,9 +15,8 @@ class EventCondition(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "device_event_id")
-    val deviceEvent: DeviceEvent,
+    @Column(name = "object_id", nullable = false)
+    var objectId: String,
     @Column(name = "is_active")
     var isActivate: Boolean = false,
     var needControl: Boolean = false,
@@ -109,6 +104,7 @@ class EventCondition(
     }
 
     fun update(
+        objectId: String,
         isActivate: Boolean,
         needControl: Boolean,
         level: ConditionLevel,
@@ -121,6 +117,7 @@ class EventCondition(
         notificationIntervalMinutes: Int?,
         order: Int?,
     ) {
+        this.objectId = objectId
         this.isActivate = isActivate
         this.needControl = needControl
         this.level = level

@@ -6,6 +6,7 @@ import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -23,6 +24,7 @@ class DisplacementGaugeProcessorTestHelper(
     actionHistoryService: ActionHistoryService,
     sseServiceMock: SseService,
     writeApiMock: WriteApi,
+    eventConditionRepository: EventConditionRepository,
 ) : ProcessorTestHelper(
         deviceTypeRepository,
         deviceProfileRepository,
@@ -30,6 +32,7 @@ class DisplacementGaugeProcessorTestHelper(
         featureRepository,
         eventHistoryRepository,
         actionHistoryService,
+        eventConditionRepository,
         sseServiceMock,
         writeApiMock,
     ) {
@@ -38,7 +41,7 @@ class DisplacementGaugeProcessorTestHelper(
      */
     val angleXProfile: DeviceProfile by lazy {
         getOrCreateProfile(
-            fieldKey = "AngleX",
+            fieldKey = "Angle-X",
             description = "X축 각도",
             fieldUnit = "°",
             fieldType = DeviceProfile.FieldType.Float,
@@ -50,7 +53,7 @@ class DisplacementGaugeProcessorTestHelper(
      */
     val angleYProfile: DeviceProfile by lazy {
         getOrCreateProfile(
-            fieldKey = "AngleY",
+            fieldKey = "Angle-Y",
             description = "Y축 각도",
             fieldUnit = "°",
             fieldType = DeviceProfile.FieldType.Float,
@@ -66,6 +69,7 @@ class DisplacementGaugeProcessorTestHelper(
             eventHistoryRepository,
             actionHistoryService,
             featureRepository,
+            eventConditionRepository,
             writeApiMock,
         )
 }

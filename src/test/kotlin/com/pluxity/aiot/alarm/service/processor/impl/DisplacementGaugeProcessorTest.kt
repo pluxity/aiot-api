@@ -9,6 +9,7 @@ import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -19,6 +20,7 @@ import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import com.pluxity.aiot.alarm.type.SensorType
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -30,6 +32,7 @@ class DisplacementGaugeProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
+    eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
@@ -49,6 +52,7 @@ class DisplacementGaugeProcessorTest(
                 actionHistoryService,
                 sseServiceMock,
                 writeApiMock,
+                eventConditionRepository,
             )
 
         Given("AngleX: BETWEEN 특수 로직 - 오차범위 처리") {
@@ -60,10 +64,10 @@ class DisplacementGaugeProcessorTest(
                 // 85° 이하 또는 95° 이상일 때 이벤트 발생
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_x1",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXWarning",
+                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
@@ -74,12 +78,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 85.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("85°는 85° ~ 95° 범위 경계값 (정확히 minRange)이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleX"
+                    eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 85.0
                 }
             }
@@ -89,10 +93,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_x2",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXDanger",
+                        eventName = "DANGER_Angle-X",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -103,12 +107,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 84.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("84°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleX"
+                    eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 84.0
                     eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
@@ -119,7 +123,7 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_x3",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXOverRange",
@@ -133,12 +137,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 96.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("96°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleX"
+                    eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 96.0
                     eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
@@ -149,10 +153,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_x4",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXWarning",
+                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -163,7 +167,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 90.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("90°는 범위 중앙값이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -185,10 +189,10 @@ class DisplacementGaugeProcessorTest(
                 // -3° 미만 또는 3° 초과일 때 이벤트 발생
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_y1",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "AngleYWarning",
+                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
@@ -199,12 +203,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = -3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("-3.5°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleY"
+                    eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.5
                     eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
@@ -215,10 +219,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_y2",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "AngleYWarning",
+                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -229,7 +233,7 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = 0.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("0°는 범위 중앙값이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -246,10 +250,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_y3",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "AngleYDanger",
+                        eventName = "DANGER_Angle-Y",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -260,12 +264,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = 3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("3.5°는 범위 밖이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleY"
+                    eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe 3.5
                     eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }
@@ -276,10 +280,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_y4",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "AngleYWarning",
+                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -290,12 +294,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleY = -3.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("-3°는 범위 경계값 (정확히 minRange)이므로 이벤트가 발생한다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleY"
+                    eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.0
                 }
             }
@@ -308,10 +312,10 @@ class DisplacementGaugeProcessorTest(
                 // AngleX 조건
                 val setupX =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_both1",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXWarning",
+                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -322,13 +326,15 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 95.0, angleY = 3.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setupX.deviceType, setupX.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setupX.deviceType.objectId), setupX.siteId, sensorData)
 
-                Then("AngleX 이벤트만 저장된다 (AngleY 조건은 별도 설정 필요)") {
+                Then("AngleX와 AngleY 모두 이벤트가 발생한다 (objectId 단위 조건 적용)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleX"
-                    eventHistories.first().value shouldBe 95.0
+                    eventHistories shouldHaveSize 2
+                    val angleXEvent = eventHistories.first { it.fieldKey == "Angle-X" }
+                    angleXEvent.value shouldBe 95.0
+                    val angleYEvent = eventHistories.first { it.fieldKey == "Angle-Y" }
+                    angleYEvent.value shouldBe 3.5
                 }
             }
         }
@@ -339,10 +345,10 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_interval1",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXWarning",
+                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -354,10 +360,10 @@ class DisplacementGaugeProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 첫 번째 이벤트
-                processor.process(deviceId, setup.deviceType, setup.siteId, helper.createSensorData(angleX = 84.0))
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, helper.createSensorData(angleX = 84.0))
 
                 // 5분 내 두 번째 이벤트
-                processor.process(deviceId, setup.deviceType, setup.siteId, helper.createSensorData(angleX = 83.0))
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, helper.createSensorData(angleX = 83.0))
 
                 Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -378,7 +384,7 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "displacement_gt1",
+                        objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
                         eventName = "AngleXHigh",
@@ -392,12 +398,12 @@ class DisplacementGaugeProcessorTest(
                 val sensorData = helper.createSensorData(angleX = 100.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("100° > 95° 조건 충족으로 이벤트 발생") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "AngleX"
+                    eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 100.0
                     eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
                 }

@@ -12,8 +12,8 @@ import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.device.profile.DeviceProfileType
-import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
@@ -38,7 +38,7 @@ interface SensorDataProcessor {
 
     fun process(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         siteId: Long,
         data: SubscriptionConResponse,
     )
@@ -52,10 +52,11 @@ interface SensorDataProcessor {
 
     fun processEvent(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         fieldKey: String,
         value: Double,
-        profileType: DeviceProfileType,
+        fieldUnit: String,
+        fieldDescription: String,
         condition: EventCondition,
         feature: Feature?,
         parsedDate: LocalDateTime,
@@ -67,7 +68,7 @@ interface SensorDataProcessor {
         val minValue = condition.numericValue1 ?: 0.0
         val maxValue = condition.numericValue2 ?: 0.0
 
-        val eventName: String = condition.deviceEvent.name
+        val eventName = "${condition.level.name}_$fieldKey"
 
         // Feature의 이벤트 상태 업데이트
         updateFeatureEventStatus(feature, condition.level.toString(), featureRepository)
@@ -88,11 +89,11 @@ interface SensorDataProcessor {
             eventHistoryRepository.save(
                 EventHistory(
                     deviceId = deviceId,
-                    objectId = deviceType.objectId,
-                    sensorDescription = deviceType.description,
+                    objectId = sensorType.objectId,
+                    sensorDescription = sensorType.description,
                     fieldKey = fieldKey,
                     value = value,
-                    unit = profileType.deviceProfile?.fieldUnit,
+                    unit = fieldUnit,
                     eventName = eventName,
                     occurredAt = parsedDate,
                     minValue = minValue,
@@ -135,8 +136,8 @@ interface SensorDataProcessor {
         lastNotificationMap[notificationKey] = now
 
         val message =
-            "[$deviceId] ${profileType.deviceProfile?.description}: ${String.format("%.1f", value)} " +
-                "${profileType.deviceProfile?.fieldUnit} - $eventName"
+            "[$deviceId] ${fieldDescription}: ${String.format("%.1f", value)} " +
+                "${fieldUnit} - $eventName"
 
         // SSE로 이벤트 발행
         sseService.publish(
@@ -147,10 +148,10 @@ interface SensorDataProcessor {
                 level = eventName,
                 eventName = eventName,
                 deviceId = deviceId,
-                objectId = deviceType.objectId,
-                sensorDescription = deviceType.description!!,
+                objectId = sensorType.objectId,
+                sensorDescription = sensorType.description,
                 value = value,
-                unit = profileType.deviceProfile?.fieldUnit!!,
+                unit = fieldUnit,
                 minValue = minValue,
                 maxValue = maxValue,
                 notificationEnabled = condition.notificationEnabled,
@@ -163,7 +164,7 @@ interface SensorDataProcessor {
 
     fun processEventConditions(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         fieldKey: String,
         value: Any,
         timestamp: String,
@@ -171,6 +172,7 @@ interface SensorDataProcessor {
         eventHistoryRepository: EventHistoryRepository,
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
+        eventConditionRepository: EventConditionRepository,
     ) {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
@@ -182,48 +184,51 @@ interface SensorDataProcessor {
 
         // anyConditionMet 플래그를 위한 컨테이너
         val anyConditionMet = booleanArrayOf(false)
-        deviceType.deviceProfileTypes
-            .filter { profileType -> fieldKey == profileType.deviceProfile?.fieldKey }
-            .forEach { profileType ->
-                deviceType.deviceEvents
-                    .flatMap { event -> event.eventConditions }
-                    .filter { condition ->
-                        condition.level != ConditionLevel.NORMAL
-                    }.filter { it.notificationEnabled }
-                    .forEach { condition ->
-                        if (isConditionMet(condition, value, fieldKey)) {
-                            anyConditionMet[0] = true
+        val conditions = eventConditionRepository.findAllByObjectId(sensorType.objectId)
+        
+        // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
+        val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey }
+        
+        if (deviceProfile != null) {
+            conditions
+                .filter { condition ->
+                    condition.level != ConditionLevel.NORMAL
+                }.filter { it.notificationEnabled }
+                .forEach { condition ->
+                    if (isConditionMet(condition, value, fieldKey)) {
+                        anyConditionMet[0] = true
 
-                            // value를 Double로 변환 (EventHistory 저장용)
-                            val doubleValue =
-                                when (value) {
-                                    is Number -> value.toDouble()
-                                    is Boolean -> if (value) 1.0 else 0.0
-                                    else -> 0.0
-                                }
+                        // value를 Double로 변환 (EventHistory 저장용)
+                        val doubleValue =
+                            when (value) {
+                                is Number -> value.toDouble()
+                                is Boolean -> if (value) 1.0 else 0.0
+                                else -> 0.0
+                            }
 
-                            // 비동기 이벤트 처리 작업 추가
-                            val eventTask =
-                                CompletableFuture.runAsync {
-                                    processEvent(
-                                        deviceId,
-                                        deviceType,
-                                        fieldKey,
-                                        doubleValue,
-                                        profileType,
-                                        condition,
-                                        feature,
-                                        parsedDate,
-                                        sseService,
-                                        eventHistoryRepository,
-                                        actionHistoryService,
-                                        featureRepository,
-                                    )
-                                }
-                            eventProcessingTasks.add(eventTask)
-                        }
+                        // 비동기 이벤트 처리 작업 추가
+                        val eventTask =
+                            CompletableFuture.runAsync {
+                                processEvent(
+                                    deviceId,
+                                    sensorType,
+                                    fieldKey,
+                                    doubleValue,
+                                    deviceProfile.unit,
+                                    deviceProfile.description,
+                                    condition,
+                                    feature,
+                                    parsedDate,
+                                    sseService,
+                                    eventHistoryRepository,
+                                    actionHistoryService,
+                                    featureRepository,
+                                )
+                            }
+                        eventProcessingTasks.add(eventTask)
                     }
-            }
+                }
+        }
 
         // 모든 이벤트 처리가 완료될 때까지 대기
         CompletableFuture.allOf(*eventProcessingTasks.toTypedArray<CompletableFuture<*>>()).join()
@@ -318,3 +323,6 @@ interface SensorDataProcessor {
         fieldKey: String,
     ): Boolean = isConditionMet(condition, value)
 }
+
+
+

@@ -11,7 +11,7 @@ import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.measure.DisplacementGauge
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.Operator
@@ -26,25 +26,25 @@ class DisplacementGaugeProcessor(
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
+    private val eventConditionRepository: EventConditionRepository,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
-        const val ANGLE_X = "AngleX"
-        const val ANGLE_Y = "AngleY"
+        const val ANGLE_X = "Angle-X"
+        const val ANGLE_Y = "Angle-Y"
     }
 
     override fun getObjectId(): String = SensorType.DISPLACEMENT_GAUGE.objectId
 
     override fun process(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.angleX?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                deviceType = deviceType,
+            processEventConditions(deviceId = deviceId,
+                sensorType = sensorType,
                 fieldKey = ANGLE_X,
                 value = it,
                 timestamp = data.timestamp,
@@ -52,13 +52,13 @@ class DisplacementGaugeProcessor(
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
+                eventConditionRepository = eventConditionRepository,
             )
             log.debug { "Angle-X value: $it" }
         }
         data.angleY?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                deviceType = deviceType,
+            processEventConditions(deviceId = deviceId,
+                sensorType = sensorType,
                 fieldKey = ANGLE_Y,
                 value = it,
                 timestamp = data.timestamp,
@@ -66,6 +66,7 @@ class DisplacementGaugeProcessor(
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
+                eventConditionRepository = eventConditionRepository,
             )
             log.debug { "Angle-Y value: $it" }
         }

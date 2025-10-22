@@ -2,13 +2,12 @@ package com.pluxity.aiot.system.event.condition
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
-import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
+import org.springframework.transaction.annotation.Transactional
 
 interface EventConditionRepository : JpaRepository<EventCondition, Long> {
+    fun findAllByObjectId(objectId: String): List<EventCondition>
+
     @Modifying
-    @Query("DELETE FROM EventCondition ec WHERE ec.deviceEvent.id IN :eventIds")
-    fun deleteAllByDeviceEventIdIn(
-        @Param("eventIds") eventIds: Set<Long>,
-    ): Int
+    @Transactional
+    fun deleteAllByObjectId(objectId: String): Int
 }

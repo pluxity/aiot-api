@@ -1,4 +1,4 @@
-package com.pluxity.aiot.system.event.setting.dto
+package com.pluxity.aiot.system.event.condition.dto
 
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
@@ -6,6 +6,7 @@ import com.pluxity.aiot.system.event.condition.Operator
 
 data class EventConditionRequest(
     val id: Long?,
+    val objectId: String,
     val isActivate: Boolean,
     val needControl: Boolean,
     val level: ConditionLevel,

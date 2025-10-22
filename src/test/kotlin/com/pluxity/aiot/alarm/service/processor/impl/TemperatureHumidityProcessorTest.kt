@@ -9,6 +9,7 @@ import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -19,6 +20,7 @@ import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import com.pluxity.aiot.alarm.type.SensorType
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -30,6 +32,7 @@ class TemperatureHumidityProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
+    eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
@@ -49,6 +52,7 @@ class TemperatureHumidityProcessorTest(
                 actionHistoryService,
                 sseServiceMock,
                 writeApiMock,
+                eventConditionRepository,
             )
 
         Given("온습도계 센서 데이터 처리 및 이벤트 이력 저장") {
@@ -56,9 +60,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_DEVICE_001"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_test1",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempWarning",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -70,7 +74,7 @@ class TemperatureHumidityProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 실행
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 MANUAL_PENDING으로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -80,7 +84,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.deviceId shouldBe deviceId
                     eventHistory.fieldKey shouldBe "Temperature"
                     eventHistory.value shouldBe 28.0
-                    eventHistory.eventName shouldBe "TempWarning"
+                    eventHistory.eventName shouldBe "WARNING_Temperature"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
                     eventHistory.actionResult shouldBe "MANUAL_PENDING"
@@ -91,9 +95,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_DEVICE_002"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_test2",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempDanger",
+                        eventName = "DANGER_Temperature",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = 30.0,
                         maxValue = 40.0,
@@ -105,7 +109,7 @@ class TemperatureHumidityProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 실행
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 MANUAL_PENDING 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -113,7 +117,7 @@ class TemperatureHumidityProcessorTest(
 
                     val eventHistory = eventHistories.first()
                     eventHistory.deviceId shouldBe deviceId
-                    eventHistory.eventName shouldBe "TempDanger"
+                    eventHistory.eventName shouldBe "DANGER_Temperature"
                     eventHistory.value shouldBe 35.0
                     eventHistory.minValue shouldBe 30.0
                     eventHistory.maxValue shouldBe 40.0
@@ -125,9 +129,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_DEVICE_003"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_test3",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempWarning",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -138,7 +142,7 @@ class TemperatureHumidityProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 실행
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장되지 않고 Feature의 eventStatus가 NORMAL이다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -156,10 +160,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GT_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_gt1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempHighGT",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -170,13 +174,13 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 30.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories.first().value shouldBe 30.0
-                    eventHistories.first().eventName shouldBe "TempHighGT"
+                    eventHistories.first().eventName shouldBe "WARNING_Temperature"
                 }
             }
 
@@ -184,10 +188,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GT_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_gt2",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempHighGT2",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -198,7 +202,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 25.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -213,10 +217,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_gte1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempHighGTE",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -227,7 +231,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 30.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -240,10 +244,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_gte2",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempHighGTE2",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -254,7 +258,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 25.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -267,10 +271,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_003"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_gte3",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempHighGTE3",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -281,7 +285,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 20.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장되지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -295,10 +299,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_lte1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempLowLTE",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -309,7 +313,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 20.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -322,10 +326,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_lte2",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempLowLTE2",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -336,7 +340,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 25.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -349,10 +353,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_003"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_lte3",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempLowLTE3",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -363,7 +367,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 30.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장되지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -377,9 +381,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_INTERVAL_001"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_interval1",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempWarningInterval",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -392,11 +396,11 @@ class TemperatureHumidityProcessorTest(
 
                 // 첫 번째 이벤트 발생 (28.0°C)
                 val sensorData1 = helper.createSensorData(temperature = 28.0)
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData1)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData1)
 
                 // 5분 내 두 번째 이벤트 발생 (28.5°C) - 즉시 재실행 (interval 내)
                 val sensorData2 = helper.createSensorData(temperature = 28.5)
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData2)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData2)
 
                 Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -414,9 +418,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_INTERVAL_002"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_interval2",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempDangerInterval",
+                        eventName = "DANGER_Temperature",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = 30.0,
                         maxValue = 40.0,
@@ -429,11 +433,11 @@ class TemperatureHumidityProcessorTest(
 
                 // 첫 번째 이벤트 발생 (35.0°C)
                 val sensorData1 = helper.createSensorData(temperature = 35.0)
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData1)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData1)
 
                 // 10분 내 두 번째 이벤트 발생 (36.0°C) - 즉시 재실행 (interval 내)
                 val sensorData2 = helper.createSensorData(temperature = 36.0)
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData2)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData2)
 
                 Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -453,9 +457,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_BOUNDARY_001"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_boundary1",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempBoundaryMin",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -466,7 +470,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 25.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -481,9 +485,9 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_BOUNDARY_002"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_boundary2",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempBoundaryMax",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -494,7 +498,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 30.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다 (경계값 포함)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -511,10 +515,10 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_HUMIDITY_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_humidity1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
-                        eventName = "HumidityWarning",
+                        eventName = "WARNING_Humidity",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = "70.0",
@@ -525,7 +529,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(humidity = 65.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -544,9 +548,9 @@ class TemperatureHumidityProcessorTest(
                 // 온도 조건
                 val tempSetup =
                     helper.setupTemperatureDevice(
-                        objectId = "tempHumidity_both1",
+                        objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "TempWarningBoth",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -557,7 +561,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 28.0, humidity = 65.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, tempSetup.deviceType, tempSetup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(tempSetup.deviceType.objectId), tempSetup.siteId, sensorData)
 
                 Then("온도 이벤트만 저장된다 (습도 조건은 별도 설정 필요)") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -584,10 +588,10 @@ class TemperatureHumidityProcessorTest(
                 // DiscomfortIndex >= 75.0 조건
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_discomfort1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = discomfortProfile,
-                        eventName = "DiscomfortHigh",
+                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
@@ -599,7 +603,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 30.0, humidity = 70.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("DiscomfortIndex 이벤트가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -626,10 +630,10 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_discomfort2",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = discomfortProfile,
-                        eventName = "DiscomfortHigh",
+                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
@@ -641,7 +645,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 20.0, humidity = 50.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("DiscomfortIndex가 75 미만이므로 이벤트가 발생하지 않고 NORMAL 상태") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -660,10 +664,10 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithDisabledEvent(
-                        objectId = "tempHumidity_disabled1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempWarning",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
@@ -673,7 +677,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 28.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("eventEnabled = false이므로 이벤트가 발생하지 않고 NORMAL 상태") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -692,10 +696,10 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "tempHumidity_no_notif1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "TempWarning",
+                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
@@ -704,17 +708,14 @@ class TemperatureHumidityProcessorTest(
                     )
 
                 // notificationEnabled를 false로 변경
-                val condition =
-                    setup.deviceType.deviceEvents
-                        .flatMap { it.eventConditions }
-                        .first()
+                val condition = eventConditionRepository.findAllByObjectId(setup.deviceType.objectId).first()
                 condition.notificationEnabled = false
-                helper.deviceTypeRepository.save(setup.deviceType)
+                eventConditionRepository.save(condition)
 
                 val sensorData = helper.createSensorData(temperature = 28.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("notificationEnabled = false이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -729,13 +730,13 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithMultipleConditions(
-                        objectId = "tempHumidity_multi1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
                         conditions =
                             listOf(
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
-                                    eventName = "TempWarning",
+                                    eventName = "WARNING_Temperature",
                                     eventLevel = ConditionLevel.WARNING,
                                     minValue = "25.0",
                                     maxValue = "30.0",
@@ -744,7 +745,7 @@ class TemperatureHumidityProcessorTest(
                                     notificationIntervalMinutes = 5,
                                 ),
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
-                                    eventName = "TempDanger",
+                                    eventName = "DANGER_Temperature",
                                     eventLevel = ConditionLevel.DANGER,
                                     minValue = "28.0",
                                     maxValue = "40.0",
@@ -759,14 +760,14 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(temperature = 28.5)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("WARNING과 DANGER 이벤트가 모두 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
-                    eventHistories.map { it.eventName }.toSet() shouldBe setOf("TempWarning", "TempDanger")
-                    eventHistories.first { it.eventName == "TempWarning" }.actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories.first { it.eventName == "TempDanger" }.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.map { it.eventName }.toSet() shouldBe setOf("WARNING_Temperature", "DANGER_Temperature")
+                    eventHistories.first { it.eventName == "WARNING_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first { it.eventName == "DANGER_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
                 }
             }
         }
@@ -777,7 +778,7 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "humidity_eq1",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
                         eventName = "HumidityExact80",
@@ -791,13 +792,13 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(humidity = 80.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories.first().value shouldBe 80.0
-                    eventHistories.first().eventName shouldBe "HumidityExact80"
+                    eventHistories.first().eventName shouldBe "WARNING_Humidity"
                 }
             }
 
@@ -806,7 +807,7 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "humidity_eq2",
+                        objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
                         eventName = "HumidityExact80_2",
@@ -820,7 +821,7 @@ class TemperatureHumidityProcessorTest(
                 val sensorData = helper.createSensorData(humidity = 75.0)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, setup.deviceType, setup.siteId, sensorData)
+                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
                 Then("EventHistory가 저장되지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)

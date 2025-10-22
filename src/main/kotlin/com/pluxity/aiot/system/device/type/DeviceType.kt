@@ -1,6 +1,5 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.device.profile.DeviceProfileType
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -24,12 +23,4 @@ class DeviceType(
 ) {
     @OneToMany(mappedBy = "deviceType", cascade = [CascadeType.ALL], orphanRemoval = true)
     var deviceProfileTypes: MutableSet<DeviceProfileType> = mutableSetOf()
-
-    @OneToMany(mappedBy = "deviceType", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var deviceEvents: MutableSet<DeviceEvent> = mutableSetOf()
-
-    fun addDeviceEvent(event: DeviceEvent) {
-        deviceEvents.add(event)
-        event.updateDeviceType(this)
-    }
 }

@@ -4,8 +4,6 @@ import com.pluxity.aiot.alarm.dto.SubscriptionSgnResponse
 import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.system.device.type.DeviceType
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 
@@ -15,19 +13,9 @@ private val log = KotlinLogging.logger {}
 class SensorDataHandler(
     processors: List<SensorDataProcessor>,
     private val featureRepository: FeatureRepository,
-    private val deviceTypeRepository: DeviceTypeRepository,
 ) {
     private val processorMap: Map<String, SensorDataProcessor> =
         processors.associateBy { it.getObjectId() }
-
-    private val deviceTypeCache: MutableMap<String, DeviceType> =
-        SensorType.entries
-            .mapNotNull { sensorType ->
-                deviceTypeRepository.findByObjectId(sensorType.objectId)?.let { deviceType ->
-                    sensorType.objectId to deviceType
-                }
-            }.toMap()
-            .toMutableMap()
 
     fun handleData(sgn: SubscriptionSgnResponse) {
         val sur = sgn.sur
@@ -43,27 +31,20 @@ class SensorDataHandler(
                 log.warn { "deviceId에 해당하는 Feature가 없습니다: $deviceId" }
                 return
             }
-        val deviceType =
-            deviceTypeCache[objectId] ?: run {
-                log.warn { "ObjectId에 해당하는 deviceType이 없습니다: $objectId" }
-                return
-            }
+        
+        val sensorType = try {
+            SensorType.fromObjectId(objectId)
+        } catch (e: IllegalArgumentException) {
+            log.warn { "ObjectId에 해당하는 SensorType이 없습니다: $objectId, $e" }
+            return
+        }
+        
         val processor =
             processorMap[objectId] ?: run {
                 log.warn { "ObjectId에 해당하는 프로세서가 없습니다: $objectId" }
                 return
             }
 
-        processor.process(deviceId, deviceType, feature.site?.id!!, sgn.nev.rep.cin.con)
-    }
-
-    fun updateDeviceTypeCache(deviceType: DeviceType) {
-        deviceTypeCache[deviceType.objectId] = deviceType
-        log.debug { "DeviceType cache updated for objectId: ${deviceType.objectId}" }
-    }
-
-    fun removeDeviceTypeFromCache(objectId: String?) {
-        deviceTypeCache.remove(objectId)
-        log.debug { "DeviceType removed from cache for objectId: $objectId" }
+        processor.process(deviceId, sensorType, feature.site?.id!!, sgn.nev.rep.cin.con)
     }
 }

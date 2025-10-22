@@ -11,7 +11,7 @@ import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.measure.TemperatureHumidity
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.device.type.DeviceType
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 
@@ -23,6 +23,7 @@ class TemperatureHumidityProcessor(
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
+    private val eventConditionRepository: EventConditionRepository,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
@@ -35,14 +36,13 @@ class TemperatureHumidityProcessor(
 
     override fun process(
         deviceId: String,
-        deviceType: DeviceType,
+        sensorType: SensorType,
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
         data.temperature?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                deviceType = deviceType,
+            processEventConditions(deviceId = deviceId,
+                sensorType = sensorType,
                 fieldKey = TEMPERATURE,
                 value = data.temperature,
                 timestamp = data.timestamp,
@@ -50,14 +50,14 @@ class TemperatureHumidityProcessor(
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
+                eventConditionRepository = eventConditionRepository,
             )
             log.debug { "Temperature processed: $it°C" }
         }
 
         data.humidity?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                deviceType = deviceType,
+            processEventConditions(deviceId = deviceId,
+                sensorType = sensorType,
                 fieldKey = HUMIDITY,
                 value = data.humidity,
                 timestamp = data.timestamp,
@@ -65,6 +65,7 @@ class TemperatureHumidityProcessor(
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
+                eventConditionRepository = eventConditionRepository,
             )
             log.debug { "Humidity processed: $it%" }
         }
@@ -74,7 +75,7 @@ class TemperatureHumidityProcessor(
             // 불쾌 지수 처리
             processEventConditions(
                 deviceId,
-                deviceType,
+                sensorType,
                 DISCOMFORT_INDEX,
                 calculateDiscomfortIndex(data.temperature, data.humidity),
                 data.timestamp,
@@ -82,6 +83,7 @@ class TemperatureHumidityProcessor(
                 eventHistoryRepository,
                 actionHistoryService,
                 featureRepository,
+                eventConditionRepository,
             )
             log.debug {
                 "Discomfort Index calculated: ${"%.2f".format(calculateDiscomfortIndex(data.temperature, data.humidity))} " +

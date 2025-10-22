@@ -6,6 +6,7 @@ import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
@@ -23,6 +24,7 @@ class FireAlarmProcessorTestHelper(
     actionHistoryService: ActionHistoryService,
     sseServiceMock: SseService,
     writeApiMock: WriteApi,
+    eventConditionRepository: EventConditionRepository,
 ) : ProcessorTestHelper(
         deviceTypeRepository,
         deviceProfileRepository,
@@ -30,6 +32,7 @@ class FireAlarmProcessorTestHelper(
         featureRepository,
         eventHistoryRepository,
         actionHistoryService,
+        eventConditionRepository,
         sseServiceMock,
         writeApiMock,
     ) {
@@ -54,6 +57,7 @@ class FireAlarmProcessorTestHelper(
             eventHistoryRepository,
             actionHistoryService,
             featureRepository,
+            eventConditionRepository,
             writeApiMock,
         )
 }

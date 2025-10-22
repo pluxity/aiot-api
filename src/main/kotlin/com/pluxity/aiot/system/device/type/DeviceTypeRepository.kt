@@ -9,8 +9,6 @@ interface DeviceTypeRepository : JpaRepository<DeviceType, Long> {
         attributePaths = [
             "deviceProfileTypes",
             "deviceProfileTypes.deviceProfile",
-            "deviceEvents",
-            "deviceEvents.eventConditions",
         ],
     )
     override fun findAll(): List<DeviceType>
@@ -19,8 +17,6 @@ interface DeviceTypeRepository : JpaRepository<DeviceType, Long> {
         attributePaths = [
             "deviceProfileTypes",
             "deviceProfileTypes.deviceProfile",
-            "deviceEvents",
-            "deviceEvents.eventConditions",
         ],
     )
     fun findByObjectId(objectId: String): DeviceType?
@@ -29,7 +25,6 @@ interface DeviceTypeRepository : JpaRepository<DeviceType, Long> {
         attributePaths = [
             "deviceProfileTypes",
             "deviceProfileTypes.deviceProfile",
-            "deviceEvents",
             "features",
         ],
     )

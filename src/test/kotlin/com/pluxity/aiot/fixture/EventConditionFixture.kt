@@ -1,6 +1,5 @@
 package com.pluxity.aiot.fixture
 
-import com.pluxity.aiot.system.device.event.DeviceEvent
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
@@ -8,33 +7,30 @@ import com.pluxity.aiot.system.event.condition.Operator
 
 object EventConditionFixture {
     fun create(
-        id: Long? = null,
-        deviceEvent: DeviceEvent,
+        objectId: String = "34954",
         isActivate: Boolean = true,
         needControl: Boolean = false,
-        level: ConditionLevel = ConditionLevel.NORMAL,
+        notificationEnabled: Boolean = true,
+        notificationIntervalMinutes: Int = 10,
+        order: Int? = null,
+        level: ConditionLevel = ConditionLevel.WARNING,
         dataType: DataType = DataType.NUMERIC,
-        operator: Operator = Operator.GREATER_OR_EQUAL,
-        numericValue1: Double? = null,
+        operator: Operator = Operator.GREATER_THAN,
+        numericValue1: Double? = 30.0,
         numericValue2: Double? = null,
         booleanValue: Boolean? = null,
-        notificationEnabled: Boolean = false,
-        notificationIntervalMinutes: Int = 0,
-        order: Int? = null,
-    ): EventCondition =
-        EventCondition(
-            id = id,
-            deviceEvent = deviceEvent,
-            isActivate = isActivate,
-            needControl = needControl,
-            level = level,
-            dataType = dataType,
-            operator = operator,
-            numericValue1 = numericValue1,
-            numericValue2 = numericValue2,
-            booleanValue = booleanValue,
-            notificationEnabled = notificationEnabled,
-            notificationIntervalMinutes = notificationIntervalMinutes,
-            order = order,
-        )
+    ) = EventCondition(
+        objectId = objectId,
+        isActivate = isActivate,
+        needControl = needControl,
+        notificationEnabled = notificationEnabled,
+        notificationIntervalMinutes = notificationIntervalMinutes,
+        order = order,
+        level = level,
+        dataType = dataType,
+        operator = operator,
+        numericValue1 = numericValue1,
+        numericValue2 = numericValue2,
+        booleanValue = booleanValue,
+    )
 }

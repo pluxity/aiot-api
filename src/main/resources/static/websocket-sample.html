@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <title>test</title>
+</head>
+<body>
+<div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+<script>
+    let stompClient;
+
+    const stompInit = () => {
+        const socket = new WebSocket(`ws://${getServerInfo()}/stomp/platform`);
+        stompClient = Stomp.over(socket);
+
+        const onConnect = async (payload) => {
+            console.log(payload)
+
+            stompClient.subscribe(`/user/queue/connection-error`, function (data) {
+                console.log(data)
+            });
+
+            // stompClient.subscribe(`/topic/aa`, function (data) {
+            //     console.log(data)
+            // });
+            stompClient.send(`/app/test/connection-error`, {}, JSON.stringify({
+                siteId: 1,
+                deviceId: 'SNIOT-P-FIR-002',
+                objectId: '34956',
+                message: '디바이스 연결 오류 - SNIOT-P-FIR-002:34956 디바이스가 3회 연속 응답하지 않습니다.'
+            }));
+        };
+        const onError = (error) => console.log("connect error", error);
+        stompClient.connect({
+            Cookie: 'AccessToken=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb29uIiwiaWF0IjoxNzYwOTM0NjIwLCJleHAiOjE3OTY5MzQ2MjB9.QYHcUtgro4vsR-6aTyalg7Qc7XsTXAkCdj47sIFNTDg; RefreshToken=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb29uIiwiaWF0IjoxNzYwOTM0NjIwLCJleHAiOjI2MjQ5MzQ2MjB9.GIVEdm2ucIiC9nvJ3WHn2Vs-5s-z7SpgFfLr_hMMEsI'
+        }, onConnect, onError);
+    };
+
+    const getServerInfo = () => {
+        return `${window.location.hostname}:${window.location.port}`
+    }
+
+    stompInit();
+</script>
+</body>
+</html>

@@ -61,6 +61,11 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.5")
     // H2 Database for testing
     testImplementation("com.h2database:h2")
+    // websocket
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+    implementation ("io.github.springwolf:springwolf-core:1.18.0")
+    implementation ("io.github.springwolf:springwolf-stomp:1.18.0")
+    runtimeOnly("io.github.springwolf:springwolf-ui:1.18.0")
 }
 
 kotlin {

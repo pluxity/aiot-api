@@ -47,6 +47,24 @@ file:
     secret-key: pluxity0304
     pre-signed-url-expiration: 600
 
+springwolf: # socket documentation ui
+  enabled: true
+  docket:
+    default-content-type: application/json
+    base-package: com.pluxity.aiot.global
+    servers:
+      stomp:
+        protocol: stomp
+        host: localhost:8080/stomp/platform
+    info:
+      title: AIoT AsyncAPI Documentation
+      version: 1.0.0
+      description: AsyncAPI Documentation using Springwolf
+  plugin:
+    stomp:
+      endpoint:
+        app: /app
+
 logging:
   level:
     com: DEBUG

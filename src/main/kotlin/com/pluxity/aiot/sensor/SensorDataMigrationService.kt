@@ -3,13 +3,13 @@ package com.pluxity.aiot.sensor
 import com.influxdb.client.QueryApi
 import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
-import com.pluxity.aiot.alarm.dto.AlarmEvent
 import com.pluxity.aiot.alarm.dto.SubscriptionCinResponse
-import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.global.messaging.dto.ConnectionErrorPayload
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.dto.LastSensorData
@@ -33,11 +33,11 @@ private val log = KotlinLogging.logger {}
 @Service
 class SensorDataMigrationService(
     private val featureRepository: FeatureRepository,
-    private val sseService: SseService,
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxdbProperties,
     private val aiotService: AiotService,
     processors: List<SensorDataProcessor>,
+    private val messageSender: StompMessageSender,
 ) {
     private val processorMap: Map<String, SensorDataProcessor> =
         processors.associateBy { it.getObjectId() }
@@ -243,7 +243,7 @@ class SensorDataMigrationService(
 
                         // 최대 실패 횟수 도달 시 SSE 알림 전송
                         if (failureCount >= MAX_CONSECUTIVE_FAILURES) {
-                            sendConnectionFailureAlert(deviceId, objectId, failureCount)
+                            sendConnectionFailureAlert(deviceId, objectId, failureCount, siteId)
                         }
                     }
 
@@ -270,28 +270,17 @@ class SensorDataMigrationService(
         deviceId: String,
         objectId: String,
         failureCount: Int,
+        siteId: Long,
     ) {
         val message = "디바이스 연결 오류 - $deviceId:$objectId 디바이스가 ${failureCount}회 연속 응답하지 않습니다."
-
-        val event =
-            AlarmEvent(
-                sensorType = "CONNECTION_ERROR",
-                fieldKey = "CONNECTION_ERROR",
-                message = message,
-                level = "CONNECTION_ERROR",
-                eventName = "CONNECTION_ERROR",
+        messageSender.sendConnectionError(
+            ConnectionErrorPayload(
+                siteId = siteId,
                 deviceId = deviceId,
                 objectId = objectId,
-                sensorDescription = "연결 오류",
-                value = 0.0,
-                unit = "회",
-                minValue = 0.0,
-                maxValue = 0.0,
-                notificationEnabled = false,
-                actionResult = "SYSTEM_ALERT",
-            )
-
-        sseService.publish(event)
+                message = message,
+            ),
+        )
         log.warn { "디바이스 연결 오류 알림 전송 - $message" }
     }
 

@@ -5,11 +5,11 @@ import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.measure.TemperatureHumidity
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -19,7 +19,7 @@ private val log = KotlinLogging.logger {}
 
 @Component
 class TemperatureHumidityProcessor(
-    private val sseService: SseService,
+    private val messageSender: StompMessageSender,
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
@@ -41,12 +41,13 @@ class TemperatureHumidityProcessor(
         data: SubscriptionConResponse,
     ) {
         data.temperature?.let {
-            processEventConditions(deviceId = deviceId,
+            processEventConditions(
+                deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = TEMPERATURE,
                 value = data.temperature,
                 timestamp = data.timestamp,
-                sseService = sseService,
+                messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
@@ -56,12 +57,13 @@ class TemperatureHumidityProcessor(
         }
 
         data.humidity?.let {
-            processEventConditions(deviceId = deviceId,
+            processEventConditions(
+                deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = HUMIDITY,
                 value = data.humidity,
                 timestamp = data.timestamp,
-                sseService = sseService,
+                messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
@@ -79,7 +81,7 @@ class TemperatureHumidityProcessor(
                 DISCOMFORT_INDEX,
                 calculateDiscomfortIndex(data.temperature, data.humidity),
                 data.timestamp,
-                sseService,
+                messageSender,
                 eventHistoryRepository,
                 actionHistoryService,
                 featureRepository,

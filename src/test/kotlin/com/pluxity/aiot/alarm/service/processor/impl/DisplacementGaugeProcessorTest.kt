@@ -3,8 +3,9 @@ package com.pluxity.aiot.alarm.service.processor.impl
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
@@ -20,7 +21,6 @@ import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import com.pluxity.aiot.alarm.type.SensorType
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -39,7 +39,7 @@ class DisplacementGaugeProcessorTest(
 
         // Mocks
         val writeApiMock = Mockito.mock(WriteApi::class.java)
-        val sseServiceMock = Mockito.mock(SseService::class.java)
+        val messageSenderMock = Mockito.mock(StompMessageSender::class.java)
 
         // Helper 초기화
         val helper =
@@ -50,7 +50,7 @@ class DisplacementGaugeProcessorTest(
                 featureRepository,
                 eventHistoryRepository,
                 actionHistoryService,
-                sseServiceMock,
+                messageSenderMock,
                 writeApiMock,
                 eventConditionRepository,
             )
@@ -360,10 +360,20 @@ class DisplacementGaugeProcessorTest(
                 val processor = helper.createProcessor()
 
                 // 첫 번째 이벤트
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, helper.createSensorData(angleX = 84.0))
+                processor.process(
+                    deviceId,
+                    SensorType.fromObjectId(setup.deviceType.objectId),
+                    setup.siteId,
+                    helper.createSensorData(angleX = 84.0),
+                )
 
                 // 5분 내 두 번째 이벤트
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, helper.createSensorData(angleX = 83.0))
+                processor.process(
+                    deviceId,
+                    SensorType.fromObjectId(setup.deviceType.objectId),
+                    setup.siteId,
+                    helper.createSensorData(angleX = 83.0),
+                )
 
                 Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)

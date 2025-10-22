@@ -19,15 +19,17 @@ class EventConditionService(
     @Transactional(readOnly = true)
     fun findAllByObjectId(objectId: String): List<EventConditionResponse> {
         log.info { "EventCondition 목록 조회 - objectId: $objectId" }
-        return eventConditionRepository.findAllByObjectId(objectId)
+        return eventConditionRepository
+            .findAllByObjectId(objectId)
             .map { it.toEventConditionResponse() }
     }
 
     @Transactional(readOnly = true)
     fun findById(id: Long): EventConditionResponse {
         log.info { "EventCondition 조회 - id: $id" }
-        val condition = eventConditionRepository.findByIdOrNull(id)
-            ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
+        val condition =
+            eventConditionRepository.findByIdOrNull(id)
+                ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
         return condition.toEventConditionResponse()
     }
 
@@ -35,20 +37,21 @@ class EventConditionService(
     fun create(request: EventConditionRequest): EventConditionResponse {
         log.info { "EventCondition 생성 시작 - objectId: ${request.objectId}, level: ${request.level}" }
 
-        val condition = EventCondition(
-            objectId = request.objectId,
-            isActivate = request.isActivate,
-            needControl = request.needControl,
-            level = request.level,
-            dataType = request.dataType,
-            operator = request.operator,
-            numericValue1 = request.numericValue1,
-            numericValue2 = request.numericValue2,
-            booleanValue = request.booleanValue,
-            notificationEnabled = request.notificationEnabled,
-            notificationIntervalMinutes = request.notificationIntervalMinutes ?: 0,
-            order = request.order,
-        )
+        val condition =
+            EventCondition(
+                objectId = request.objectId,
+                isActivate = request.isActivate,
+                needControl = request.needControl,
+                level = request.level,
+                dataType = request.dataType,
+                operator = request.operator,
+                numericValue1 = request.numericValue1,
+                numericValue2 = request.numericValue2,
+                booleanValue = request.booleanValue,
+                notificationEnabled = request.notificationEnabled,
+                notificationIntervalMinutes = request.notificationIntervalMinutes ?: 0,
+                order = request.order,
+            )
 
         val saved = eventConditionRepository.save(condition)
         log.info { "EventCondition 생성 완료 - id: ${saved.id}" }
@@ -63,8 +66,9 @@ class EventConditionService(
     ): EventConditionResponse {
         log.info { "EventCondition 수정 시작 - id: $id" }
 
-        val condition = eventConditionRepository.findByIdOrNull(id)
-            ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
+        val condition =
+            eventConditionRepository.findByIdOrNull(id)
+                ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
 
         condition.update(
             objectId = request.objectId,
@@ -90,8 +94,9 @@ class EventConditionService(
     fun delete(id: Long) {
         log.info { "EventCondition 삭제 시작 - id: $id" }
 
-        val condition = eventConditionRepository.findByIdOrNull(id)
-            ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
+        val condition =
+            eventConditionRepository.findByIdOrNull(id)
+                ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
 
         eventConditionRepository.delete(condition)
 

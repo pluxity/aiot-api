@@ -47,6 +47,7 @@ logbook:
       - path: /swagger-ui/**
       - path: /api-docs/**
       - path: /.well-known/**
+      - path: /springwolf/**
 
 user:
   init-password: qwer1234

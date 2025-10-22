@@ -3,14 +3,14 @@ package com.pluxity.aiot.alarm.service.processor.impl
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.system.event.condition.EventConditionRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 
 /**
  * FireAlarmProcessor 테스트를 위한 헬퍼 클래스
@@ -22,7 +22,7 @@ class FireAlarmProcessorTestHelper(
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
-    sseServiceMock: SseService,
+    messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
 ) : ProcessorTestHelper(
@@ -33,7 +33,7 @@ class FireAlarmProcessorTestHelper(
         eventHistoryRepository,
         actionHistoryService,
         eventConditionRepository,
-        sseServiceMock,
+        messageSenderMock,
         writeApiMock,
     ) {
     /**
@@ -53,7 +53,7 @@ class FireAlarmProcessorTestHelper(
      */
     fun createProcessor(): FireAlarmProcessor =
         FireAlarmProcessor(
-            sseServiceMock,
+            this@FireAlarmProcessorTestHelper.messageSenderMock,
             eventHistoryRepository,
             actionHistoryService,
             featureRepository,

@@ -2,21 +2,21 @@ package com.pluxity.aiot.alarm.service.processor
 
 import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.action.ActionHistoryService
-import com.pluxity.aiot.alarm.dto.AlarmEvent
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.alarm.type.SensorType
-import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.Operator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
@@ -58,9 +58,9 @@ interface SensorDataProcessor {
         fieldUnit: String,
         fieldDescription: String,
         condition: EventCondition,
-        feature: Feature?,
+        feature: Feature,
         parsedDate: LocalDateTime,
-        sseService: SseService,
+        messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
@@ -136,28 +136,30 @@ interface SensorDataProcessor {
         lastNotificationMap[notificationKey] = now
 
         val message =
-            "[$deviceId] ${fieldDescription}: ${String.format("%.1f", value)} " +
-                "${fieldUnit} - $eventName"
+            "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
+                "$fieldUnit - $eventName"
 
-        // SSE로 이벤트 발행
-        sseService.publish(
-            AlarmEvent(
-                sensorType = fieldKey,
-                fieldKey = fieldKey,
-                message = message,
-                level = eventName,
-                eventName = eventName,
-                deviceId = deviceId,
-                objectId = sensorType.objectId,
-                sensorDescription = sensorType.description,
-                value = value,
-                unit = fieldUnit,
-                minValue = minValue,
-                maxValue = maxValue,
-                notificationEnabled = condition.notificationEnabled,
-                actionResult = eventHistory.actionResult,
-            ),
-        )
+        feature.site?.let {
+            messageSender.sendSensorAlarm(
+                SensorAlarmPayload(
+                    siteId = it.id!!,
+                    sensorType = fieldKey,
+                    fieldKey = fieldKey,
+                    message = message,
+                    level = eventName,
+                    eventName = eventName,
+                    deviceId = deviceId,
+                    objectId = sensorType.objectId,
+                    sensorDescription = sensorType.description,
+                    value = value,
+                    unit = fieldUnit,
+                    minValue = minValue,
+                    maxValue = maxValue,
+                    notificationEnabled = condition.notificationEnabled,
+                    actionResult = eventHistory.actionResult,
+                ),
+            )
+        }
 
         log.info { "Event triggered and saved: $message" }
     }
@@ -168,7 +170,7 @@ interface SensorDataProcessor {
         fieldKey: String,
         value: Any,
         timestamp: String,
-        sseService: SseService,
+        messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
@@ -177,7 +179,7 @@ interface SensorDataProcessor {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
         // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
-        val feature: Feature? = getFeatureFromCacheOrDb(deviceId, featureRepository)
+        val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
 
         // 조건 충족을 위한 이벤트 컨테이너 준비
         val eventProcessingTasks: MutableList<CompletableFuture<Void>> = mutableListOf()
@@ -185,10 +187,10 @@ interface SensorDataProcessor {
         // anyConditionMet 플래그를 위한 컨테이너
         val anyConditionMet = booleanArrayOf(false)
         val conditions = eventConditionRepository.findAllByObjectId(sensorType.objectId)
-        
+
         // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
         val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey }
-        
+
         if (deviceProfile != null) {
             conditions
                 .filter { condition ->
@@ -219,7 +221,7 @@ interface SensorDataProcessor {
                                     condition,
                                     feature,
                                     parsedDate,
-                                    sseService,
+                                    messageSender,
                                     eventHistoryRepository,
                                     actionHistoryService,
                                     featureRepository,
@@ -234,7 +236,7 @@ interface SensorDataProcessor {
         CompletableFuture.allOf(*eventProcessingTasks.toTypedArray<CompletableFuture<*>>()).join()
 
         // 조건을 만족하는 이벤트가 없으면 NORMAL 상태로 설정
-        if (!anyConditionMet[0] && feature != null) {
+        if (!anyConditionMet[0]) {
             updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)
         }
     }
@@ -242,19 +244,20 @@ interface SensorDataProcessor {
     fun getFeatureFromCacheOrDb(
         deviceId: String,
         featureRepository: FeatureRepository,
-    ): Feature? {
+    ): Feature {
         val currentTime = System.currentTimeMillis()
 
         // 캐시에 있고 만료되지 않은 경우 캐시된 값 반환
         if (featureCache.containsKey(deviceId)) {
             val expiryTime: Long? = featureCacheExpiryMap[deviceId]
             if (expiryTime != null && currentTime < expiryTime) {
-                return featureCache[deviceId]
+                return featureCache[deviceId] ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
             }
         }
 
         // 캐시에 없거나 만료된 경우, DB에서 조회 후 캐시 업데이트
-        val feature = featureRepository.findByDeviceId(deviceId)
+        val feature =
+            featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
         featureCache[deviceId] = feature
         featureCacheExpiryMap[deviceId] = currentTime + 864_000_000L
         return feature
@@ -299,7 +302,6 @@ interface SensorDataProcessor {
                                 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
                         value in v1..v2
                     }
-                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)
                 }
             }
             DataType.BOOLEAN -> {
@@ -326,6 +328,3 @@ interface SensorDataProcessor {
         fieldKey: String,
     ): Boolean = isConditionMet(condition, value)
 }
-
-
-

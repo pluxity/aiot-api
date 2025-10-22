@@ -5,11 +5,11 @@ import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.measure.FireAlarm
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -19,7 +19,7 @@ private val log = KotlinLogging.logger {}
 
 @Component
 class FireAlarmProcessor(
-    private val sseService: SseService,
+    private val messageSender: StompMessageSender,
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
@@ -39,12 +39,13 @@ class FireAlarmProcessor(
         data: SubscriptionConResponse,
     ) {
         data.fireAlarm?.let {
-            processEventConditions(deviceId = deviceId,
+            processEventConditions(
+                deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = FIRE_ALARM,
                 value = it, // Boolean 값 그대로 전달
                 timestamp = data.timestamp,
-                sseService = sseService,
+                messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
                 actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,

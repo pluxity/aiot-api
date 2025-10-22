@@ -78,8 +78,7 @@ class EventConditionController(
     @GetMapping("/{id}")
     fun findById(
         @PathVariable id: Long,
-    ): ResponseEntity<DataResponseBody<EventConditionResponse>> =
-        ResponseEntity.ok(DataResponseBody(eventConditionService.findById(id)))
+    ): ResponseEntity<DataResponseBody<EventConditionResponse>> = ResponseEntity.ok(DataResponseBody(eventConditionService.findById(id)))
 
     @Operation(summary = "이벤트 조건 생성", description = "새로운 이벤트 조건을 생성합니다")
     @ApiResponses(
@@ -110,8 +109,7 @@ class EventConditionController(
     @PostMapping
     fun create(
         @RequestBody request: EventConditionRequest,
-    ): ResponseEntity<DataResponseBody<EventConditionResponse>> =
-        ResponseEntity.ok(DataResponseBody(eventConditionService.create(request)))
+    ): ResponseEntity<DataResponseBody<EventConditionResponse>> = ResponseEntity.ok(DataResponseBody(eventConditionService.create(request)))
 
     @Operation(summary = "이벤트 조건 수정", description = "기존 이벤트 조건을 수정합니다")
     @ApiResponses(

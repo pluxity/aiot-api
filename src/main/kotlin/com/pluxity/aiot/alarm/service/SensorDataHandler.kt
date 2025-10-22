@@ -31,14 +31,15 @@ class SensorDataHandler(
                 log.warn { "deviceId에 해당하는 Feature가 없습니다: $deviceId" }
                 return
             }
-        
-        val sensorType = try {
-            SensorType.fromObjectId(objectId)
-        } catch (e: IllegalArgumentException) {
-            log.warn { "ObjectId에 해당하는 SensorType이 없습니다: $objectId, $e" }
-            return
-        }
-        
+
+        val sensorType =
+            try {
+                SensorType.fromObjectId(objectId)
+            } catch (e: IllegalArgumentException) {
+                log.warn { "ObjectId에 해당하는 SensorType이 없습니다: $objectId, $e" }
+                return
+            }
+
         val processor =
             processorMap[objectId] ?: run {
                 log.warn { "ObjectId에 해당하는 프로세서가 없습니다: $objectId" }

@@ -8,7 +8,6 @@ import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
@@ -25,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional
 class FeatureServiceTest(
     private val featureService: FeatureService,
     private val featureRepository: FeatureRepository,
-    private val deviceTypeRepository: DeviceTypeRepository,
     private val siteRepository: SiteRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf

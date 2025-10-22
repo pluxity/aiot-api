@@ -1,9 +1,6 @@
 package com.pluxity.aiot.system.event.condition
 
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.system.event.condition.dto.EventConditionRequest
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension

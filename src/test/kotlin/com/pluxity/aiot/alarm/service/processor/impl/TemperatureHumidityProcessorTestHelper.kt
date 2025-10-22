@@ -3,15 +3,15 @@ package com.pluxity.aiot.alarm.service.processor.impl
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.service.SseService
 import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.system.event.condition.EventConditionRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.device.profile.DeviceProfile
 import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
 import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
+import com.pluxity.aiot.system.event.condition.EventConditionRepository
 
 /**
  * TemperatureHumidityProcessor 테스트를 위한 헬퍼 클래스
@@ -23,7 +23,7 @@ class TemperatureHumidityProcessorTestHelper(
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
     actionHistoryService: ActionHistoryService,
-    sseServiceMock: SseService,
+    messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
 ) : ProcessorTestHelper(
@@ -34,7 +34,7 @@ class TemperatureHumidityProcessorTestHelper(
         eventHistoryRepository,
         actionHistoryService,
         eventConditionRepository,
-        sseServiceMock,
+        messageSenderMock,
         writeApiMock,
     ) {
     /**
@@ -105,7 +105,7 @@ class TemperatureHumidityProcessorTestHelper(
      */
     fun createProcessor(): TemperatureHumidityProcessor =
         TemperatureHumidityProcessor(
-            sseServiceMock,
+            messageSenderMock,
             eventHistoryRepository,
             actionHistoryService,
             featureRepository,

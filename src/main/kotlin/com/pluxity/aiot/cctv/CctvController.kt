@@ -130,4 +130,19 @@ class CctvController(
         cctvService.delete(id)
         return ResponseEntity.noContent().build()
     }
+
+    @Operation(summary = "CCTV 미디어서버 동기화", description = "CCTV 정보를 미디어 서버와 동기화합니다.")
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "204",
+                description = "CCTV 동기화 성공",
+            ),
+        ],
+    )
+    @GetMapping("/sync")
+    fun synchronize(): ResponseEntity<Void> {
+        cctvService.synchronizeCctv()
+        return ResponseEntity.noContent().build()
+    }
 }

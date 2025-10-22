@@ -125,7 +125,7 @@ enum class ErrorCode(
 
     NOT_FOUND_INVALID_NUMERIC_VALUE(HttpStatus.BAD_REQUEST, "유효한 숫자가 아닙니다."),
     NOT_FOUND_INVALID_BOOLEAN_VALUE(HttpStatus.BAD_REQUEST, "유효한 Boolean 값이 아닙니다."),
-    NOT_SUPPORTED_OPERATOR(HttpStatus.BAD_REQUEST, "지원하지 않는 연산자입니다.")
+    NOT_SUPPORTED_OPERATOR(HttpStatus.BAD_REQUEST, "지원하지 않는 연산자입니다."),
     ;
 
     override fun getHttpStatus(): HttpStatus = httpStatus

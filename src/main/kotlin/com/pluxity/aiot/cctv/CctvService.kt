@@ -9,6 +9,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.MediaMtxProperties
 import com.pluxity.aiot.global.utils.UUIDUtils
 import com.pluxity.aiot.site.SiteRepository
+import jakarta.annotation.PostConstruct
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +23,11 @@ class CctvService(
     private val mediaMtxService: MediaMtxService,
     private val mediaMtxProperties: MediaMtxProperties,
 ) {
+    @PostConstruct
+    fun init() {
+        synchronizeCctv()
+    }
+
     @Transactional
     fun create(request: CctvRequest): Long {
         val site =
@@ -95,4 +101,18 @@ class CctvService(
     fun findById(id: Long): Cctv =
         cctvRepository.findByIdOrNull(id)
             ?: throw CustomException(ErrorCode.NOT_FOUND_CCTV, id)
+
+    fun synchronizeCctv() {
+        val mtxList = mediaMtxService.getAllPath().map { it.name }
+        val cctvList = cctvRepository.findAll()
+        val dbList = cctvList.mapNotNull { it.mtxName }
+
+        mtxList.minus(dbList.toSet()).forEach {
+            mediaMtxService.deletePath(it)
+        }
+
+        dbList.minus(mtxList.toSet()).forEach {
+            mediaMtxService.addPath(it, cctvList.first { cctv -> cctv.mtxName == it }.url!!)
+        }
+    }
 }

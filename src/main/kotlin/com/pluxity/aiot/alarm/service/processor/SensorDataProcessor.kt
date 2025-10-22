@@ -283,7 +283,8 @@ interface SensorDataProcessor {
                         is Number -> incomingValue.toDouble()
                         else -> return false
                     }
-                val v1 = condition.numericValue1 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue1)
+                val v1 =
+                    condition.numericValue1 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue1)
 
                 when (condition.operator) {
                     Operator.GREATER_THAN -> value > v1
@@ -293,7 +294,9 @@ interface SensorDataProcessor {
                     Operator.EQUAL -> value == v1
                     Operator.NOT_EQUAL -> value != v1
                     Operator.BETWEEN -> {
-                        val v2 = condition.numericValue2 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
+                        val v2 =
+                            condition.numericValue2
+                                ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
                         value in v1..v2
                     }
                     else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)

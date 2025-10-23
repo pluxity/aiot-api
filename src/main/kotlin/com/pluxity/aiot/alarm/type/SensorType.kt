@@ -1,8 +1,7 @@
 package com.pluxity.aiot.alarm.type
 
 import com.pluxity.aiot.data.dto.MetricDefinition
-import com.pluxity.aiot.system.device.profile.DeviceProfile
-import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
+import com.pluxity.aiot.system.device.type.dto.DeviceProfileResponse
 
 enum class SensorType(
     val id: Long,
@@ -66,15 +65,15 @@ enum class DeviceProfileEnum(
     val id: Long,
     val description: String,
     val fieldKey: String,
-    val fieldType: DeviceProfile.FieldType,
+    val fieldType: FieldType,
     val unit: String,
 ) {
-    TEMPERATURE(1, "온도", "Temperature", DeviceProfile.FieldType.Float, "°C"),
-    HUMIDITY(2, "습도", "Humidity", DeviceProfile.FieldType.Float, "%"),
-    FIRE_ALARM(3, "화재감지", "Fire Alarm", DeviceProfile.FieldType.Boolean, ""),
-    DISCOMFORT_INDEX(4, "불쾌지수", "DiscomfortIndex", DeviceProfile.FieldType.Float, ""),
-    ANGLE_X(5, "X축 각도", "Angle-X", DeviceProfile.FieldType.Float, "°"),
-    ANGLE_Y(6, "Y축 각도", "Angle-Y", DeviceProfile.FieldType.Float, "°"),
+    TEMPERATURE(1, "온도", "Temperature", FieldType.Float, "°C"),
+    HUMIDITY(2, "습도", "Humidity", FieldType.Float, "%"),
+    FIRE_ALARM(3, "화재감지", "Fire Alarm", FieldType.Boolean, ""),
+    DISCOMFORT_INDEX(4, "불쾌지수", "DiscomfortIndex", FieldType.Float, ""),
+    ANGLE_X(5, "X축 각도", "Angle-X", FieldType.Float, "°"),
+    ANGLE_Y(6, "Y축 각도", "Angle-Y", FieldType.Float, "°"),
     ;
 
     fun toMetricDefinition() = MetricDefinition(fieldKey, unit)
@@ -88,23 +87,12 @@ enum class DeviceProfileEnum(
             fieldType = this.fieldType,
         )
 
-    fun toEntity() =
-        DeviceProfile(
-            id = this.id,
-            fieldKey = this.fieldKey,
-            description = this.description,
-            fieldUnit = this.unit,
-            fieldType = this.fieldType,
-        )
-
     companion object {
         private val map = entries.associateBy(DeviceProfileEnum::id)
 
         fun findById(id: Long) = map[id] ?: throw IllegalArgumentException("Unknown id: $id")
 
         fun getAllResponses() = entries.map { it.toResponse() }
-
-        fun toEntity(id: Long) = findById(id).toEntity()
     }
 }
 
@@ -112,3 +100,10 @@ data class AbbreviationData(
     var abbreviationKey: String,
     var fullName: String,
 )
+
+enum class FieldType {
+    String,
+    Integer,
+    Float,
+    Boolean,
+}

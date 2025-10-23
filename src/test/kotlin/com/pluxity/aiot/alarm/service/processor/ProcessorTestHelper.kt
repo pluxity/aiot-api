@@ -4,16 +4,12 @@ import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfile
-import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfileType
-import com.pluxity.aiot.system.device.type.DeviceType
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition
@@ -114,8 +110,6 @@ fun mapDeviceEventLevelToConditionLevel(eventLevel: ConditionLevel): ConditionLe
  * 센서 데이터 Processor 테스트를 위한 공통 헬퍼 클래스
  */
 abstract class ProcessorTestHelper(
-    val deviceTypeRepository: DeviceTypeRepository,
-    protected val deviceProfileRepository: DeviceProfileRepository,
     val siteRepository: SiteRepository,
     val featureRepository: FeatureRepository,
     protected val eventHistoryRepository: EventHistoryRepository,
@@ -125,38 +119,11 @@ abstract class ProcessorTestHelper(
     protected val writeApiMock: WriteApi,
 ) {
     /**
-     * DeviceProfile 캐시 (fieldKey 기반)
-     */
-    private val profileCache = mutableMapOf<String, DeviceProfile>()
-
-    /**
-     * DeviceProfile 조회 또는 생성 (캐싱)
-     */
-    fun getOrCreateProfile(
-        fieldKey: String,
-        description: String,
-        fieldUnit: String,
-        fieldType: DeviceProfile.FieldType,
-    ): DeviceProfile =
-        profileCache.getOrPut(fieldKey) {
-            deviceProfileRepository.findAll().firstOrNull { it.fieldKey == fieldKey }
-                ?: deviceProfileRepository.save(
-                    DeviceProfile(
-                        fieldKey = fieldKey,
-                        description = description,
-                        fieldUnit = fieldUnit,
-                        fieldType = fieldType,
-                    ),
-                )
-        }
-
-    /**
      * 테스트용 DeviceType + EventCondition 생성
      */
     fun setupDeviceWithCondition(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         eventName: String,
         eventLevel: ConditionLevel,
         minValue: String? = null,
@@ -165,24 +132,7 @@ abstract class ProcessorTestHelper(
         isBoolean: Boolean = false,
         notificationIntervalMinutes: Int = 0,
     ): TestSetup {
-        // 1. DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType =
-                        DeviceType(
-                            objectId = objectId,
-                            description = "$objectId 설명",
-                            version = "1.0",
-                        )
-                    val deviceProfileType =
-                        DeviceProfileType(
-                            deviceProfile = profile,
-                            deviceType = newDeviceType,
-                        )
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
+        val sensorType = SensorType.fromObjectId(objectId)
 
         // 2. 기존 EventCondition 삭제 (테스트 격리 - 같은 objectId로 중복 생성 방지)
         eventConditionRepository.deleteAllByObjectId(objectId)
@@ -208,9 +158,6 @@ abstract class ProcessorTestHelper(
             )
         eventConditionRepository.save(condition)
 
-        // 3. DeviceType는 이미 저장되어 있음
-        val savedDeviceType = deviceType
-
         // 7. Site & Feature 생성
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
@@ -222,7 +169,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
     /**
@@ -252,22 +199,13 @@ abstract class ProcessorTestHelper(
     fun setupDeviceWithDisabledEvent(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         eventName: String,
         eventLevel: ConditionLevel,
         minValue: String?,
         maxValue: String?,
         isBoolean: Boolean = false,
     ): TestSetup {
-        // DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
-                    val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
+        val sensorType = SensorType.fromObjectId(objectId)
 
         // 기존 EventCondition 삭제 (테스트 격리)
         eventConditionRepository.deleteAllByObjectId(objectId)
@@ -292,7 +230,6 @@ abstract class ProcessorTestHelper(
             )
         eventConditionRepository.save(condition)
 
-        val savedDeviceType = deviceType
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
@@ -303,7 +240,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
     /**
@@ -312,19 +249,9 @@ abstract class ProcessorTestHelper(
     fun setupDeviceWithMultipleConditions(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         conditions: List<ConditionSpec>,
     ): TestSetup {
-        // DeviceType 조회 또는 생성 (objectId가 UNIQUE이므로 재사용)
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType = DeviceType(objectId = objectId, description = "$objectId 설명", version = "1.0")
-                    val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
-
+        val sensorType = SensorType.fromObjectId(objectId)
         // 기존 EventCondition 삭제 (테스트 격리)
         eventConditionRepository.deleteAllByObjectId(objectId)
 
@@ -355,7 +282,6 @@ abstract class ProcessorTestHelper(
             eventConditionRepository.save(condition)
         }
 
-        val savedDeviceType = deviceType
         val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
@@ -366,7 +292,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
     data class ConditionSpec(
@@ -381,7 +307,7 @@ abstract class ProcessorTestHelper(
     )
 
     data class TestSetup(
-        val deviceType: DeviceType,
+        val sensorType: SensorType,
         val siteId: Long,
     )
 }

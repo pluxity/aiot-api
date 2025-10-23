@@ -1,8 +1,8 @@
 package com.pluxity.aiot.data.dto
 
 import com.influxdb.annotations.Column
-import com.pluxity.aiot.alarm.type.DeviceProfileEnum
-import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
+import com.pluxity.aiot.sensor.type.SensorType
 import java.time.Instant
 import java.time.ZoneId
 

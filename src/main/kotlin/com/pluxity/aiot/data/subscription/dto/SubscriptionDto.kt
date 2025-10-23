@@ -1,4 +1,4 @@
-package com.pluxity.aiot.alarm.dto
+package com.pluxity.aiot.data.subscription.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

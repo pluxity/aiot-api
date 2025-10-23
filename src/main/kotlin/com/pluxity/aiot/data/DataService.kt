@@ -3,7 +3,6 @@ package com.pluxity.aiot.data
 import com.influxdb.client.QueryApi
 import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
-import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.dto.ClimateSensorData
 import com.pluxity.aiot.data.dto.DataResponse
 import com.pluxity.aiot.data.dto.DisplacementGaugeSensorData
@@ -22,6 +21,7 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -1,7 +1,7 @@
 package com.pluxity.aiot.feature.dto
 
-import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.Feature
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.dto.SiteResponse
 import com.pluxity.aiot.site.dto.toSiteResponse
 import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse

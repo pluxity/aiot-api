@@ -1,6 +1,6 @@
 package com.pluxity.aiot.system.device.type
 
-import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.system.device.type.dto.toDeviceTypeResponse
 import org.springframework.stereotype.Service

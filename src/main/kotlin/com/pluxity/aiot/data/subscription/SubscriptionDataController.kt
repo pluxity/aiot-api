@@ -1,7 +1,6 @@
-package com.pluxity.aiot.alarm
+package com.pluxity.aiot.data.subscription
 
-import com.pluxity.aiot.alarm.dto.SubscriptionAlarm
-import com.pluxity.aiot.alarm.service.EventService
+import com.pluxity.aiot.data.subscription.dto.SubscriptionAlarm
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Hidden
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,8 +11,8 @@ private val log = KotlinLogging.logger {}
 
 @Hidden
 @RestController
-class AlarmController(
-    private val eventService: EventService,
+class SubscriptionDataController(
+    private val subscriptionDataService: SubscriptionDataService,
 ) {
     @PostMapping("/subscription")
     fun subscription(
@@ -22,6 +21,6 @@ class AlarmController(
         log.info { "=== Subscription Notification Received ===" }
         log.info { "request: $alarmRequest" }
 
-        eventService.processData(alarmRequest)
+        subscriptionDataService.processData(alarmRequest)
     }
 }

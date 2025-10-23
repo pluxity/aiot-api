@@ -1,10 +1,9 @@
-package com.pluxity.aiot.alarm.service.processor
+package com.pluxity.aiot.data.subscription.processor
 
 import com.pluxity.aiot.action.ActionHistoryService
-import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
@@ -12,6 +11,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.DataType
 import com.pluxity.aiot.system.event.condition.EventCondition

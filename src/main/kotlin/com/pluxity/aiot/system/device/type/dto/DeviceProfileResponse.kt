@@ -1,6 +1,6 @@
 package com.pluxity.aiot.system.device.type.dto
 
-import com.pluxity.aiot.alarm.type.FieldType
+import com.pluxity.aiot.sensor.type.FieldType
 
 data class DeviceProfileResponse(
     val id: Long,

@@ -1,4 +1,4 @@
-package com.pluxity.aiot.alarm.type
+package com.pluxity.aiot.sensor.type
 
 import com.pluxity.aiot.data.dto.MetricDefinition
 import com.pluxity.aiot.system.device.type.dto.DeviceProfileResponse

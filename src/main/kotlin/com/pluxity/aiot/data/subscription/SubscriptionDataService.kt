@@ -1,6 +1,6 @@
-package com.pluxity.aiot.alarm.service
+package com.pluxity.aiot.data.subscription
 
-import com.pluxity.aiot.alarm.dto.SubscriptionAlarm
+import com.pluxity.aiot.data.subscription.dto.SubscriptionAlarm
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service
 private val log = KotlinLogging.logger {}
 
 @Service
-class EventService(
+class SubscriptionDataService(
     private val sensorDataMigrationService: SensorDataMigrationService,
     private val featureRepository: FeatureRepository,
     private val sensorDataHandler: SensorDataHandler,

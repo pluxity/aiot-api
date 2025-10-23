@@ -1,9 +1,9 @@
-package com.pluxity.aiot.alarm.service
+package com.pluxity.aiot.data.subscription
 
-import com.pluxity.aiot.alarm.dto.SubscriptionSgnResponse
-import com.pluxity.aiot.alarm.service.processor.SensorDataProcessor
-import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.data.subscription.dto.SubscriptionSgnResponse
+import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 

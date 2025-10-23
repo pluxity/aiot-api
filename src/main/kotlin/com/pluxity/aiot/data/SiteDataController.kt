@@ -1,10 +1,10 @@
 package com.pluxity.aiot.data
 
-import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
+import com.pluxity.aiot.sensor.type.SensorType
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content

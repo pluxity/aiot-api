@@ -27,7 +27,6 @@ class EventConditionServiceTest(
                         id = null,
                         objectId = "34954",
                         isActivate = true,
-                        needControl = false,
                         level = ConditionLevel.WARNING,
                         dataType = DataType.NUMERIC,
                         operator = Operator.GREATER_THAN,
@@ -35,7 +34,6 @@ class EventConditionServiceTest(
                         numericValue2 = null,
                         booleanValue = null,
                         notificationEnabled = true,
-                        notificationIntervalMinutes = 10,
                         order = null,
                     )
 

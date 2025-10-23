@@ -2,6 +2,7 @@ package com.pluxity.aiot.alarm.service.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
+import com.pluxity.aiot.alarm.entity.HistoryResult
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
@@ -60,7 +61,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        needControl = true,
                         guideMessage = "온도가 높습니다",
                     )
 
@@ -70,7 +70,7 @@ class TemperatureHumidityProcessorTest(
                 // 실행
                 processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("EventHistory가 MANUAL_PENDING으로 저장된다") {
+                Then("EventHistory가 PENDING으로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
 
@@ -81,41 +81,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.eventName shouldBe "WARNING_Temperature"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
-                    eventHistory.actionResult shouldBe "MANUAL_PENDING"
-                }
-            }
-
-            When("온도 35.0°C - BETWEEN(30.0~40.0) Danger 조건 충족 (Auto 조치)") {
-                val deviceId = "TH_DEVICE_002"
-                val setup =
-                    helper.setupTemperatureDevice(
-                        objectId = "34954",
-                        deviceId = deviceId,
-                        eventName = "DANGER_Temperature",
-                        eventLevel = ConditionLevel.DANGER,
-                        minValue = 30.0,
-                        maxValue = 40.0,
-                        needControl = true,
-                        guideMessage = "온도가 매우 높습니다",
-                    )
-
-                val sensorData = helper.createSensorData(temperature = 35.0)
-                val processor = helper.createProcessor()
-
-                // 실행
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
-
-                Then("EventHistory가 MANUAL_PENDING 저장된다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 1
-
-                    val eventHistory = eventHistories.first()
-                    eventHistory.deviceId shouldBe deviceId
-                    eventHistory.eventName shouldBe "DANGER_Temperature"
-                    eventHistory.value shouldBe 35.0
-                    eventHistory.minValue shouldBe 30.0
-                    eventHistory.maxValue shouldBe 40.0
-                    eventHistory.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistory.actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -129,7 +95,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        needControl = true,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 22.0)
@@ -160,7 +125,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -187,7 +151,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -215,7 +178,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -241,7 +203,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -267,7 +228,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -294,7 +254,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -320,7 +279,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -346,7 +304,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -362,82 +319,6 @@ class TemperatureHumidityProcessorTest(
             }
         }
 
-        Given("NotificationInterval: IGNORED 케이스 테스트") {
-            When("MANUAL 조치 - 5분 내 재발생 (IGNORED)") {
-                val deviceId = "TH_INTERVAL_001"
-                val setup =
-                    helper.setupTemperatureDevice(
-                        objectId = "34954",
-                        deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = 25.0,
-                        maxValue = 30.0,
-                        needControl = true,
-                        guideMessage = "온도가 높습니다",
-                        notificationIntervalMinutes = 5,
-                    )
-
-                val processor = helper.createProcessor()
-
-                // 첫 번째 이벤트 발생 (28.0°C)
-                val sensorData1 = helper.createSensorData(temperature = 28.0)
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData1)
-
-                // 5분 내 두 번째 이벤트 발생 (28.5°C) - 즉시 재실행 (interval 내)
-                val sensorData2 = helper.createSensorData(temperature = 28.5)
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData2)
-
-                Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED로 저장된다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-
-                    val firstEvent = eventHistories.first { it.value == 28.0 }
-                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
-
-                    val secondEvent = eventHistories.first { it.value == 28.5 }
-                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
-                }
-            }
-
-            When("AUTO 조치 - 10분 내 재발생 (IGNORED)") {
-                val deviceId = "TH_INTERVAL_002"
-                val setup =
-                    helper.setupTemperatureDevice(
-                        objectId = "34954",
-                        deviceId = deviceId,
-                        eventName = "DANGER_Temperature",
-                        eventLevel = ConditionLevel.DANGER,
-                        minValue = 30.0,
-                        maxValue = 40.0,
-                        needControl = true,
-                        guideMessage = "온도가 매우 높습니다",
-                        notificationIntervalMinutes = 10,
-                    )
-
-                val processor = helper.createProcessor()
-
-                // 첫 번째 이벤트 발생 (35.0°C)
-                val sensorData1 = helper.createSensorData(temperature = 35.0)
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData1)
-
-                // 10분 내 두 번째 이벤트 발생 (36.0°C) - 즉시 재실행 (interval 내)
-                val sensorData2 = helper.createSensorData(temperature = 36.0)
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData2)
-
-                Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED로 저장된다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-
-                    val firstEvent = eventHistories.first { it.value == 35.0 }
-                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
-
-                    val secondEvent = eventHistories.first { it.value == 36.0 }
-                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
-                }
-            }
-        }
-
         Given("특수 케이스: 경계값 정확도 테스트") {
             When("BETWEEN 범위의 정확한 minValue (25.0)") {
                 val deviceId = "TH_BOUNDARY_001"
@@ -449,7 +330,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        needControl = true,
                         guideMessage = "경계값 테스트",
                     )
 
@@ -477,7 +357,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        needControl = true,
                         guideMessage = "경계값 테스트",
                     )
 
@@ -507,7 +386,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = "70.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -539,7 +417,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
-                        needControl = true,
                         guideMessage = "온도 주의",
                     )
 
@@ -570,7 +447,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -588,7 +464,7 @@ class TemperatureHumidityProcessorTest(
                     val actualValue = eventHistories.first().value
                     actualValue.shouldNotBeNull()
                     (actualValue in 81.37..81.39) shouldBe true
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -603,7 +479,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -667,7 +542,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -703,18 +577,14 @@ class TemperatureHumidityProcessorTest(
                                     eventLevel = ConditionLevel.WARNING,
                                     minValue = "25.0",
                                     maxValue = "30.0",
-                                    needControl = true,
                                     isBoolean = false,
-                                    notificationIntervalMinutes = 5,
                                 ),
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
                                     eventName = "DANGER_Temperature",
                                     eventLevel = ConditionLevel.DANGER,
                                     minValue = "28.0",
                                     maxValue = "40.0",
-                                    needControl = true,
                                     isBoolean = false,
-                                    notificationIntervalMinutes = 10,
                                 ),
                             ),
                     )
@@ -729,8 +599,8 @@ class TemperatureHumidityProcessorTest(
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
                     eventHistories.map { it.eventName }.toSet() shouldBe setOf("WARNING_Temperature", "DANGER_Temperature")
-                    eventHistories.first { it.eventName == "WARNING_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories.first { it.eventName == "DANGER_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first { it.eventName == "WARNING_Temperature" }.actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first { it.eventName == "DANGER_Temperature" }.actionResult shouldBe HistoryResult.PENDING
                 }
             }
         }
@@ -747,7 +617,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -775,7 +644,6 @@ class TemperatureHumidityProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 

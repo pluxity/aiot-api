@@ -128,9 +128,7 @@ abstract class ProcessorTestHelper(
         eventLevel: ConditionLevel,
         minValue: String? = null,
         maxValue: String? = null,
-        needControl: Boolean = false,
         isBoolean: Boolean = false,
-        notificationIntervalMinutes: Int = 0,
     ): TestSetup {
         val sensorType = SensorType.fromObjectId(objectId)
 
@@ -145,7 +143,6 @@ abstract class ProcessorTestHelper(
             EventCondition(
                 objectId = objectId,
                 isActivate = true,
-                needControl = needControl,
                 level = level,
                 dataType = dataType,
                 operator = operator,
@@ -153,7 +150,6 @@ abstract class ProcessorTestHelper(
                 numericValue2 = numericValue2,
                 booleanValue = booleanValue,
                 notificationEnabled = true,
-                notificationIntervalMinutes = notificationIntervalMinutes,
                 order = 1,
             )
         eventConditionRepository.save(condition)
@@ -217,7 +213,6 @@ abstract class ProcessorTestHelper(
             EventCondition(
                 objectId = objectId,
                 isActivate = true,
-                needControl = true,
                 level = level,
                 dataType = dataType,
                 operator = operator,
@@ -225,7 +220,6 @@ abstract class ProcessorTestHelper(
                 numericValue2 = numericValue2,
                 booleanValue = booleanValue,
                 notificationEnabled = false, // Disabled
-                notificationIntervalMinutes = 0,
                 order = 1,
             )
         eventConditionRepository.save(condition)
@@ -268,7 +262,6 @@ abstract class ProcessorTestHelper(
                 EventCondition(
                     objectId = objectId,
                     isActivate = true,
-                    needControl = spec.needControl,
                     level = level,
                     dataType = dataType,
                     operator = operator,
@@ -276,7 +269,6 @@ abstract class ProcessorTestHelper(
                     numericValue2 = numericValue2,
                     booleanValue = booleanValue,
                     notificationEnabled = spec.notificationEnabled,
-                    notificationIntervalMinutes = spec.notificationIntervalMinutes,
                     order = index + 1,
                 )
             eventConditionRepository.save(condition)
@@ -300,9 +292,7 @@ abstract class ProcessorTestHelper(
         val eventLevel: ConditionLevel,
         val minValue: String?,
         val maxValue: String?,
-        val needControl: Boolean = false,
         val isBoolean: Boolean = false,
-        val notificationIntervalMinutes: Int = 5,
         val notificationEnabled: Boolean = true,
     )
 

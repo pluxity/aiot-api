@@ -15,9 +15,7 @@ data class EventConditionResponse(
     val numericValue2: Double?,
     val booleanValue: Boolean?,
     val isActivate: Boolean,
-    val needControl: Boolean,
     val notificationEnabled: Boolean,
-    val notificationIntervalMinutes: Int?,
     val order: Int?,
 )
 
@@ -32,8 +30,6 @@ fun EventCondition.toEventConditionResponse() =
         numericValue2 = this.numericValue2,
         booleanValue = this.booleanValue,
         isActivate = this.isActivate,
-        needControl = this.needControl,
         notificationEnabled = this.notificationEnabled,
-        notificationIntervalMinutes = this.notificationIntervalMinutes,
         order = this.order,
     )

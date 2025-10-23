@@ -2,6 +2,8 @@ package com.pluxity.aiot.alarm.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -35,11 +37,12 @@ class EventHistory(
     @Column
     var maxValue: Double? = null,
     @Column
-    var actionResult: String = "",
+    @Enumerated(EnumType.STRING)
+    var actionResult: HistoryResult = HistoryResult.PENDING,
     @Column
     var guideMessage: String? = null,
 ) {
-    fun changeActionResult(actionResult: String) {
+    fun changeActionResult(actionResult: HistoryResult) {
         this.actionResult = actionResult
     }
 }

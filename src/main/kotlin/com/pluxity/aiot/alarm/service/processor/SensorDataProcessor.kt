@@ -1,6 +1,5 @@
 package com.pluxity.aiot.alarm.service.processor
 
-import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.entity.EventHistory
@@ -29,7 +28,6 @@ private val log = KotlinLogging.logger {}
 
 interface SensorDataProcessor {
     companion object {
-        private val lastNotificationMap: ConcurrentMap<String, LocalDateTime> = ConcurrentHashMap()
         private val featureCache: ConcurrentMap<String, Feature> = ConcurrentHashMap()
         private val featureCacheExpiryMap: ConcurrentMap<String, Long> = ConcurrentHashMap()
     }
@@ -76,13 +74,6 @@ interface SensorDataProcessor {
         // 알림 간격 확인
         val notificationKey = "$deviceId:$eventName"
         val now = LocalDateTime.now()
-        val lastNotificationTime = lastNotificationMap[notificationKey]
-
-        // 조치 이력 처리 로직
-        val isWithinNotificationInterval =
-            lastNotificationTime != null &&
-                condition.notificationIntervalMinutes > 0 &&
-                now.isBefore(lastNotificationTime.plusMinutes(condition.notificationIntervalMinutes.toLong()))
 
         // 이벤트 이력 저장
         val eventHistory =
@@ -100,40 +91,6 @@ interface SensorDataProcessor {
                     maxValue = maxValue,
                 ),
             )
-
-        if (condition.needControl && isWithinNotificationInterval) {
-            // 6.1 조치가 수동이면서 무시 시간 안에 있으면 -> 수동대응 (무시)으로 조치 이력 저장, 무시 열은 true
-            actionHistoryService.createManualAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.IGNORED,
-                true,
-                parsedDate.toString(),
-            )
-
-            eventHistory.changeActionResult("MANUAL_IGNORED")
-            eventHistoryRepository.save(eventHistory)
-
-            log.info { "Manual response - ignored due to notification interval: $notificationKey" }
-            return // 이벤트 발행하지 않고 종료
-        } else if (condition.needControl && !isWithinNotificationInterval) {
-            // 6.2 그 외의 경우에는 -> 수동 대응(조치전)으로 이벤트 히스토리 저장
-            actionHistoryService.createManualAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.PENDING,
-                false,
-                parsedDate.toString(),
-            )
-
-            eventHistory.changeActionResult("MANUAL_PENDING")
-            eventHistoryRepository.save(eventHistory)
-        }
-
-        // 현재 시간 업데이트 (알림 발생 시점 기록)
-        lastNotificationMap[notificationKey] = now
 
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
@@ -156,7 +113,7 @@ interface SensorDataProcessor {
                     minValue = minValue,
                     maxValue = maxValue,
                     notificationEnabled = condition.notificationEnabled,
-                    actionResult = eventHistory.actionResult,
+                    actionResult = eventHistory.actionResult.name,
                 ),
             )
         }

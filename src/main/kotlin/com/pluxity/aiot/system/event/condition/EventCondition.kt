@@ -19,10 +19,7 @@ class EventCondition(
     var objectId: String,
     @Column(name = "is_active")
     var isActivate: Boolean = false,
-    var needControl: Boolean = false,
     var notificationEnabled: Boolean = false,
-    @Column(name = "notification_interval_minutes")
-    var notificationIntervalMinutes: Int = 0,
     @Column(name = "condition_order")
     var order: Int? = null,
     @Enumerated(EnumType.STRING)
@@ -106,7 +103,6 @@ class EventCondition(
     fun update(
         objectId: String,
         isActivate: Boolean,
-        needControl: Boolean,
         level: ConditionLevel,
         dataType: DataType,
         operator: Operator,
@@ -114,12 +110,10 @@ class EventCondition(
         numericValue2: Double?,
         booleanValue: Boolean?,
         notificationEnabled: Boolean,
-        notificationIntervalMinutes: Int?,
         order: Int?,
     ) {
         this.objectId = objectId
         this.isActivate = isActivate
-        this.needControl = needControl
         this.level = level
         this.dataType = dataType
         this.operator = operator
@@ -127,7 +121,6 @@ class EventCondition(
         this.numericValue2 = numericValue2
         this.booleanValue = booleanValue
         this.notificationEnabled = notificationEnabled
-        this.notificationIntervalMinutes = notificationIntervalMinutes ?: 0
         this.order = order ?: this.order
 
         validate()

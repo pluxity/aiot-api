@@ -2,6 +2,7 @@ package com.pluxity.aiot.alarm.service.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
+import com.pluxity.aiot.alarm.entity.HistoryResult
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
@@ -64,7 +65,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
-                        needControl = false,
                         isBoolean = false,
                     )
 
@@ -92,7 +92,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -106,7 +105,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 84.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -121,7 +120,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -135,7 +133,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 96.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -150,7 +148,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -185,7 +182,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -199,7 +195,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.5
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -214,7 +210,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -244,7 +239,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -258,7 +252,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe 3.5
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -273,7 +267,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -304,7 +297,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = false,
                         isBoolean = false,
                     )
 
@@ -320,50 +312,6 @@ class DisplacementGaugeProcessorTest(
                     angleXEvent.value shouldBe 95.0
                     val angleYEvent = eventHistories.first { it.fieldKey == "Angle-Y" }
                     angleYEvent.value shouldBe 3.5
-                }
-            }
-        }
-
-        Given("DisplacementGauge: NotificationInterval 테스트") {
-            When("MANUAL 조치 - 5분 내 재발생 시 IGNORED") {
-                val deviceId = "DISP_INTERVAL_001"
-
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "34957",
-                        deviceId = deviceId,
-                        eventName = "WARNING_Angle-X",
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "5.0",
-                        maxValue = "90.0",
-                        needControl = true,
-                        isBoolean = false,
-                        notificationIntervalMinutes = 5,
-                    )
-
-                val processor = helper.createProcessor()
-
-                // 첫 번째 이벤트
-                processor.process(
-                    deviceId,
-                    setup.sensorType,
-                    setup.siteId,
-                    helper.createSensorData(angleX = 84.0),
-                )
-
-                // 5분 내 두 번째 이벤트
-                processor.process(
-                    deviceId,
-                    setup.sensorType,
-                    setup.siteId,
-                    helper.createSensorData(angleX = 83.0),
-                )
-
-                Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-                    eventHistories[0].actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories[1].actionResult shouldBe "MANUAL_IGNORED"
                 }
             }
         }
@@ -384,7 +332,6 @@ class DisplacementGaugeProcessorTest(
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "95.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -398,7 +345,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 100.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
         }

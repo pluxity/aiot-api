@@ -8,7 +8,6 @@ data class EventConditionRequest(
     val id: Long?,
     val objectId: String,
     val isActivate: Boolean,
-    val needControl: Boolean,
     val level: ConditionLevel,
     val dataType: DataType,
     val operator: Operator,
@@ -16,6 +15,5 @@ data class EventConditionRequest(
     val numericValue2: Double?,
     val booleanValue: Boolean?,
     val notificationEnabled: Boolean,
-    val notificationIntervalMinutes: Int?,
     val order: Int?,
 )

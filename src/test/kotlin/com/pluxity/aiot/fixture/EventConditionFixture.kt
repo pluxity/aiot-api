@@ -9,9 +9,7 @@ object EventConditionFixture {
     fun create(
         objectId: String = "34954",
         isActivate: Boolean = true,
-        needControl: Boolean = false,
         notificationEnabled: Boolean = true,
-        notificationIntervalMinutes: Int = 10,
         order: Int? = null,
         level: ConditionLevel = ConditionLevel.WARNING,
         dataType: DataType = DataType.NUMERIC,
@@ -22,9 +20,7 @@ object EventConditionFixture {
     ) = EventCondition(
         objectId = objectId,
         isActivate = isActivate,
-        needControl = needControl,
         notificationEnabled = notificationEnabled,
-        notificationIntervalMinutes = notificationIntervalMinutes,
         order = order,
         level = level,
         dataType = dataType,

@@ -41,7 +41,6 @@ class EventConditionService(
             EventCondition(
                 objectId = request.objectId,
                 isActivate = request.isActivate,
-                needControl = request.needControl,
                 level = request.level,
                 dataType = request.dataType,
                 operator = request.operator,
@@ -49,7 +48,6 @@ class EventConditionService(
                 numericValue2 = request.numericValue2,
                 booleanValue = request.booleanValue,
                 notificationEnabled = request.notificationEnabled,
-                notificationIntervalMinutes = request.notificationIntervalMinutes ?: 0,
                 order = request.order,
             )
 
@@ -73,7 +71,6 @@ class EventConditionService(
         condition.update(
             objectId = request.objectId,
             isActivate = request.isActivate,
-            needControl = request.needControl,
             level = request.level,
             dataType = request.dataType,
             operator = request.operator,
@@ -81,7 +78,6 @@ class EventConditionService(
             numericValue2 = request.numericValue2,
             booleanValue = request.booleanValue,
             notificationEnabled = request.notificationEnabled,
-            notificationIntervalMinutes = request.notificationIntervalMinutes,
             order = request.order,
         )
 

@@ -111,8 +111,7 @@ class EventConditionController(
     @PostMapping
     fun createBatch(
         @RequestBody request: EventConditionBatchRequest,
-    ): ResponseEntity<List<Long>> =
-        ResponseEntity.ok(eventConditionService.createBatch(request))
+    ): ResponseEntity<List<Long>> = ResponseEntity.ok(eventConditionService.createBatch(request))
 
     @Operation(summary = "이벤트 조건 일괄 수정", description = "기존 이벤트 조건들을 일괄 수정합니다 (기존 조건 삭제 후 재생성)")
     @ApiResponses(

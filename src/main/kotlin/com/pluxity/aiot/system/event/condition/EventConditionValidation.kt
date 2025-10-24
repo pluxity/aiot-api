@@ -1,6 +1,7 @@
 package com.pluxity.aiot.system.event.condition
 
-import com.pluxity.aiot.alarm.type.SensorType
+import com.pluxity.aiot.sensor.type.SensorType
+
 
 sealed class ValidationResult {
     object Valid : ValidationResult()

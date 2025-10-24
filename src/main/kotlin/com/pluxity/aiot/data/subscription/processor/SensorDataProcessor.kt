@@ -83,7 +83,7 @@ interface SensorDataProcessor {
                     fieldKey = fieldKey,
                     value = value,
                     unit = fieldUnit,
-                    eventName = condition.level.name,
+                    eventName = eventName,
                     occurredAt = parsedDate,
                     minValue = minValue,
                     maxValue = maxValue,

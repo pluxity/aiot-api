@@ -28,7 +28,6 @@ private val log = KotlinLogging.logger {}
 
 interface SensorDataProcessor {
     companion object {
-        private val lastNotificationMap: ConcurrentMap<String, LocalDateTime> = ConcurrentHashMap()
         private val featureCache: ConcurrentMap<String, Feature> = ConcurrentHashMap()
         private val featureCacheExpiryMap: ConcurrentMap<String, Long> = ConcurrentHashMap()
     }
@@ -255,8 +254,8 @@ interface SensorDataProcessor {
                         ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "thresholdValue is null")
 
                 when (condition.operator) {
-                    Operator.GOE -> value >= threshold
-                    Operator.LOE -> value <= threshold
+                    Operator.GE -> value >= threshold
+                    Operator.LE -> value <= threshold
                     Operator.BETWEEN -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "BETWEEN not allowed for SINGLE type")
                 }
             }

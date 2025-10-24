@@ -14,7 +14,7 @@ object EventConditionFixture {
         order: Int? = null,
         level: ConditionLevel = ConditionLevel.WARNING,
         conditionType: ConditionType = ConditionType.SINGLE,
-        operator: Operator = Operator.GOE,
+        operator: Operator = Operator.GE,
         thresholdValue: Double? = 30.0,
         leftValue: Double? = null,
         rightValue: Double? = null,

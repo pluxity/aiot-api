@@ -2,7 +2,6 @@ package com.pluxity.aiot.system.event.condition
 
 import com.pluxity.aiot.system.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.system.event.condition.dto.EventConditionItemRequest
-import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -34,7 +33,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -47,10 +46,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+                    val id =
+                        eventConditionService.createBatch(request)[0]
+                    val result = eventConditionRepository.findAll().filter { it.id == id }
                     result.size shouldBe 1
                     result[0].thresholdValue shouldBe 30.0
                 }
@@ -66,7 +64,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Humidity",
                                     level = ConditionLevel.CAUTION,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.LOE,
+                                    operator = Operator.LE,
                                     thresholdValue = 20.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -79,10 +77,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 1
                     result[0].thresholdValue shouldBe 20.0
                 }
@@ -111,10 +108,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 1
                     result[0].leftValue shouldBe 25.0
                     result[0].rightValue shouldBe 35.0
@@ -131,7 +127,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Fire Alarm",
                                     level = ConditionLevel.DANGER,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = null,
                                     leftValue = null,
                                     rightValue = null,
@@ -144,10 +140,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 1
                     result[0].booleanValue shouldBe true
                 }
@@ -176,10 +171,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 1
                     result[0].leftValue shouldBe 5.0
                     result[0].rightValue shouldBe 0.0
@@ -198,7 +192,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -229,7 +223,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -262,7 +256,7 @@ class EventConditionServiceTest(
                                     fieldKey = "  ",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -293,7 +287,7 @@ class EventConditionServiceTest(
                                     fieldKey = "InvalidField",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -327,7 +321,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Fire Alarm",
                                     level = ConditionLevel.DANGER,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0, // Boolean type에는 불필요
                                     leftValue = null,
                                     rightValue = null,
@@ -392,7 +386,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = null,
                                     leftValue = null,
                                     rightValue = null,
@@ -424,7 +418,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = 25.0, // SINGLE type에는 불필요
                                     rightValue = null,
@@ -458,7 +452,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.RANGE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = null,
                                     leftValue = 25.0,
                                     rightValue = 35.0,
@@ -736,10 +730,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 2
                 }
             }
@@ -780,10 +773,9 @@ class EventConditionServiceTest(
                     )
 
                 Then("정상 생성된다") {
-                    val result =
-                        shouldNotThrowAny {
-                            eventConditionService.createBatch(request)
-                        }
+
+                    eventConditionService.createBatch(request)
+                    val result = eventConditionRepository.findAll()
                     result.size shouldBe 2
                 }
             }
@@ -800,7 +792,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -811,12 +803,12 @@ class EventConditionServiceTest(
                                 ),
                             ),
                     )
-                val created = eventConditionService.createBatch(request)
+                val created = eventConditionService.createBatch(request)[0]
 
                 Then("조회가 가능하다") {
                     val found = eventConditionService.findAllByObjectId("34954")
                     found.size shouldBe 1
-                    found[0].id shouldBe created[0].id
+                    found[0].id shouldBe created
                     found[0].thresholdValue shouldBe 30.0
                 }
             }
@@ -831,7 +823,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -853,7 +845,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.DANGER, // WARNING → DANGER
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 35.0, // 30.0 → 35.0
                                     leftValue = null,
                                     rightValue = null,
@@ -883,7 +875,7 @@ class EventConditionServiceTest(
                                     fieldKey = "Temperature",
                                     level = ConditionLevel.WARNING,
                                     conditionType = ConditionType.SINGLE,
-                                    operator = Operator.GOE,
+                                    operator = Operator.GE,
                                     thresholdValue = 30.0,
                                     leftValue = null,
                                     rightValue = null,
@@ -894,10 +886,10 @@ class EventConditionServiceTest(
                                 ),
                             ),
                     )
-                val created = eventConditionService.createBatch(request)
+                val created = eventConditionService.createBatch(request)[0]
 
                 Then("삭제가 가능하다") {
-                    eventConditionService.delete(created[0].id!!)
+                    eventConditionService.delete(created)
                     val found = eventConditionService.findAllByObjectId("34954")
                     found.size shouldBe 0
                 }

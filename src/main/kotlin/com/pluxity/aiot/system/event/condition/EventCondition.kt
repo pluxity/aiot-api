@@ -156,7 +156,7 @@ enum class ConditionType {
 }
 
 enum class Operator {
-    GOE,
-    LOE,
+    GE,
+    LE,
     BETWEEN,
 }

@@ -77,7 +77,7 @@ object EventConditionValidators {
         if (condition.conditionType == ConditionType.SINGLE && condition.booleanValue == null) {
             listOf(
                 Pair(
-                    condition.operator in listOf(Operator.GOE, Operator.LOE),
+                    condition.operator in listOf(Operator.GE, Operator.LE),
                     "SINGLE 타입은 GOE 또는 LOE 연산자만 사용 가능합니다 (현재: ${condition.operator})",
                 ),
                 Pair(

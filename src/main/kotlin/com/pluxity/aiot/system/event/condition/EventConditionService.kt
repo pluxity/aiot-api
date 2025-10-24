@@ -34,7 +34,7 @@ class EventConditionService(
     }
 
     @Transactional
-    fun createBatch(request: EventConditionBatchRequest): List<EventConditionResponse> {
+    fun createBatch(request: EventConditionBatchRequest): List<Long> {
         log.info { "EventCondition 일괄 생성 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
         // 조건 생성
@@ -66,7 +66,7 @@ class EventConditionService(
 
         log.info { "EventCondition 일괄 생성 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
 
-        return savedConditions.map { it.toEventConditionResponse() }
+        return savedConditions.map { it.id!! }
     }
 
     @Transactional

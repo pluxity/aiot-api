@@ -2,7 +2,7 @@ package com.pluxity.aiot.system.event.condition
 
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
-import com.pluxity.aiot.system.event.condition.dto.EventConditionRequest
+import com.pluxity.aiot.system.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.system.event.condition.dto.EventConditionResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -80,7 +80,7 @@ class EventConditionController(
         @PathVariable id: Long,
     ): ResponseEntity<DataResponseBody<EventConditionResponse>> = ResponseEntity.ok(DataResponseBody(eventConditionService.findById(id)))
 
-    @Operation(summary = "이벤트 조건 생성", description = "새로운 이벤트 조건을 생성합니다")
+    @Operation(summary = "이벤트 조건 일괄 생성", description = "새로운 이벤트 조건들을 일괄 생성합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "생성 성공"),
@@ -107,27 +107,18 @@ class EventConditionController(
         ],
     )
     @PostMapping
-    fun create(
-        @RequestBody request: EventConditionRequest,
-    ): ResponseEntity<DataResponseBody<EventConditionResponse>> = ResponseEntity.ok(DataResponseBody(eventConditionService.create(request)))
+    fun createBatch(
+        @RequestBody request: EventConditionBatchRequest,
+    ): ResponseEntity<DataResponseBody<List<EventConditionResponse>>> = 
+        ResponseEntity.ok(DataResponseBody(eventConditionService.createBatch(request)))
 
-    @Operation(summary = "이벤트 조건 수정", description = "기존 이벤트 조건을 수정합니다")
+    @Operation(summary = "이벤트 조건 일괄 수정", description = "기존 이벤트 조건들을 일괄 수정합니다 (기존 조건 삭제 후 재생성)")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "수정 성공"),
             ApiResponse(
                 responseCode = "400",
                 description = "잘못된 요청",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "이벤트 조건을 찾을 수 없음",
                 content = [
                     Content(
                         mediaType = "application/json",
@@ -147,12 +138,11 @@ class EventConditionController(
             ),
         ],
     )
-    @PutMapping("/{id}")
-    fun update(
-        @PathVariable id: Long,
-        @RequestBody request: EventConditionRequest,
-    ): ResponseEntity<DataResponseBody<EventConditionResponse>> =
-        ResponseEntity.ok(DataResponseBody(eventConditionService.update(id, request)))
+    @PutMapping
+    fun updateBatch(
+        @RequestBody request: EventConditionBatchRequest,
+    ): ResponseEntity<DataResponseBody<List<EventConditionResponse>>> =
+        ResponseEntity.ok(DataResponseBody(eventConditionService.updateBatch(request)))
 
     @Operation(summary = "이벤트 조건 삭제", description = "이벤트 조건을 삭제합니다")
     @ApiResponses(

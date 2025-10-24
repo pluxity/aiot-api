@@ -64,11 +64,9 @@ class FireAlarmProcessorTest(
                         objectId = "34956",
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
-                        eventName = "DANGER_Fire Alarm",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        needControl = true,
                         isBoolean = true,
                     )
 
@@ -83,7 +81,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "DANGER_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -95,11 +93,9 @@ class FireAlarmProcessorTest(
                         objectId = "34956",
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
-                        eventName = "DANGER_Fire Alarm",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        needControl = false,
                         isBoolean = true,
                     )
 
@@ -128,11 +124,9 @@ class FireAlarmProcessorTest(
                         objectId = "34956",
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
-                        eventName = "WARNING_Fire Alarm",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "false",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = true,
                     )
 
@@ -147,7 +141,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 0.0
                     eventHistories.first().eventName shouldBe "WARNING_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
         }
@@ -161,13 +155,10 @@ class FireAlarmProcessorTest(
                         objectId = "34956",
                         deviceId = deviceId,
                         profile = helper.fireAlarmProfile,
-                        eventName = "DANGER_Fire Alarm",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
-                        needControl = false,
                         isBoolean = true,
-                        notificationIntervalMinutes = 5,
                     )
 
                 val processor = helper.createProcessor()
@@ -182,8 +173,8 @@ class FireAlarmProcessorTest(
                 Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
-                    eventHistories[0].actionResult shouldBe ""
-                    eventHistories[1].actionResult shouldBe ""
+                    eventHistories[0].actionResult shouldBe "PENDING"
+                    eventHistories[1].actionResult shouldBe "PENDING"
                 }
             }
         }

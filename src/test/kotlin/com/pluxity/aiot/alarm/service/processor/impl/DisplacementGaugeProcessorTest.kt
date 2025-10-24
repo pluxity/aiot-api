@@ -67,11 +67,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
-                        needControl = false,
                         isBoolean = false,
                     )
 
@@ -96,11 +94,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "DANGER_Angle-X",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -114,7 +110,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 84.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -126,11 +122,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXOverRange",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -144,7 +138,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 96.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -156,11 +150,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -192,11 +184,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -210,7 +200,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.5
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -222,11 +212,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -253,11 +241,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "DANGER_Angle-Y",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -271,7 +257,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe 3.5
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -283,11 +269,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleYProfile,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -315,11 +299,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = false,
                         isBoolean = false,
                     )
 
@@ -348,13 +330,10 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
-                        needControl = true,
                         isBoolean = false,
-                        notificationIntervalMinutes = 5,
                     )
 
                 val processor = helper.createProcessor()
@@ -375,11 +354,11 @@ class DisplacementGaugeProcessorTest(
                     helper.createSensorData(angleX = 83.0),
                 )
 
-                Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED") {
+                Then("모두 PENDING") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
-                    eventHistories[0].actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories[1].actionResult shouldBe "MANUAL_IGNORED"
+                    eventHistories[0].actionResult shouldBe "PENDING"
+                    eventHistories[1].actionResult shouldBe "PENDING"
                 }
             }
         }
@@ -397,11 +376,9 @@ class DisplacementGaugeProcessorTest(
                         objectId = "34957",
                         deviceId = deviceId,
                         profile = helper.angleXProfile,
-                        eventName = "AngleXHigh",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "95.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -415,7 +392,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 100.0
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
         }

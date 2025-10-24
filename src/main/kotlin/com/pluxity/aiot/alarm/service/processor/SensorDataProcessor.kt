@@ -14,7 +14,7 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.system.event.condition.ConditionLevel
-import com.pluxity.aiot.system.event.condition.DataType
+import com.pluxity.aiot.system.event.condition.ConditionType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.Operator
@@ -65,8 +65,8 @@ interface SensorDataProcessor {
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
     ) {
-        val minValue = condition.numericValue1 ?: 0.0
-        val maxValue = condition.numericValue2 ?: 0.0
+        val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
+        val maxValue = condition.rightValue ?: 0.0
 
         val eventName = "${condition.level.name}_$fieldKey"
 
@@ -76,13 +76,7 @@ interface SensorDataProcessor {
         // 알림 간격 확인
         val notificationKey = "$deviceId:$eventName"
         val now = LocalDateTime.now()
-        val lastNotificationTime = lastNotificationMap[notificationKey]
 
-        // 조치 이력 처리 로직
-        val isWithinNotificationInterval =
-            lastNotificationTime != null &&
-                condition.notificationIntervalMinutes > 0 &&
-                now.isBefore(lastNotificationTime.plusMinutes(condition.notificationIntervalMinutes.toLong()))
 
         // 이벤트 이력 저장
         val eventHistory =
@@ -101,64 +95,48 @@ interface SensorDataProcessor {
                 ),
             )
 
-        if (condition.needControl && isWithinNotificationInterval) {
-            // 6.1 조치가 수동이면서 무시 시간 안에 있으면 -> 수동대응 (무시)으로 조치 이력 저장, 무시 열은 true
-            actionHistoryService.createManualAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.IGNORED,
-                true,
-                parsedDate.toString(),
-            )
+        actionHistoryService.createManualAction(
+            deviceId,
+            eventName,
+            eventHistory,
+            ActionHistory.ActionResult.PENDING,
+            false,
+            parsedDate.toString(),
+        )
 
-            eventHistory.changeActionResult("MANUAL_IGNORED")
-            eventHistoryRepository.save(eventHistory)
-
-            log.info { "Manual response - ignored due to notification interval: $notificationKey" }
-            return // 이벤트 발행하지 않고 종료
-        } else if (condition.needControl && !isWithinNotificationInterval) {
-            // 6.2 그 외의 경우에는 -> 수동 대응(조치전)으로 이벤트 히스토리 저장
-            actionHistoryService.createManualAction(
-                deviceId,
-                eventName,
-                eventHistory,
-                ActionHistory.ActionResult.PENDING,
-                false,
-                parsedDate.toString(),
-            )
-
-            eventHistory.changeActionResult("MANUAL_PENDING")
-            eventHistoryRepository.save(eventHistory)
-        }
+        eventHistory.changeActionResult("PENDING")
+        eventHistoryRepository.save(eventHistory)
 
         // 현재 시간 업데이트 (알림 발생 시점 기록)
         lastNotificationMap[notificationKey] = now
 
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
-                "$fieldUnit - $eventName"
+                    "$fieldUnit - $eventName"
 
-        feature.site?.let {
-            messageSender.sendSensorAlarm(
-                SensorAlarmPayload(
-                    siteId = it.id!!,
-                    sensorType = fieldKey,
-                    fieldKey = fieldKey,
-                    message = message,
-                    level = eventName,
-                    eventName = eventName,
-                    deviceId = deviceId,
-                    objectId = sensorType.objectId,
-                    sensorDescription = sensorType.description,
-                    value = value,
-                    unit = fieldUnit,
-                    minValue = minValue,
-                    maxValue = maxValue,
-                    notificationEnabled = condition.notificationEnabled,
-                    actionResult = eventHistory.actionResult,
-                ),
-            )
+
+        if (condition.notificationEnabled) {
+            feature.site?.let {
+                messageSender.sendSensorAlarm(
+                    SensorAlarmPayload(
+                        siteId = it.id!!,
+                        sensorType = fieldKey,
+                        fieldKey = fieldKey,
+                        message = message,
+                        level = eventName,
+                        eventName = eventName,
+                        deviceId = deviceId,
+                        objectId = sensorType.objectId,
+                        sensorDescription = sensorType.description,
+                        value = value,
+                        unit = fieldUnit,
+                        minValue = minValue,
+                        maxValue = maxValue,
+                        notificationEnabled = condition.notificationEnabled,
+                        actionResult = eventHistory.actionResult,
+                    ),
+                )
+            }
         }
 
         log.info { "Event triggered and saved: $message" }
@@ -195,7 +173,7 @@ interface SensorDataProcessor {
             conditions
                 .filter { condition ->
                     condition.level != ConditionLevel.NORMAL
-                }.filter { it.notificationEnabled }
+                }.filter { it.isActivate }
                 .forEach { condition ->
                     if (isConditionMet(condition, value, fieldKey)) {
                         anyConditionMet[0] = true
@@ -279,39 +257,40 @@ interface SensorDataProcessor {
         condition: EventCondition,
         incomingValue: Any,
     ): Boolean {
-        return when (condition.dataType) {
-            DataType.NUMERIC -> {
-                val value =
-                    when (incomingValue) {
-                        is Number -> incomingValue.toDouble()
-                        else -> return false
-                    }
-                val v1 =
-                    condition.numericValue1 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue1)
+        // Boolean 값 체크
+        if (condition.booleanValue != null) {
+            val value = incomingValue as? Boolean ?: return false
+            return value == condition.booleanValue
+        }
+
+        // Numeric 값 체크
+        val value =
+            when (incomingValue) {
+                is Number -> incomingValue.toDouble()
+                else -> return false
+            }
+
+        return when (condition.conditionType) {
+            ConditionType.SINGLE -> {
+                val threshold = condition.thresholdValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "thresholdValue is null")
 
                 when (condition.operator) {
-                    Operator.GREATER_THAN -> value > v1
-                    Operator.GREATER_OR_EQUAL -> value >= v1
-                    Operator.LESS_THAN -> value < v1
-                    Operator.LESS_OR_EQUAL -> value <= v1
-                    Operator.EQUAL -> value == v1
-                    Operator.NOT_EQUAL -> value != v1
-                    Operator.BETWEEN -> {
-                        val v2 =
-                            condition.numericValue2
-                                ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
-                        value in v1..v2
-                    }
+                    Operator.GOE -> value >= threshold
+                    Operator.LOE -> value <= threshold
+                    Operator.BETWEEN -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "BETWEEN not allowed for SINGLE type")
                 }
             }
-            DataType.BOOLEAN -> {
-                val value = incomingValue as? Boolean ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, incomingValue)
-                val bv = condition.booleanValue ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, condition.booleanValue)
+
+            ConditionType.RANGE -> {
+                val leftValue = condition.leftValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "leftValue is null")
+                val rightValue = condition.rightValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "rightValue is null")
 
                 when (condition.operator) {
-                    Operator.EQUAL -> value == bv
-                    Operator.NOT_EQUAL -> value != bv
-                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)
+                    Operator.BETWEEN -> value in leftValue..rightValue
+                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "${condition.operator} not allowed for RANGE type")
                 }
             }
         }

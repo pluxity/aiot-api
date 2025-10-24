@@ -11,7 +11,7 @@ import com.pluxity.aiot.data.measure.DisplacementGauge
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
-import com.pluxity.aiot.system.event.condition.DataType
+import com.pluxity.aiot.system.event.condition.ConditionType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.Operator
@@ -55,7 +55,7 @@ class DisplacementGaugeProcessor(
                 featureRepository = featureRepository,
                 eventConditionRepository = eventConditionRepository,
             )
-            log.debug { "Angle-X value: $it" }
+            log.debug { "Angle-X value: \$it" }
         }
         data.angleY?.let {
             processEventConditions(
@@ -70,11 +70,11 @@ class DisplacementGaugeProcessor(
                 featureRepository = featureRepository,
                 eventConditionRepository = eventConditionRepository,
             )
-            log.debug { "Angle-Y value: $it" }
+            log.debug { "Angle-Y value: \$it" }
         }
         log.info {
-            "${SensorType.DISPLACEMENT_GAUGE.description} - DeviceId: $deviceId, " +
-                "Timestamp: ${data.timestamp}, Period: ${data.period}"
+            "\${SensorType.DISPLACEMENT_GAUGE.description} - DeviceId: \$deviceId, " +
+                "Timestamp: \${data.timestamp}, Period: \${data.period}"
         }
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }
@@ -110,9 +110,9 @@ class DisplacementGaugeProcessor(
     }
 
     /**
-     * 각도계 센서(AngleX, AngleY)의 특수한 BETWEEN 처리를 위한 override
-     * - numericValue1: 오차 범위 (errorRange)
-     * - numericValue2: 중앙값 (centerValue)
+     * 변위계 센서(AngleX, AngleY)의 특수한 BETWEEN 처리를 위한 override
+     * - leftValue: 오차 범위 (errorRange)
+     * - rightValue: 중앙값 (centerValue)
      * - 조건: 실제 값이 (중앙값 - 오차범위) ~ (중앙값 + 오차범위) 범위를 벗어나면 true
      */
     override fun isConditionMet(
@@ -123,13 +123,13 @@ class DisplacementGaugeProcessor(
         // 각도계 센서(AngleX, AngleY)이고 BETWEEN 연산자인 경우 특수 처리
         if ((fieldKey == ANGLE_X || fieldKey == ANGLE_Y) &&
             value is Double &&
-            condition.dataType == DataType.NUMERIC &&
+            condition.conditionType == ConditionType.RANGE &&
             condition.operator == Operator.BETWEEN &&
-            condition.numericValue1 != null &&
-            condition.numericValue2 != null
+            condition.leftValue != null &&
+            condition.rightValue != null
         ) {
-            val errorRange = condition.numericValue1!!
-            val centerValue = condition.numericValue2!!
+            val errorRange = condition.leftValue!!
+            val centerValue = condition.rightValue!!
 
             // 중앙값 ± 오차 범위 계산
             val minRange = centerValue - errorRange

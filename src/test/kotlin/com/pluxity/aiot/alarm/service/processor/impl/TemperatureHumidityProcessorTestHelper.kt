@@ -91,13 +91,10 @@ class TemperatureHumidityProcessorTestHelper(
             objectId = objectId,
             deviceId = deviceId,
             profile = temperatureProfile,
-            eventName = eventName,
             eventLevel = eventLevel,
             minValue = minValue.toString(),
             maxValue = maxValue.toString(),
-            needControl = needControl,
             isBoolean = false,
-            notificationIntervalMinutes = notificationIntervalMinutes,
         )
 
     /**

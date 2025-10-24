@@ -76,7 +76,7 @@ class TemperatureHumidityProcessorTest(
                 // 실행
                 processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
-                Then("EventHistory가 MANUAL_PENDING으로 저장된다") {
+                Then("EventHistory가 PENDING으로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
 
@@ -87,7 +87,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.eventName shouldBe "WARNING_Temperature"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
-                    eventHistory.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistory.actionResult shouldBe "PENDING"
                 }
             }
 
@@ -111,7 +111,7 @@ class TemperatureHumidityProcessorTest(
                 // 실행
                 processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
-                Then("EventHistory가 MANUAL_PENDING 저장된다") {
+                Then("EventHistory가 PENDING 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
 
@@ -121,7 +121,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.value shouldBe 35.0
                     eventHistory.minValue shouldBe 30.0
                     eventHistory.maxValue shouldBe 40.0
-                    eventHistory.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistory.actionResult shouldBe "PENDING"
                 }
             }
 
@@ -163,11 +163,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -191,11 +189,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -220,11 +216,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -247,11 +241,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -274,11 +266,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -302,11 +292,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -329,11 +317,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -356,11 +342,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -402,15 +386,15 @@ class TemperatureHumidityProcessorTest(
                 val sensorData2 = helper.createSensorData(temperature = 28.5)
                 processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData2)
 
-                Then("첫 번째는 MANUAL_PENDING, 두 번째는 MANUAL_IGNORED로 저장된다") {
+                Then("모두 PENDING로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
 
                     val firstEvent = eventHistories.first { it.value == 28.0 }
-                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
+                    firstEvent.actionResult shouldBe "PENDING"
 
                     val secondEvent = eventHistories.first { it.value == 28.5 }
-                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
+                    secondEvent.actionResult shouldBe "PENDING"
                 }
             }
 
@@ -439,15 +423,15 @@ class TemperatureHumidityProcessorTest(
                 val sensorData2 = helper.createSensorData(temperature = 36.0)
                 processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData2)
 
-                Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED로 저장된다") {
+                Then("모두 PENDING 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
 
                     val firstEvent = eventHistories.first { it.value == 35.0 }
-                    firstEvent.actionResult shouldBe "MANUAL_PENDING"
+                    firstEvent.actionResult shouldBe "PENDING"
 
                     val secondEvent = eventHistories.first { it.value == 36.0 }
-                    secondEvent.actionResult shouldBe "MANUAL_IGNORED"
+                    secondEvent.actionResult shouldBe "PENDING"
                 }
             }
         }
@@ -518,11 +502,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
-                        eventName = "WARNING_Humidity",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = "70.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -591,11 +573,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = discomfortProfile,
-                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -613,7 +593,7 @@ class TemperatureHumidityProcessorTest(
                     val actualValue = eventHistories.first().value
                     actualValue.shouldNotBeNull()
                     (actualValue in 81.37..81.39) shouldBe true
-                    eventHistories.first().actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first().actionResult shouldBe "PENDING"
                 }
             }
 
@@ -633,11 +613,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = discomfortProfile,
-                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -658,28 +636,32 @@ class TemperatureHumidityProcessorTest(
             }
         }
 
-        Given("Filter Chain: eventEnabled = false") {
-            When("eventEnabled = false인 경우 이벤트가 처리되지 않는다") {
+        Given("Filter Chain: isActivate = false") {
+            When("isActivate = false인 경우 이벤트가 처리되지 않는다") {
                 val deviceId = "TH_DISABLED_001"
 
                 val setup =
-                    helper.setupDeviceWithDisabledEvent(
+                    helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
                         isBoolean = false,
                     )
 
+                // isActivate를 false로 변경
+                val condition = eventConditionRepository.findAllByObjectId(setup.deviceType.objectId).first()
+                condition.isActivate = false
+                eventConditionRepository.save(condition)
+
                 val sensorData = helper.createSensorData(temperature = 28.0)
                 val processor = helper.createProcessor()
 
                 processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
 
-                Then("eventEnabled = false이므로 이벤트가 발생하지 않고 NORMAL 상태") {
+                Then("isActivate = false이므로 이벤트가 발생하지 않고 NORMAL 상태") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 0
 
@@ -699,11 +681,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.temperatureProfile,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -719,7 +699,7 @@ class TemperatureHumidityProcessorTest(
 
                 Then("notificationEnabled = false이므로 이벤트가 발생하지 않는다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
+                    eventHistories shouldHaveSize 1
                 }
             }
         }
@@ -766,8 +746,8 @@ class TemperatureHumidityProcessorTest(
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
                     eventHistories.map { it.eventName }.toSet() shouldBe setOf("WARNING_Temperature", "DANGER_Temperature")
-                    eventHistories.first { it.eventName == "WARNING_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
-                    eventHistories.first { it.eventName == "DANGER_Temperature" }.actionResult shouldBe "MANUAL_PENDING"
+                    eventHistories.first { it.eventName == "WARNING_Temperature" }.actionResult shouldBe "PENDING"
+                    eventHistories.first { it.eventName == "DANGER_Temperature" }.actionResult shouldBe "PENDING"
                 }
             }
         }
@@ -781,11 +761,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
-                        eventName = "HumidityExact80",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 
@@ -810,11 +788,9 @@ class TemperatureHumidityProcessorTest(
                         objectId = "34954",
                         deviceId = deviceId,
                         profile = helper.humidityProfile,
-                        eventName = "HumidityExact80_2",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
-                        needControl = true,
                         isBoolean = false,
                     )
 

@@ -21,8 +21,12 @@ class ActionHistory(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_history_id", nullable = false)
     val eventHistory: EventHistory,
-    var content: String? = null,
+    var content: String,
 ) : BaseEntity() {
     @OneToMany(mappedBy = "actionHistory")
     var historyFiles: MutableList<ActionHistoryFile> = mutableListOf()
+
+    fun updateContent(content: String) {
+        this.content = content
+    }
 }

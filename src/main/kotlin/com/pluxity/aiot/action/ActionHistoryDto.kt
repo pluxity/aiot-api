@@ -4,13 +4,15 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.pluxity.aiot.file.dto.FileResponse
 import com.pluxity.aiot.global.response.BaseResponse
 import com.pluxity.aiot.global.response.toBaseResponse
+import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.NotBlank
 
 data class ActionHistoryResponse(
     var id: Long? = null,
     var deviceId: String? = null,
     var eventName: String? = null,
     var eventHistoryId: Long? = null,
-    var content: String? = null,
+    var content: String,
     var files: List<FileResponse>? = null,
     @field:JsonUnwrapped var baseResponse: BaseResponse? = null,
 )
@@ -27,6 +29,9 @@ fun ActionHistory.toActionHistoryResponse(fileMap: Map<Long, FileResponse>): Act
     )
 
 data class ActionHistoryRequest(
+    @field:Schema(description = "조치 내역", example = "조치완료함")
+    @field:NotBlank(message = "조치 내역은 필수입니다")
+    var content: String,
+    @field:Schema(description = "파일 ID", example = "1")
     var fileIds: List<Long>?,
-    var content: String? = null,
 )

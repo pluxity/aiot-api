@@ -1,6 +1,7 @@
 package com.pluxity.aiot.action
 
 import com.pluxity.aiot.alarm.entity.EventHistory
+import com.pluxity.aiot.alarm.entity.HistoryResult
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.file.extensions.getFileMapById
 import com.pluxity.aiot.file.service.FileService
@@ -24,6 +25,13 @@ class ActionHistoryService(
     private fun findEventHistoryById(id: Long): EventHistory =
         eventHistoryRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_HISTORY, id)
 
+    private fun findActionHistoryById(
+        eventId: Long,
+        id: Long,
+    ): ActionHistory =
+        actionHistoryRepository.findByIdAndEventHistory(id, findEventHistoryById(eventId))
+            ?: throw CustomException(ErrorCode.NOT_FOUND_ACTION_HISTORY, id)
+
     @Transactional
     fun save(
         eventId: Long,
@@ -38,15 +46,24 @@ class ActionHistoryService(
                     content = requestDto.content,
                 ),
             )
-        requestDto.fileIds?.forEach { fileId ->
-            fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}${savedActionHistory.id}")
-            actionHistoryFileRepository.save(
-                ActionHistoryFile(
-                    actionHistory = savedActionHistory,
-                    fileId = fileId,
-                ),
-            )
+        // 파일 처리를 배치로 개선
+        requestDto.fileIds?.let { fileIds ->
+            // 파일 업로드 finalize를 먼저 배치 처리
+            fileIds.forEach { fileId ->
+                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}${savedActionHistory.id}")
+            }
+
+            // ActionHistoryFile 엔티티들을 배치로 저장
+            val actionHistoryFiles =
+                fileIds.map { fileId ->
+                    ActionHistoryFile(
+                        actionHistory = savedActionHistory,
+                        fileId = fileId,
+                    )
+                }
+            actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
+        eventHistory.changeActionResult(HistoryResult.COMPLETED)
         return savedActionHistory.id!!
     }
 
@@ -59,5 +76,41 @@ class ActionHistoryService(
         val historyFiles = histories.flatMap { it.historyFiles }
         val fileMap = fileService.getFileMapById(historyFiles) { it.fileId }
         return histories.map { it.toActionHistoryResponse(fileMap) }
+    }
+
+    @Transactional
+    fun update(
+        eventId: Long,
+        id: Long,
+        request: ActionHistoryRequest,
+    ) {
+        val actionHistory = findActionHistoryById(eventId, id)
+        actionHistory.updateContent(request.content)
+        val existIds = actionHistory.historyFiles.map { it.fileId }
+        request.fileIds?.let {
+            actionHistoryFileRepository.deleteByIdIn(existIds.minus(it.toSet()))
+            val filesToAdd = it.minus(existIds.toSet())
+            filesToAdd.forEach { fileId ->
+                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}$id")
+            }
+            val newActionHistoryFiles =
+                filesToAdd.map { fileId ->
+                    ActionHistoryFile(
+                        actionHistory = actionHistory,
+                        fileId = fileId,
+                    )
+                }
+            actionHistoryFileRepository.saveAll(newActionHistoryFiles)
+        }
+    }
+
+    @Transactional
+    fun delete(
+        eventId: Long,
+        id: Long,
+    ) {
+        val actionHistory = findActionHistoryById(eventId, id)
+        actionHistoryFileRepository.deleteAll(actionHistory.historyFiles)
+        actionHistoryRepository.delete(actionHistory)
     }
 }

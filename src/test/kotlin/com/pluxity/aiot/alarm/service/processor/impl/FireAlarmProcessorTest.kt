@@ -57,7 +57,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        eventName = "DANGER_Fire Alarm",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
@@ -86,7 +85,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        eventName = "DANGER_Fire Alarm",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
@@ -117,7 +115,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        eventName = "WARNING_Fire Alarm",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "false",
                         maxValue = null,

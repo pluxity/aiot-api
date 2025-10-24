@@ -57,7 +57,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupTemperatureDevice(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -91,7 +90,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupTemperatureDevice(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -121,7 +119,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -147,7 +144,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -174,7 +170,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -199,7 +194,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -224,7 +218,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
@@ -250,7 +243,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -275,7 +267,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -300,7 +291,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
@@ -326,7 +316,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupTemperatureDevice(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -353,7 +342,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupTemperatureDevice(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -382,7 +370,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Humidity",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = "70.0",
@@ -413,7 +400,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupTemperatureDevice(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
                         maxValue = 30.0,
@@ -443,7 +429,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
@@ -475,7 +460,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "DANGER_DiscomfortIndex",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
@@ -507,7 +491,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithDisabledEvent(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
@@ -538,7 +521,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "WARNING_Temperature",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
@@ -573,14 +555,12 @@ class TemperatureHumidityProcessorTest(
                         conditions =
                             listOf(
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
-                                    eventName = "WARNING_Temperature",
                                     eventLevel = ConditionLevel.WARNING,
                                     minValue = "25.0",
                                     maxValue = "30.0",
                                     isBoolean = false,
                                 ),
                                 com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper.ConditionSpec(
-                                    eventName = "DANGER_Temperature",
                                     eventLevel = ConditionLevel.DANGER,
                                     minValue = "28.0",
                                     maxValue = "40.0",
@@ -613,7 +593,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "HumidityExact80",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
@@ -640,7 +619,6 @@ class TemperatureHumidityProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34954",
                         deviceId = deviceId,
-                        eventName = "HumidityExact80_2",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,

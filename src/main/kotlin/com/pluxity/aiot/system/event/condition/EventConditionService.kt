@@ -2,7 +2,7 @@ package com.pluxity.aiot.system.event.condition
 
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.system.event.condition.dto.EventConditionRequest
+import com.pluxity.aiot.system.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.system.event.condition.dto.EventConditionResponse
 import com.pluxity.aiot.system.event.condition.dto.toEventConditionResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,56 +34,74 @@ class EventConditionService(
     }
 
     @Transactional
-    fun create(request: EventConditionRequest): EventConditionResponse {
-        log.info { "EventCondition 생성 시작 - objectId: ${request.objectId}, level: ${request.level}" }
+    fun createBatch(request: EventConditionBatchRequest): List<EventConditionResponse> {
+        log.info { "EventCondition 일괄 생성 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
-        val condition =
+        // 조건 생성
+        val newConditions = request.conditions.map { itemRequest ->
             EventCondition(
                 objectId = request.objectId,
-                isActivate = request.isActivate,
-                level = request.level,
-                dataType = request.dataType,
-                operator = request.operator,
-                numericValue1 = request.numericValue1,
-                numericValue2 = request.numericValue2,
-                booleanValue = request.booleanValue,
-                notificationEnabled = request.notificationEnabled,
-                order = request.order,
+                fieldKey = itemRequest.fieldKey,
+                isActivate = itemRequest.isActivate,
+                level = itemRequest.level,
+                conditionType = itemRequest.conditionType,
+                operator = itemRequest.operator,
+                thresholdValue = itemRequest.thresholdValue,
+                leftValue = itemRequest.leftValue,
+                rightValue = itemRequest.rightValue,
+                booleanValue = itemRequest.booleanValue,
+                notificationEnabled = itemRequest.notificationEnabled,
+                order = itemRequest.order,
             )
+        }
 
-        val saved = eventConditionRepository.save(condition)
-        log.info { "EventCondition 생성 완료 - id: ${saved.id}" }
+        validateRangeOverlap(newConditions)
 
-        return saved.toEventConditionResponse()
+        // 저장
+        val savedConditions = newConditions.map { condition ->
+            eventConditionRepository.save(condition)
+        }
+
+        log.info { "EventCondition 일괄 생성 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
+
+        return savedConditions.map { it.toEventConditionResponse() }
     }
 
     @Transactional
-    fun update(
-        id: Long,
-        request: EventConditionRequest,
-    ): EventConditionResponse {
-        log.info { "EventCondition 수정 시작 - id: $id" }
+    fun updateBatch(request: EventConditionBatchRequest): List<EventConditionResponse> {
+        log.info { "EventCondition 일괄 수정 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
-        val condition =
-            eventConditionRepository.findByIdOrNull(id)
-                ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_CONDITION, id)
+        // 기존 조건들 삭제
+        eventConditionRepository.deleteAllByObjectId(request.objectId)
 
-        condition.update(
-            objectId = request.objectId,
-            isActivate = request.isActivate,
-            level = request.level,
-            dataType = request.dataType,
-            operator = request.operator,
-            numericValue1 = request.numericValue1,
-            numericValue2 = request.numericValue2,
-            booleanValue = request.booleanValue,
-            notificationEnabled = request.notificationEnabled,
-            order = request.order,
-        )
+        // 새로운 조건들 생성
+        val newConditions = request.conditions.map { itemRequest ->
+            EventCondition(
+                objectId = request.objectId,
+                fieldKey = itemRequest.fieldKey,
+                isActivate = itemRequest.isActivate,
+                level = itemRequest.level,
+                conditionType = itemRequest.conditionType,
+                operator = itemRequest.operator,
+                thresholdValue = itemRequest.thresholdValue,
+                leftValue = itemRequest.leftValue,
+                rightValue = itemRequest.rightValue,
+                booleanValue = itemRequest.booleanValue,
+                notificationEnabled = itemRequest.notificationEnabled,
+                order = itemRequest.order,
+            )
+        }
 
-        log.info { "EventCondition 수정 완료 - id: $id" }
+        validateRangeOverlap(newConditions)
 
-        return condition.toEventConditionResponse()
+        // 저장
+        val savedConditions = newConditions.map { condition ->
+            eventConditionRepository.save(condition)
+        }
+
+        log.info { "EventCondition 일괄 수정 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
+
+        return savedConditions.map { it.toEventConditionResponse() }
     }
 
     @Transactional
@@ -105,5 +123,27 @@ class EventConditionService(
         val deletedCount = eventConditionRepository.deleteAllByObjectId(objectId)
         log.info { "EventCondition 일괄 삭제 완료 - objectId: $objectId, 삭제 수: $deletedCount" }
         return deletedCount
+    }
+
+    private fun validateRangeOverlap(conditions: List<EventCondition>) {
+        // 같은 fieldKey끼리 범위 중복 확인
+        for (i in conditions.indices) {
+            for (j in i + 1 until conditions.size) {
+                val condition1 = conditions[i]
+                val condition2 = conditions[j]
+
+                if (condition1.hasRangeOverlap(condition2)) {
+                    val range1 = condition1.getActualRange()!!
+                    val range2 = condition2.getActualRange()!!
+
+                    throw IllegalArgumentException(
+                        "조건 범위가 겹칩니다. " +
+                            "fieldKey='${condition1.fieldKey}', " +
+                            "level1=${condition1.level} (${range1.first}~${range1.second}), " +
+                            "level2=${condition2.level} (${range2.first}~${range2.second})"
+                    )
+                }
+            }
+        }
     }
 }

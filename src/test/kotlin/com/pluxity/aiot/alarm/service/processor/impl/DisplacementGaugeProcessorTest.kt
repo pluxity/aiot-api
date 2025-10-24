@@ -61,7 +61,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
@@ -88,7 +87,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "DANGER_Angle-X",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -116,7 +114,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "AngleXOverRange",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -144,7 +141,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -178,7 +174,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
@@ -206,7 +201,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -235,7 +229,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "DANGER_Angle-Y",
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -263,7 +256,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-Y",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
@@ -293,7 +285,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "WARNING_Angle-X",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
@@ -328,7 +319,6 @@ class DisplacementGaugeProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34957",
                         deviceId = deviceId,
-                        eventName = "AngleXHigh",
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "95.0",
                         maxValue = null,

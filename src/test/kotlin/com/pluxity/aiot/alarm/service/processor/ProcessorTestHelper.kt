@@ -11,83 +11,77 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
-import com.pluxity.aiot.system.event.condition.DataType
+import com.pluxity.aiot.system.event.condition.ConditionType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.Operator
 
-/**
- * 기존 파라미터를 새로운 구조로 변환하는 헬퍼 데이터 클래스
- */
 data class ConvertedConditionParams(
-    val dataType: DataType,
+    val conditionType: ConditionType,
     val operator: Operator,
-    val numericValue1: Double?,
-    val numericValue2: Double?,
+    val thresholdValue: Double?,
+    val leftValue: Double?,
+    val rightValue: Double?,
     val booleanValue: Boolean?,
 )
 
-/**
- * 기존 isBoolean, minValue, maxValue를 새로운 구조로 변환
- */
 fun convertLegacyConditionParams(
     isBoolean: Boolean,
     minValue: String?,
     maxValue: String?,
 ): ConvertedConditionParams =
     if (isBoolean) {
-        // Boolean 타입의 경우
         val boolValue = minValue?.toBoolean() ?: true
         ConvertedConditionParams(
-            dataType = DataType.BOOLEAN,
-            operator = Operator.EQUAL,
-            numericValue1 = null,
-            numericValue2 = null,
+            conditionType = ConditionType.SINGLE,
+            operator = Operator.GOE,
+            thresholdValue = null,
+            leftValue = null,
+            rightValue = null,
             booleanValue = boolValue,
         )
     } else {
-        // Numeric 타입의 경우
         val min = minValue?.toDoubleOrNull()
         val max = maxValue?.toDoubleOrNull()
 
         when {
             min != null && max != null -> {
-                // 두 값이 모두 있으면 BETWEEN
                 ConvertedConditionParams(
-                    dataType = DataType.NUMERIC,
+                    conditionType = ConditionType.RANGE,
                     operator = Operator.BETWEEN,
-                    numericValue1 = min,
-                    numericValue2 = max,
+                    thresholdValue = null,
+                    leftValue = min,
+                    rightValue = max,
                     booleanValue = null,
                 )
             }
             min != null -> {
-                // minValue만 있으면 GREATER_OR_EQUAL
                 ConvertedConditionParams(
-                    dataType = DataType.NUMERIC,
-                    operator = Operator.GREATER_OR_EQUAL,
-                    numericValue1 = min,
-                    numericValue2 = null,
+                    conditionType = ConditionType.SINGLE,
+                    operator = Operator.GOE,
+                    thresholdValue = min,
+                    leftValue = null,
+                    rightValue = null,
                     booleanValue = null,
                 )
             }
             max != null -> {
-                // maxValue만 있으면 LESS_OR_EQUAL
                 ConvertedConditionParams(
-                    dataType = DataType.NUMERIC,
-                    operator = Operator.LESS_OR_EQUAL,
-                    numericValue1 = max,
-                    numericValue2 = null,
+                    conditionType = ConditionType.SINGLE,
+                    operator = Operator.LOE,
+                    thresholdValue = max,
+                    leftValue = null,
+                    rightValue = null,
                     booleanValue = null,
                 )
             }
             else -> {
-                // 기본값
                 ConvertedConditionParams(
-                    dataType = DataType.NUMERIC,
-                    operator = Operator.GREATER_OR_EQUAL,
-                    numericValue1 = 0.0,
-                    numericValue2 = null,
+                    conditionType = ConditionType.SINGLE,
+                    operator = Operator.GOE,
+                    thresholdValue = 0.0,
+                    leftValue = null,
+                    rightValue = null,
                     booleanValue = null,
                 )
             }
@@ -124,7 +118,6 @@ abstract class ProcessorTestHelper(
     fun setupDeviceWithCondition(
         objectId: String,
         deviceId: String,
-        eventName: String,
         eventLevel: ConditionLevel,
         minValue: String? = null,
         maxValue: String? = null,
@@ -136,19 +129,21 @@ abstract class ProcessorTestHelper(
         eventConditionRepository.deleteAllByObjectId(objectId)
 
         // 3. EventCondition 생성 및 저장
-        val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        val params = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
+                fieldKey = sensorType.deviceProfiles.first().fieldKey,
                 objectId = objectId,
                 isActivate = true,
                 level = level,
-                dataType = dataType,
-                operator = operator,
-                numericValue1 = numericValue1,
-                numericValue2 = numericValue2,
-                booleanValue = booleanValue,
+                conditionType = params.conditionType,
+                operator = params.operator,
+                thresholdValue = params.thresholdValue,
+                leftValue = params.leftValue,
+                rightValue = params.rightValue,
+                booleanValue = params.booleanValue,
                 notificationEnabled = true,
                 order = 1,
             )
@@ -195,7 +190,6 @@ abstract class ProcessorTestHelper(
     fun setupDeviceWithDisabledEvent(
         objectId: String,
         deviceId: String,
-        eventName: String,
         eventLevel: ConditionLevel,
         minValue: String?,
         maxValue: String?,
@@ -206,20 +200,22 @@ abstract class ProcessorTestHelper(
         // 기존 EventCondition 삭제 (테스트 격리)
         eventConditionRepository.deleteAllByObjectId(objectId)
 
-        val (dataType, operator, numericValue1, numericValue2, booleanValue) = convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        val params = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
+                fieldKey = sensorType.deviceProfiles.first().fieldKey,
                 objectId = objectId,
                 isActivate = true,
                 level = level,
-                dataType = dataType,
-                operator = operator,
-                numericValue1 = numericValue1,
-                numericValue2 = numericValue2,
-                booleanValue = booleanValue,
-                notificationEnabled = false, // Disabled
+                conditionType = params.conditionType,
+                operator = params.operator,
+                thresholdValue = params.thresholdValue,
+                leftValue = params.leftValue,
+                rightValue = params.rightValue,
+                booleanValue = params.booleanValue,
+                notificationEnabled = false,
                 order = 1,
             )
         eventConditionRepository.save(condition)
@@ -229,7 +225,7 @@ abstract class ProcessorTestHelper(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
-                name = "$objectId 센서",
+                name = "$objectId Sensor",
                 site = site,
             ),
         )
@@ -250,7 +246,7 @@ abstract class ProcessorTestHelper(
         eventConditionRepository.deleteAllByObjectId(objectId)
 
         conditions.forEachIndexed { index, spec ->
-            val (dataType, operator, numericValue1, numericValue2, booleanValue) =
+            val params =
                 convertLegacyConditionParams(
                     spec.isBoolean,
                     spec.minValue,
@@ -260,14 +256,16 @@ abstract class ProcessorTestHelper(
 
             val condition =
                 EventCondition(
+                    fieldKey = sensorType.deviceProfiles.first().fieldKey,
                     objectId = objectId,
                     isActivate = true,
                     level = level,
-                    dataType = dataType,
-                    operator = operator,
-                    numericValue1 = numericValue1,
-                    numericValue2 = numericValue2,
-                    booleanValue = booleanValue,
+                    conditionType = params.conditionType,
+                    operator = params.operator,
+                    thresholdValue = params.thresholdValue,
+                    leftValue = params.leftValue,
+                    rightValue = params.rightValue,
+                    booleanValue = params.booleanValue,
                     notificationEnabled = spec.notificationEnabled,
                     order = index + 1,
                 )
@@ -279,7 +277,7 @@ abstract class ProcessorTestHelper(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
-                name = "$objectId 센서",
+                name = "$objectId Sensor",
                 site = site,
             ),
         )
@@ -288,11 +286,12 @@ abstract class ProcessorTestHelper(
     }
 
     data class ConditionSpec(
-        val eventName: String,
         val eventLevel: ConditionLevel,
         val minValue: String?,
         val maxValue: String?,
+        val needControl: Boolean = false,
         val isBoolean: Boolean = false,
+        val notificationIntervalMinutes: Int = 5,
         val notificationEnabled: Boolean = true,
     )
 

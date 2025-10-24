@@ -1,5 +1,6 @@
 package com.pluxity.aiot.data.subscription.processor
 
+import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
@@ -13,7 +14,7 @@ import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.system.event.condition.ConditionLevel
-import com.pluxity.aiot.system.event.condition.DataType
+import com.pluxity.aiot.system.event.condition.ConditionType
 import com.pluxity.aiot.system.event.condition.EventCondition
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import com.pluxity.aiot.system.event.condition.Operator
@@ -28,6 +29,7 @@ private val log = KotlinLogging.logger {}
 
 interface SensorDataProcessor {
     companion object {
+        private val lastNotificationMap: ConcurrentMap<String, LocalDateTime> = ConcurrentHashMap()
         private val featureCache: ConcurrentMap<String, Feature> = ConcurrentHashMap()
         private val featureCacheExpiryMap: ConcurrentMap<String, Long> = ConcurrentHashMap()
     }
@@ -63,8 +65,8 @@ interface SensorDataProcessor {
         actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
     ) {
-        val minValue = condition.numericValue1 ?: 0.0
-        val maxValue = condition.numericValue2 ?: 0.0
+        val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
+        val maxValue = condition.rightValue ?: 0.0
 
         val eventName = "${condition.level.name}_$fieldKey"
 
@@ -90,28 +92,30 @@ interface SensorDataProcessor {
 
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
-                "$fieldUnit - $eventName"
+                    "$fieldUnit - $eventName"
 
-        feature.site?.let {
-            messageSender.sendSensorAlarm(
-                SensorAlarmPayload(
-                    siteId = it.id!!,
-                    sensorType = sensorType.description,
-                    fieldKey = fieldKey,
-                    message = message,
-                    level = eventName,
-                    eventName = eventName,
-                    deviceId = deviceId,
-                    objectId = sensorType.objectId,
-                    sensorDescription = sensorType.description,
-                    value = value,
-                    unit = fieldUnit,
-                    minValue = minValue,
-                    maxValue = maxValue,
-                    notificationEnabled = condition.notificationEnabled,
-                    actionResult = eventHistory.actionResult.name,
-                ),
-            )
+        if (condition.notificationEnabled) {
+            feature.site?.let {
+                messageSender.sendSensorAlarm(
+                    SensorAlarmPayload(
+                        siteId = it.id!!,
+                        sensorType = sensorType.description,
+                        fieldKey = fieldKey,
+                        message = message,
+                        level = eventName,
+                        eventName = eventName,
+                        deviceId = deviceId,
+                        objectId = sensorType.objectId,
+                        sensorDescription = sensorType.description,
+                        value = value,
+                        unit = fieldUnit,
+                        minValue = minValue,
+                        maxValue = maxValue,
+                        notificationEnabled = condition.notificationEnabled,
+                        actionResult = eventHistory.actionResult.name,
+                    ),
+                )
+            }
         }
 
         log.info { "Event triggered and saved: $message" }
@@ -232,39 +236,40 @@ interface SensorDataProcessor {
         condition: EventCondition,
         incomingValue: Any,
     ): Boolean {
-        return when (condition.dataType) {
-            DataType.NUMERIC -> {
-                val value =
-                    when (incomingValue) {
-                        is Number -> incomingValue.toDouble()
-                        else -> return false
-                    }
-                val v1 =
-                    condition.numericValue1 ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue1)
+        // Boolean 값 체크
+        if (condition.booleanValue != null) {
+            val value = incomingValue as? Boolean ?: return false
+            return value == condition.booleanValue
+        }
+
+        // Numeric 값 체크
+        val value =
+            when (incomingValue) {
+                is Number -> incomingValue.toDouble()
+                else -> return false
+            }
+
+        return when (condition.conditionType) {
+            ConditionType.SINGLE -> {
+                val threshold = condition.thresholdValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "thresholdValue is null")
 
                 when (condition.operator) {
-                    Operator.GREATER_THAN -> value > v1
-                    Operator.GREATER_OR_EQUAL -> value >= v1
-                    Operator.LESS_THAN -> value < v1
-                    Operator.LESS_OR_EQUAL -> value <= v1
-                    Operator.EQUAL -> value == v1
-                    Operator.NOT_EQUAL -> value != v1
-                    Operator.BETWEEN -> {
-                        val v2 =
-                            condition.numericValue2
-                                ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, condition.numericValue2)
-                        value in v1..v2
-                    }
+                    Operator.GOE -> value >= threshold
+                    Operator.LOE -> value <= threshold
+                    Operator.BETWEEN -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "BETWEEN not allowed for SINGLE type")
                 }
             }
-            DataType.BOOLEAN -> {
-                val value = incomingValue as? Boolean ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, incomingValue)
-                val bv = condition.booleanValue ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_BOOLEAN_VALUE, condition.booleanValue)
+
+            ConditionType.RANGE -> {
+                val leftValue = condition.leftValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "leftValue is null")
+                val rightValue = condition.rightValue
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "rightValue is null")
 
                 when (condition.operator) {
-                    Operator.EQUAL -> value == bv
-                    Operator.NOT_EQUAL -> value != bv
-                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, condition.operator)
+                    Operator.BETWEEN -> value in leftValue..rightValue
+                    else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "${condition.operator} not allowed for RANGE type")
                 }
             }
         }

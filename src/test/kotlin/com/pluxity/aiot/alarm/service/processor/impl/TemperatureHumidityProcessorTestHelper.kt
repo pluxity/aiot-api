@@ -37,16 +37,16 @@ class TemperatureHumidityProcessorTestHelper(
     fun setupTemperatureDevice(
         objectId: String,
         deviceId: String,
-        eventName: String,
         eventLevel: ConditionLevel,
         minValue: Double,
         maxValue: Double,
+        needControl: Boolean = false,
         guideMessage: String? = null,
+        notificationIntervalMinutes: Int = 5,
     ): TestSetup =
         setupDeviceWithCondition(
             objectId = objectId,
             deviceId = deviceId,
-            eventName = eventName,
             eventLevel = eventLevel,
             minValue = minValue.toString(),
             maxValue = maxValue.toString(),

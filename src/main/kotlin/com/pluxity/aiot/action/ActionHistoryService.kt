@@ -1,8 +1,9 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.action.ActionHistory.ActionResult
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
+import com.pluxity.aiot.file.extensions.getFileMapById
+import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import org.springframework.data.repository.findByIdOrNull
@@ -13,94 +14,50 @@ import org.springframework.transaction.annotation.Transactional
 class ActionHistoryService(
     private val actionHistoryRepository: ActionHistoryRepository,
     private val eventHistoryRepository: EventHistoryRepository,
+    private val actionHistoryFileRepository: ActionHistoryFileRepository,
+    private val fileService: FileService,
 ) {
+    companion object {
+        private const val ACTION_HISTORIES: String = "action-histories/"
+    }
+
     private fun findEventHistoryById(id: Long): EventHistory =
         eventHistoryRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_HISTORY, id)
 
     @Transactional
-    fun save(requestDto: ActionHistoryRequest): Long {
-        val eventHistory = findEventHistoryById(requestDto.eventHistoryId)
+    fun save(
+        eventId: Long,
+        requestDto: ActionHistoryRequest,
+    ): Long {
+        val eventHistory = findEventHistoryById(eventId)
 
         val savedActionHistory =
             actionHistoryRepository.save(
                 ActionHistory(
                     eventHistory = eventHistory,
-                    deviceId = requestDto.deviceId,
-                    eventName = requestDto.eventName,
                     content = requestDto.content,
-                    actionType = ActionHistory.ActionType.valueOf(requestDto.actionType),
-                    actionResult = ActionHistory.ActionResult.valueOf(requestDto.actionResult),
-                    ignored = requestDto.ignored,
-                    actedBy = requestDto.actedBy,
                 ),
             )
+        requestDto.fileIds?.forEach { fileId ->
+            fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}${savedActionHistory.id}")
+            actionHistoryFileRepository.save(
+                ActionHistoryFile(
+                    actionHistory = savedActionHistory,
+                    fileId = fileId,
+                ),
+            )
+        }
         return savedActionHistory.id!!
     }
 
     @Transactional(readOnly = true)
-    fun findAll(): List<ActionHistoryResponse> = actionHistoryRepository.findAll().map { it.toActionHistoryResponse() }
+    fun findAll(eventId: Long): List<ActionHistoryResponse> {
+        val eventHistory = findEventHistoryById(eventId)
+        val histories = actionHistoryRepository.findByEventHistory(eventHistory)
+        if (histories.isEmpty()) return emptyList()
 
-    @Transactional(readOnly = true)
-    fun findByDeviceIdAndEventName(deviceId: String): List<ActionHistoryResponse> =
-        actionHistoryRepository.findByDeviceId(deviceId).map { it.toActionHistoryResponse() }
-
-    @Transactional(readOnly = true)
-    fun findByEventHistory(eventHistoryId: Long): List<ActionHistoryResponse> {
-        val eventHistory = findEventHistoryById(eventHistoryId)
-        return actionHistoryRepository.findByEventHistory(eventHistory).map { it.toActionHistoryResponse() }
-    }
-
-    @Transactional(readOnly = true)
-    fun getById(id: Long): ActionHistoryResponse {
-        val actionHist =
-            actionHistoryRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_ACTION_HISTORY, id)
-        return actionHist.toActionHistoryResponse()
-    }
-
-    @Transactional
-    fun createAutomaticAction(
-        deviceId: String,
-        eventName: String,
-        eventHistory: EventHistory,
-        actionResult: ActionResult,
-        ignored: Boolean,
-    ) {
-        val actionHistory =
-            ActionHistory(
-                deviceId = deviceId,
-                eventName = eventName,
-                eventHistory = eventHistory,
-                actionType = ActionHistory.ActionType.AUTOMATIC,
-                actionResult = actionResult,
-                ignored = ignored,
-                content = "자동조치",
-                actedBy = "SYSTEM",
-            )
-
-        actionHistoryRepository.save(actionHistory)
-    }
-
-    @Transactional
-    fun createManualAction(
-        deviceId: String,
-        eventName: String,
-        eventHistory: EventHistory,
-        actionResult: ActionResult,
-        ignored: Boolean,
-        actedBy: String,
-    ) {
-        val actionHistory =
-            ActionHistory(
-                deviceId = deviceId,
-                eventName = eventName,
-                eventHistory = eventHistory,
-                actionType = ActionHistory.ActionType.MANUAL,
-                actionResult = actionResult,
-                ignored = ignored,
-                content = "수동조치",
-                actedBy = actedBy,
-            )
-
-        actionHistoryRepository.save(actionHistory)
+        val historyFiles = histories.flatMap { it.historyFiles }
+        val fileMap = fileService.getFileMapById(historyFiles) { it.fileId }
+        return histories.map { it.toActionHistoryResponse(fileMap) }
     }
 }

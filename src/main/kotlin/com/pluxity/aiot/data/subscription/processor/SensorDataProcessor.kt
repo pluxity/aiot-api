@@ -71,10 +71,6 @@ interface SensorDataProcessor {
         // Feature의 이벤트 상태 업데이트
         updateFeatureEventStatus(feature, condition.level.toString(), featureRepository)
 
-        // 알림 간격 확인
-        val notificationKey = "$deviceId:$eventName"
-        val now = LocalDateTime.now()
-
         // 이벤트 이력 저장
         val eventHistory =
             eventHistoryRepository.save(
@@ -85,7 +81,7 @@ interface SensorDataProcessor {
                     fieldKey = fieldKey,
                     value = value,
                     unit = fieldUnit,
-                    eventName = eventName,
+                    eventName = condition.level.name,
                     occurredAt = parsedDate,
                     minValue = minValue,
                     maxValue = maxValue,
@@ -100,7 +96,7 @@ interface SensorDataProcessor {
             messageSender.sendSensorAlarm(
                 SensorAlarmPayload(
                     siteId = it.id!!,
-                    sensorType = fieldKey,
+                    sensorType = sensorType.description,
                     fieldKey = fieldKey,
                     message = message,
                     level = eventName,

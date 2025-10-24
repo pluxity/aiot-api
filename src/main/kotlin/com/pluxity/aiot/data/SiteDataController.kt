@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/sites")
-@Tag(name = "Site Data Controller", description = "현장별 데이터 조회 API")
+@Tag(name = "Site Controller", description = "현장 관리 API")
 class SiteDataController(
     private val dataService: DataService,
 ) {

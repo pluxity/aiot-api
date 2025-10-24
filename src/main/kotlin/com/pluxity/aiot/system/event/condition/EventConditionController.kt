@@ -1,5 +1,6 @@
 package com.pluxity.aiot.system.event.condition
 
+import com.pluxity.aiot.global.annotation.ResponseCreated
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.system.event.condition.dto.EventConditionBatchRequest
@@ -106,11 +107,12 @@ class EventConditionController(
             ),
         ],
     )
+    @ResponseCreated("/event-conditions/{id}")
     @PostMapping
     fun createBatch(
         @RequestBody request: EventConditionBatchRequest,
-    ): ResponseEntity<DataResponseBody<List<EventConditionResponse>>> = 
-        ResponseEntity.ok(DataResponseBody(eventConditionService.createBatch(request)))
+    ): ResponseEntity<List<Long>> =
+        ResponseEntity.ok(eventConditionService.createBatch(request))
 
     @Operation(summary = "이벤트 조건 일괄 수정", description = "기존 이벤트 조건들을 일괄 수정합니다 (기존 조건 삭제 후 재생성)")
     @ApiResponses(
@@ -141,8 +143,10 @@ class EventConditionController(
     @PutMapping
     fun updateBatch(
         @RequestBody request: EventConditionBatchRequest,
-    ): ResponseEntity<DataResponseBody<List<EventConditionResponse>>> =
-        ResponseEntity.ok(DataResponseBody(eventConditionService.updateBatch(request)))
+    ): ResponseEntity<Void> {
+        eventConditionService.updateBatch(request)
+        return ResponseEntity.noContent().build()
+    }
 
     @Operation(summary = "이벤트 조건 삭제", description = "이벤트 조건을 삭제합니다")
     @ApiResponses(

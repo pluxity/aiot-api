@@ -34,7 +34,7 @@ fun convertLegacyConditionParams(
         val boolValue = minValue?.toBoolean() ?: true
         ConvertedConditionParams(
             conditionType = ConditionType.SINGLE,
-            operator = Operator.GOE,
+            operator = Operator.GE,
             thresholdValue = null,
             leftValue = null,
             rightValue = null,
@@ -58,7 +58,7 @@ fun convertLegacyConditionParams(
             min != null -> {
                 ConvertedConditionParams(
                     conditionType = ConditionType.SINGLE,
-                    operator = Operator.GOE,
+                    operator = Operator.GE,
                     thresholdValue = min,
                     leftValue = null,
                     rightValue = null,
@@ -68,7 +68,7 @@ fun convertLegacyConditionParams(
             max != null -> {
                 ConvertedConditionParams(
                     conditionType = ConditionType.SINGLE,
-                    operator = Operator.LOE,
+                    operator = Operator.LE,
                     thresholdValue = max,
                     leftValue = null,
                     rightValue = null,
@@ -78,7 +78,7 @@ fun convertLegacyConditionParams(
             else -> {
                 ConvertedConditionParams(
                     conditionType = ConditionType.SINGLE,
-                    operator = Operator.GOE,
+                    operator = Operator.GE,
                     thresholdValue = 0.0,
                     leftValue = null,
                     rightValue = null,

@@ -1,6 +1,5 @@
 package com.pluxity.aiot.data.subscription.processor
 
-import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.entity.EventHistory
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
@@ -29,7 +28,6 @@ private val log = KotlinLogging.logger {}
 
 interface SensorDataProcessor {
     companion object {
-        private val lastNotificationMap: ConcurrentMap<String, LocalDateTime> = ConcurrentHashMap()
         private val featureCache: ConcurrentMap<String, Feature> = ConcurrentHashMap()
         private val featureCacheExpiryMap: ConcurrentMap<String, Long> = ConcurrentHashMap()
     }
@@ -92,7 +90,7 @@ interface SensorDataProcessor {
 
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
-                    "$fieldUnit - $eventName"
+                "$fieldUnit - $eventName"
 
         if (condition.notificationEnabled) {
             feature.site?.let {
@@ -251,21 +249,24 @@ interface SensorDataProcessor {
 
         return when (condition.conditionType) {
             ConditionType.SINGLE -> {
-                val threshold = condition.thresholdValue
-                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "thresholdValue is null")
+                val threshold =
+                    condition.thresholdValue
+                        ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "thresholdValue is null")
 
                 when (condition.operator) {
-                    Operator.GOE -> value >= threshold
-                    Operator.LOE -> value <= threshold
+                    Operator.GE -> value >= threshold
+                    Operator.LE -> value <= threshold
                     Operator.BETWEEN -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "BETWEEN not allowed for SINGLE type")
                 }
             }
 
             ConditionType.RANGE -> {
-                val leftValue = condition.leftValue
-                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "leftValue is null")
-                val rightValue = condition.rightValue
-                    ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "rightValue is null")
+                val leftValue =
+                    condition.leftValue
+                        ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "leftValue is null")
+                val rightValue =
+                    condition.rightValue
+                        ?: throw CustomException(ErrorCode.NOT_FOUND_INVALID_NUMERIC_VALUE, "rightValue is null")
 
                 when (condition.operator) {
                     Operator.BETWEEN -> value in leftValue..rightValue

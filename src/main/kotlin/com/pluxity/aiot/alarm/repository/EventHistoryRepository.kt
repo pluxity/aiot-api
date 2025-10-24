@@ -7,5 +7,4 @@ interface EventHistoryRepository :
     JpaRepository<EventHistory, Long>,
     EventHistoryRepositoryCustom {
     fun findByDeviceId(deviceId: String): List<EventHistory>
-
 }

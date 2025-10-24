@@ -38,29 +38,31 @@ class EventConditionService(
         log.info { "EventCondition 일괄 생성 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
         // 조건 생성
-        val newConditions = request.conditions.map { itemRequest ->
-            EventCondition(
-                objectId = request.objectId,
-                fieldKey = itemRequest.fieldKey,
-                isActivate = itemRequest.isActivate,
-                level = itemRequest.level,
-                conditionType = itemRequest.conditionType,
-                operator = itemRequest.operator,
-                thresholdValue = itemRequest.thresholdValue,
-                leftValue = itemRequest.leftValue,
-                rightValue = itemRequest.rightValue,
-                booleanValue = itemRequest.booleanValue,
-                notificationEnabled = itemRequest.notificationEnabled,
-                order = itemRequest.order,
-            )
-        }
+        val newConditions =
+            request.conditions.map { itemRequest ->
+                EventCondition(
+                    objectId = request.objectId,
+                    fieldKey = itemRequest.fieldKey,
+                    isActivate = itemRequest.isActivate,
+                    level = itemRequest.level,
+                    conditionType = itemRequest.conditionType,
+                    operator = itemRequest.operator,
+                    thresholdValue = itemRequest.thresholdValue,
+                    leftValue = itemRequest.leftValue,
+                    rightValue = itemRequest.rightValue,
+                    booleanValue = itemRequest.booleanValue,
+                    notificationEnabled = itemRequest.notificationEnabled,
+                    order = itemRequest.order,
+                )
+            }
 
         validateRangeOverlap(newConditions)
 
         // 저장
-        val savedConditions = newConditions.map { condition ->
-            eventConditionRepository.save(condition)
-        }
+        val savedConditions =
+            newConditions.map { condition ->
+                eventConditionRepository.save(condition)
+            }
 
         log.info { "EventCondition 일괄 생성 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
 
@@ -75,29 +77,31 @@ class EventConditionService(
         eventConditionRepository.deleteAllByObjectId(request.objectId)
 
         // 새로운 조건들 생성
-        val newConditions = request.conditions.map { itemRequest ->
-            EventCondition(
-                objectId = request.objectId,
-                fieldKey = itemRequest.fieldKey,
-                isActivate = itemRequest.isActivate,
-                level = itemRequest.level,
-                conditionType = itemRequest.conditionType,
-                operator = itemRequest.operator,
-                thresholdValue = itemRequest.thresholdValue,
-                leftValue = itemRequest.leftValue,
-                rightValue = itemRequest.rightValue,
-                booleanValue = itemRequest.booleanValue,
-                notificationEnabled = itemRequest.notificationEnabled,
-                order = itemRequest.order,
-            )
-        }
+        val newConditions =
+            request.conditions.map { itemRequest ->
+                EventCondition(
+                    objectId = request.objectId,
+                    fieldKey = itemRequest.fieldKey,
+                    isActivate = itemRequest.isActivate,
+                    level = itemRequest.level,
+                    conditionType = itemRequest.conditionType,
+                    operator = itemRequest.operator,
+                    thresholdValue = itemRequest.thresholdValue,
+                    leftValue = itemRequest.leftValue,
+                    rightValue = itemRequest.rightValue,
+                    booleanValue = itemRequest.booleanValue,
+                    notificationEnabled = itemRequest.notificationEnabled,
+                    order = itemRequest.order,
+                )
+            }
 
         validateRangeOverlap(newConditions)
 
         // 저장
-        val savedConditions = newConditions.map { condition ->
-            eventConditionRepository.save(condition)
-        }
+        val savedConditions =
+            newConditions.map { condition ->
+                eventConditionRepository.save(condition)
+            }
 
         log.info { "EventCondition 일괄 수정 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
 
@@ -140,7 +144,7 @@ class EventConditionService(
                         "조건 범위가 겹칩니다. " +
                             "fieldKey='${condition1.fieldKey}', " +
                             "level1=${condition1.level} (${range1.first}~${range1.second}), " +
-                            "level2=${condition2.level} (${range2.first}~${range2.second})"
+                            "level2=${condition2.level} (${range2.first}~${range2.second})",
                     )
                 }
             }

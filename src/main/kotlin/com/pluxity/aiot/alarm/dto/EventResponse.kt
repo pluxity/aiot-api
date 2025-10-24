@@ -1,6 +1,9 @@
 package com.pluxity.aiot.alarm.dto
 
 import com.pluxity.aiot.alarm.entity.EventHistory
+import com.pluxity.aiot.data.dto.ListMetaData
+import com.pluxity.aiot.data.dto.ListMetricData
+import com.pluxity.aiot.data.dto.MetricDefinition
 
 data class EventResponse(
     val eventId: Long,
@@ -26,3 +29,18 @@ fun EventHistory.toEventResponse() =
         eventName = this.eventName,
         fieldKey = this.fieldKey,
     )
+
+data class EventTimeSeriesDataResponse(
+    val meta: ListMetaData,
+    val timestamps: List<String>,
+    val metrics: Map<String, ListMetricData>,
+)
+
+// 공통 메트릭 정의
+object EventMetrics {
+    val PENDING = MetricDefinition("pendingCnt", "건")
+    val WORKING = MetricDefinition("workingCnt", "건")
+    val COMPLETED = MetricDefinition("completedCnt", "건")
+
+    val ALL = listOf(PENDING, WORKING, COMPLETED)
+}

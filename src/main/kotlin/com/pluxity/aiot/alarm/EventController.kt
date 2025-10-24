@@ -1,7 +1,9 @@
 package com.pluxity.aiot.alarm
 
 import com.pluxity.aiot.alarm.dto.EventResponse
+import com.pluxity.aiot.alarm.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.alarm.entity.HistoryResult
+import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import io.swagger.v3.oas.annotations.Operation
@@ -73,4 +75,24 @@ class EventController(
         eventService.updateStatus(id, result)
         return ResponseEntity.noContent().build()
     }
+
+    @Operation(summary = "이벤트 통계 데이터 조회", description = "이벤트 통계 데이터 정보를 시간별로 조회합니다.")
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+            ),
+        ],
+    )
+    @GetMapping("/time-series")
+    fun getPeriodData(
+        @Parameter(description = "데이터 집계 간격", example = "HOUR")
+        @RequestParam(defaultValue = "HOUR", required = false) interval: DataInterval,
+        @Parameter(description = "조회 시작일(yyyyMMddHHmmss)", required = true)
+        @RequestParam("from") from: String,
+        @Parameter(description = "조회 종료일(yyyyMMddHHmmss)", required = true)
+        @RequestParam("to") to: String,
+    ): ResponseEntity<DataResponseBody<EventTimeSeriesDataResponse>> =
+        ResponseEntity.ok(DataResponseBody(eventService.getPeriodData(interval, from, to)))
 }

@@ -77,7 +77,6 @@ interface SensorDataProcessor {
         val notificationKey = "$deviceId:$eventName"
         val now = LocalDateTime.now()
 
-
         // 이벤트 이력 저장
         val eventHistory =
             eventHistoryRepository.save(
@@ -95,25 +94,9 @@ interface SensorDataProcessor {
                 ),
             )
 
-        actionHistoryService.createManualAction(
-            deviceId,
-            eventName,
-            eventHistory,
-            ActionHistory.ActionResult.PENDING,
-            false,
-            parsedDate.toString(),
-        )
-
-        eventHistory.changeActionResult("PENDING")
-        eventHistoryRepository.save(eventHistory)
-
-        // 현재 시간 업데이트 (알림 발생 시점 기록)
-        lastNotificationMap[notificationKey] = now
-
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
                     "$fieldUnit - $eventName"
-
 
         if (condition.notificationEnabled) {
             feature.site?.let {
@@ -133,7 +116,7 @@ interface SensorDataProcessor {
                         minValue = minValue,
                         maxValue = maxValue,
                         notificationEnabled = condition.notificationEnabled,
-                        actionResult = eventHistory.actionResult,
+                        actionResult = eventHistory.actionResult.name,
                     ),
                 )
             }
@@ -173,7 +156,7 @@ interface SensorDataProcessor {
             conditions
                 .filter { condition ->
                     condition.level != ConditionLevel.NORMAL
-                }.filter { it.isActivate }
+                }.filter { it.notificationEnabled }
                 .forEach { condition ->
                     if (isConditionMet(condition, value, fieldKey)) {
                         anyConditionMet[0] = true

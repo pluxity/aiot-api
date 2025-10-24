@@ -2,13 +2,11 @@ package com.pluxity.aiot.alarm.service.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
+import com.pluxity.aiot.alarm.entity.HistoryResult
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
-import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.kotest.core.spec.IsolationMode
@@ -26,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional
 @ActiveProfiles("test")
 @Transactional
 class FireAlarmProcessorTest(
-    deviceTypeRepository: DeviceTypeRepository,
-    deviceProfileRepository: DeviceProfileRepository,
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
@@ -44,8 +40,6 @@ class FireAlarmProcessorTest(
         // Helper 초기화
         val helper =
             FireAlarmProcessorTestHelper(
-                deviceTypeRepository,
-                deviceProfileRepository,
                 siteRepository,
                 featureRepository,
                 eventHistoryRepository,
@@ -63,7 +57,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
@@ -73,15 +66,15 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = true)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
+                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("화재 이벤트가 저장되고 AUTO로 처리된다") {
+                Then("화재 이벤트가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "DANGER_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe "PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
 
@@ -92,7 +85,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
@@ -102,7 +94,7 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = false)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
+                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
                 Then("이벤트가 발생하지 않고 NORMAL 상태") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
@@ -123,7 +115,6 @@ class FireAlarmProcessorTest(
                     helper.setupDeviceWithCondition(
                         objectId = "34956",
                         deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "false",
                         maxValue = null,
@@ -133,48 +124,15 @@ class FireAlarmProcessorTest(
                 val sensorData = helper.createSensorData(fireAlarm = false)
                 val processor = helper.createProcessor()
 
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
+                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("FireNormal 이벤트가 저장되고 MANUAL로 처리된다") {
+                Then("FireNormal 이벤트가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 0.0
                     eventHistories.first().eventName shouldBe "WARNING_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe "PENDING"
-                }
-            }
-        }
-
-        Given("화재 감지 센서: NotificationInterval 테스트") {
-            When("AUTO 조치 - 5분 내 재발생 시 IGNORED") {
-                val deviceId = "FIRE_INTERVAL_001"
-
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = "34956",
-                        deviceId = deviceId,
-                        profile = helper.fireAlarmProfile,
-                        eventLevel = ConditionLevel.DANGER,
-                        minValue = null,
-                        maxValue = null,
-                        isBoolean = true,
-                    )
-
-                val processor = helper.createProcessor()
-                val sensorData = helper.createSensorData(fireAlarm = true)
-
-                // 첫 번째 화재 감지
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
-
-                // 5분 내 두 번째 화재 감지
-                processor.process(deviceId, SensorType.fromObjectId(setup.deviceType.objectId), setup.siteId, sensorData)
-
-                Then("첫 번째는 AUTOMATIC_COMPLETED, 두 번째는 AUTOMATIC_IGNORED") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-                    eventHistories[0].actionResult shouldBe "PENDING"
-                    eventHistories[1].actionResult shouldBe "PENDING"
+                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
                 }
             }
         }

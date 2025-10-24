@@ -14,6 +14,28 @@
 <script>
     let stompClient;
 
+    const login = () => {
+        axios
+            .post(`http://${getServerInfo()}/auth/sign-in`,
+                {
+                    username: 'moon',
+                    password: 'qwer1234'
+                },
+                {
+                    headers: {
+                        "Content-Type": `application/json`,
+                    }
+                }
+            )
+            .then((response) => {
+                console.log(response);
+                stompInit();
+            })
+            .catch((error) => {
+                console.log("", error);
+            });
+    }
+
     const stompInit = () => {
         const socket = new WebSocket(`ws://${getServerInfo()}/stomp/platform`);
         stompClient = Stomp.over(socket);
@@ -36,16 +58,14 @@
             }));
         };
         const onError = (error) => console.log("connect error", error);
-        stompClient.connect({
-            Cookie: 'AccessToken=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb29uIiwiaWF0IjoxNzYwOTM0NjIwLCJleHAiOjE3OTY5MzQ2MjB9.QYHcUtgro4vsR-6aTyalg7Qc7XsTXAkCdj47sIFNTDg; RefreshToken=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb29uIiwiaWF0IjoxNzYwOTM0NjIwLCJleHAiOjI2MjQ5MzQ2MjB9.GIVEdm2ucIiC9nvJ3WHn2Vs-5s-z7SpgFfLr_hMMEsI'
-        }, onConnect, onError);
+        stompClient.connect({}, onConnect, onError);
     };
 
     const getServerInfo = () => {
         return `${window.location.hostname}:${window.location.port}`
     }
 
-    stompInit();
+    login();
 </script>
 </body>
 </html>

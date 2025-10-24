@@ -4,16 +4,12 @@ import com.influxdb.client.WriteApi
 import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.alarm.dto.SubscriptionConResponse
 import com.pluxity.aiot.alarm.repository.EventHistoryRepository
+import com.pluxity.aiot.alarm.type.SensorType
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfile
-import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfileType
-import com.pluxity.aiot.system.device.type.DeviceType
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.ConditionLevel
 import com.pluxity.aiot.system.event.condition.ConditionType
 import com.pluxity.aiot.system.event.condition.EventCondition
@@ -92,6 +88,9 @@ fun convertLegacyConditionParams(
         }
     }
 
+/**
+ * EventCondition.ConditionLevel을 ConditionLevel로 변환
+ */
 fun mapDeviceEventLevelToConditionLevel(eventLevel: ConditionLevel): ConditionLevel =
     when (eventLevel) {
         ConditionLevel.NORMAL -> ConditionLevel.NORMAL
@@ -101,9 +100,10 @@ fun mapDeviceEventLevelToConditionLevel(eventLevel: ConditionLevel): ConditionLe
         ConditionLevel.DISCONNECTED -> ConditionLevel.DISCONNECTED
     }
 
+/**
+ * 센서 데이터 Processor 테스트를 위한 공통 헬퍼 클래스
+ */
 abstract class ProcessorTestHelper(
-    val deviceTypeRepository: DeviceTypeRepository,
-    protected val deviceProfileRepository: DeviceProfileRepository,
     val siteRepository: SiteRepository,
     val featureRepository: FeatureRepository,
     protected val eventHistoryRepository: EventHistoryRepository,
@@ -112,90 +112,60 @@ abstract class ProcessorTestHelper(
     protected val messageSenderMock: StompMessageSender,
     protected val writeApiMock: WriteApi,
 ) {
-    private val profileCache = mutableMapOf<String, DeviceProfile>()
-
-    fun getOrCreateProfile(
-        fieldKey: String,
-        description: String,
-        fieldUnit: String,
-        fieldType: DeviceProfile.FieldType,
-    ): DeviceProfile =
-        profileCache.getOrPut(fieldKey) {
-            deviceProfileRepository.findAll().firstOrNull { it.fieldKey == fieldKey }
-                ?: deviceProfileRepository.save(
-                    DeviceProfile(
-                        fieldKey = fieldKey,
-                        description = description,
-                        fieldUnit = fieldUnit,
-                        fieldType = fieldType,
-                    ),
-                )
-        }
-
+    /**
+     * 테스트용 DeviceType + EventCondition 생성
+     */
     fun setupDeviceWithCondition(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         eventLevel: ConditionLevel,
         minValue: String? = null,
         maxValue: String? = null,
         isBoolean: Boolean = false,
     ): TestSetup {
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType =
-                        DeviceType(
-                            objectId = objectId,
-                            description = "$objectId Description",
-                            version = "1.0",
-                        )
-                    val deviceProfileType =
-                        DeviceProfileType(
-                            deviceProfile = profile,
-                            deviceType = newDeviceType,
-                        )
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
+        val sensorType = SensorType.fromObjectId(objectId)
 
+        // 2. 기존 EventCondition 삭제 (테스트 격리 - 같은 objectId로 중복 생성 방지)
         eventConditionRepository.deleteAllByObjectId(objectId)
 
-        val (conditionType, operator, thresholdValue, leftValue, rightValue, booleanValue) =
-            convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        // 3. EventCondition 생성 및 저장
+        val params = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
+                fieldKey = sensorType.deviceProfiles.first().fieldKey,
                 objectId = objectId,
-                fieldKey = profile.fieldKey,
                 isActivate = true,
                 level = level,
-                conditionType = conditionType,
-                operator = operator,
-                thresholdValue = thresholdValue,
-                leftValue = leftValue,
-                rightValue = rightValue,
-                booleanValue = booleanValue,
+                conditionType = params.conditionType,
+                operator = params.operator,
+                thresholdValue = params.thresholdValue,
+                leftValue = params.leftValue,
+                rightValue = params.rightValue,
+                booleanValue = params.booleanValue,
                 notificationEnabled = true,
                 order = 1,
             )
         eventConditionRepository.save(condition)
 
-        val savedDeviceType = deviceType
-        val site = siteRepository.save(SiteFixture.create(name = "Test Site $deviceId"))
+        // 7. Site & Feature 생성
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
                 objectId = objectId,
-                name = "$objectId Sensor",
+                name = "$objectId 센서",
                 site = site,
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
+    /**
+     * 더미 센서 데이터 생성
+     */
     fun createSensorData(
         temperature: Double? = null,
         humidity: Double? = null,
@@ -214,49 +184,43 @@ abstract class ProcessorTestHelper(
             angleY = angleY,
         )
 
+    /**
+     * notificationEnabled = false로 설정된 DeviceType 생성
+     */
     fun setupDeviceWithDisabledEvent(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         eventLevel: ConditionLevel,
         minValue: String?,
         maxValue: String?,
         isBoolean: Boolean = false,
     ): TestSetup {
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType = DeviceType(objectId = objectId, description = "$objectId Description", version = "1.0")
-                    val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
+        val sensorType = SensorType.fromObjectId(objectId)
 
+        // 기존 EventCondition 삭제 (테스트 격리)
         eventConditionRepository.deleteAllByObjectId(objectId)
 
-        val (conditionType, operator, thresholdValue, leftValue, rightValue, booleanValue) =
-            convertLegacyConditionParams(isBoolean, minValue, maxValue)
+        val params = convertLegacyConditionParams(isBoolean, minValue, maxValue)
         val level = mapDeviceEventLevelToConditionLevel(eventLevel)
 
         val condition =
             EventCondition(
+                fieldKey = sensorType.deviceProfiles.first().fieldKey,
                 objectId = objectId,
-                fieldKey = profile.fieldKey,
                 isActivate = true,
                 level = level,
-                conditionType = conditionType,
-                operator = operator,
-                thresholdValue = thresholdValue,
-                leftValue = leftValue,
-                rightValue = rightValue,
-                booleanValue = booleanValue,
+                conditionType = params.conditionType,
+                operator = params.operator,
+                thresholdValue = params.thresholdValue,
+                leftValue = params.leftValue,
+                rightValue = params.rightValue,
+                booleanValue = params.booleanValue,
                 notificationEnabled = false,
                 order = 1,
             )
         eventConditionRepository.save(condition)
 
-        val savedDeviceType = deviceType
-        val site = siteRepository.save(SiteFixture.create(name = "Test Site $deviceId"))
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
@@ -266,28 +230,23 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
+    /**
+     * 여러 EventCondition을 가진 복합 DeviceType 생성
+     */
     fun setupDeviceWithMultipleConditions(
         objectId: String,
         deviceId: String,
-        profile: DeviceProfile,
         conditions: List<ConditionSpec>,
     ): TestSetup {
-        val deviceType =
-            deviceTypeRepository.findAll().firstOrNull { it.objectId == objectId }
-                ?: run {
-                    val newDeviceType = DeviceType(objectId = objectId, description = "$objectId Description", version = "1.0")
-                    val deviceProfileType = DeviceProfileType(deviceProfile = profile, deviceType = newDeviceType)
-                    newDeviceType.deviceProfileTypes.add(deviceProfileType)
-                    deviceTypeRepository.save(newDeviceType)
-                }
-
+        val sensorType = SensorType.fromObjectId(objectId)
+        // 기존 EventCondition 삭제 (테스트 격리)
         eventConditionRepository.deleteAllByObjectId(objectId)
 
         conditions.forEachIndexed { index, spec ->
-            val (conditionType, operator, thresholdValue, leftValue, rightValue, booleanValue) =
+            val params =
                 convertLegacyConditionParams(
                     spec.isBoolean,
                     spec.minValue,
@@ -297,24 +256,23 @@ abstract class ProcessorTestHelper(
 
             val condition =
                 EventCondition(
+                    fieldKey = sensorType.deviceProfiles.first().fieldKey,
                     objectId = objectId,
-                    fieldKey = profile.fieldKey,
                     isActivate = true,
                     level = level,
-                    conditionType = conditionType,
-                    operator = operator,
-                    thresholdValue = thresholdValue,
-                    leftValue = leftValue,
-                    rightValue = rightValue,
-                    booleanValue = booleanValue,
+                    conditionType = params.conditionType,
+                    operator = params.operator,
+                    thresholdValue = params.thresholdValue,
+                    leftValue = params.leftValue,
+                    rightValue = params.rightValue,
+                    booleanValue = params.booleanValue,
                     notificationEnabled = spec.notificationEnabled,
                     order = index + 1,
                 )
             eventConditionRepository.save(condition)
         }
 
-        val savedDeviceType = deviceType
-        val site = siteRepository.save(SiteFixture.create(name = "Test Site $deviceId"))
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
         featureRepository.save(
             FeatureFixture.create(
                 deviceId = deviceId,
@@ -324,11 +282,10 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(savedDeviceType, site.id!!)
+        return TestSetup(sensorType, site.id!!)
     }
 
     data class ConditionSpec(
-        val eventName: String,
         val eventLevel: ConditionLevel,
         val minValue: String?,
         val maxValue: String?,
@@ -339,7 +296,7 @@ abstract class ProcessorTestHelper(
     )
 
     data class TestSetup(
-        val deviceType: DeviceType,
+        val sensorType: SensorType,
         val siteId: Long,
     )
 }

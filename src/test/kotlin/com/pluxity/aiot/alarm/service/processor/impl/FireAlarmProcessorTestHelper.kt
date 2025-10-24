@@ -7,17 +7,12 @@ import com.pluxity.aiot.alarm.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
-import com.pluxity.aiot.system.device.profile.DeviceProfile
-import com.pluxity.aiot.system.device.profile.DeviceProfileRepository
-import com.pluxity.aiot.system.device.type.DeviceTypeRepository
 import com.pluxity.aiot.system.event.condition.EventConditionRepository
 
 /**
  * FireAlarmProcessor 테스트를 위한 헬퍼 클래스
  */
 class FireAlarmProcessorTestHelper(
-    deviceTypeRepository: DeviceTypeRepository,
-    deviceProfileRepository: DeviceProfileRepository,
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
@@ -26,8 +21,6 @@ class FireAlarmProcessorTestHelper(
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
 ) : ProcessorTestHelper(
-        deviceTypeRepository,
-        deviceProfileRepository,
         siteRepository,
         featureRepository,
         eventHistoryRepository,
@@ -37,23 +30,11 @@ class FireAlarmProcessorTestHelper(
         writeApiMock,
     ) {
     /**
-     * FireAlarm DeviceProfile (공유)
-     */
-    val fireAlarmProfile: DeviceProfile by lazy {
-        getOrCreateProfile(
-            fieldKey = "Fire Alarm",
-            description = "화재감지",
-            fieldUnit = "boolean",
-            fieldType = DeviceProfile.FieldType.Boolean,
-        )
-    }
-
-    /**
      * FireAlarmProcessor 인스턴스 생성
      */
     fun createProcessor(): FireAlarmProcessor =
         FireAlarmProcessor(
-            this@FireAlarmProcessorTestHelper.messageSenderMock,
+            messageSenderMock,
             eventHistoryRepository,
             actionHistoryService,
             featureRepository,

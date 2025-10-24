@@ -1,7 +1,7 @@
 package com.pluxity.aiot.system.device.type.dto
 
 import com.pluxity.aiot.alarm.type.SensorType
-import com.pluxity.aiot.system.device.profile.dto.DeviceProfileResponse
+import com.pluxity.aiot.system.device.type.dto.DeviceProfileResponse
 
 data class DeviceTypeResponse(
     var id: Long,

@@ -41,7 +41,7 @@ class Feature(
     @JoinColumn(name = "site_id")
     var site: Site? = null,
     @Column
-    private var subscriptionTime: LocalDateTime? = null,
+    var subscriptionTime: LocalDateTime? = null,
 ) : BaseEntity() {
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive

@@ -270,6 +270,7 @@ class AiotService(
             featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
         // 구독 시간 업데이트
         feature.updateSubscriptionTime(LocalDateTime.now())
+        featureRepository.save(feature)
         log.info { "Updated subscription time for Feature $deviceId" }
     }
 
@@ -338,7 +339,7 @@ class AiotService(
         val subscriptionUrl = getSubscriptionUrl()
         log.info { "Setting up subscriptions for active Features using URL: $subscriptionUrl" }
 
-        activeFeatures.forEach { feature ->
+        activeFeatures.filter { it.deviceId == "SNIOT-P-TST-007" }.forEach { feature ->
             setupSubscriptionForFeature(feature.deviceId, feature.objectId, subscriptionUrl)
         }
     }

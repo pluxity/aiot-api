@@ -339,7 +339,7 @@ class AiotService(
         val subscriptionUrl = getSubscriptionUrl()
         log.info { "Setting up subscriptions for active Features using URL: $subscriptionUrl" }
 
-        activeFeatures.filter { it.deviceId == "SNIOT-P-TST-007" }.forEach { feature ->
+        activeFeatures.forEach { feature ->
             setupSubscriptionForFeature(feature.deviceId, feature.objectId, subscriptionUrl)
         }
     }

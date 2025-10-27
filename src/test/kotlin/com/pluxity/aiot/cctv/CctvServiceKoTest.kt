@@ -18,7 +18,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.springframework.data.repository.findByIdOrNull
 
-class CctvServiceTest :
+class CctvServiceKoTest :
     BehaviorSpec({
         val cctvRepository: CctvRepository = mockk()
         val siteRepository: SiteRepository = mockk(relaxed = true)

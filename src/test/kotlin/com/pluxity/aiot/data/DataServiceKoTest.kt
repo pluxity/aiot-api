@@ -23,7 +23,7 @@ import io.mockk.mockk
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-class DataServiceTest :
+class DataServiceKoTest :
     BehaviorSpec({
 
         val influxdbProperties: InfluxdbProperties =

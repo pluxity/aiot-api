@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import java.time.LocalDateTime
 
-class EventServiceTest :
+class EventServiceKoTest :
     BehaviorSpec({
 
         val eventHistoryRepository: EventHistoryRepository = mockk()

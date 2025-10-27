@@ -15,7 +15,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import org.springframework.data.repository.findByIdOrNull
 
-class ActionHistoryServiceTest :
+class ActionHistoryServiceKoTest :
     BehaviorSpec({
 
         val actionHistoryRepository: ActionHistoryRepository = mockk()

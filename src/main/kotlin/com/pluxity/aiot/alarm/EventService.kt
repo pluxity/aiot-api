@@ -88,7 +88,7 @@ class EventService(
         return result.toDeviceListDataResponse(interval, timeRange)
     }
 
-    private data class EventListDto(
+    data class EventListDto(
         val bucketStart: String, // date_trunc로 만든 버킷 시작 시각
         val pendingCnt: Int,
         val workingCnt: Int,

@@ -284,14 +284,11 @@ class AiotService(
             .uri(uri)
             .header("Content-Type", "application/json;ty=23")
             .bodyValue(body)
-            .exchangeToMono { response ->
-                val isSuccess = response.statusCode().is2xxSuccessful
-                response.bodyToMono<String>().doOnNext { body ->
-                    log.info { "'$uri/$subscriptionName' Subscribe Result(${response.statusCode()}) : '$body'" }
-                    if (isSuccess) {
-                        updateFeatureSubscriptionTime(deviceId)
-                    }
-                }
+            .retrieve() // <- 여기서 비-2xx면 WebClientResponseException 던짐
+            .bodyToMono(String::class.java)
+            .doOnNext { respBody ->
+                log.info { "'$uri/$subscriptionName' Subscribe Result : '$respBody'" }
+                updateFeatureSubscriptionTime(deviceId)
             }.block()
     }
 

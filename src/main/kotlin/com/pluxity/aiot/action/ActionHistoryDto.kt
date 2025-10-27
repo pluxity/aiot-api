@@ -33,5 +33,5 @@ data class ActionHistoryRequest(
     @field:NotBlank(message = "조치 내역은 필수입니다")
     var content: String,
     @field:Schema(description = "파일 ID", example = "1")
-    var fileIds: List<Long>?,
+    var fileIds: List<Long>? = null,
 )

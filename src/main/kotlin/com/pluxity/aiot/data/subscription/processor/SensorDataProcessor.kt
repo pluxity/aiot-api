@@ -258,6 +258,7 @@ interface SensorDataProcessor {
                     Operator.GE -> value >= threshold
                     Operator.LE -> value <= threshold
                     Operator.BETWEEN -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "BETWEEN not allowed for SINGLE type")
+                    else -> false
                 }
             }
 
@@ -274,6 +275,7 @@ interface SensorDataProcessor {
                     else -> throw CustomException(ErrorCode.NOT_SUPPORTED_OPERATOR, "${condition.operator} not allowed for RANGE type")
                 }
             }
+            else -> false
         }
     }
 

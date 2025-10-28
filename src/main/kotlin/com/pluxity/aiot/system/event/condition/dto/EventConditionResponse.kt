@@ -10,15 +10,14 @@ data class EventConditionResponse(
     val objectId: String,
     val fieldKey: String,
     val level: ConditionLevel,
-    val conditionType: ConditionType,
-    val operator: Operator,
+    val conditionType: ConditionType?,
+    val operator: Operator?,
     val thresholdValue: Double?,
     val leftValue: Double?,
     val rightValue: Double?,
     val booleanValue: Boolean?,
     val isActivate: Boolean,
     val notificationEnabled: Boolean,
-    val order: Int?,
 )
 
 fun EventCondition.toEventConditionResponse() =
@@ -35,5 +34,4 @@ fun EventCondition.toEventConditionResponse() =
         booleanValue = this.booleanValue,
         isActivate = this.isActivate,
         notificationEnabled = this.notificationEnabled,
-        order = this.order,
     )

@@ -52,7 +52,6 @@ class EventConditionService(
                     rightValue = itemRequest.rightValue,
                     booleanValue = itemRequest.booleanValue,
                     notificationEnabled = itemRequest.notificationEnabled,
-                    order = itemRequest.order,
                 )
             }
 
@@ -91,7 +90,6 @@ class EventConditionService(
                     rightValue = itemRequest.rightValue,
                     booleanValue = itemRequest.booleanValue,
                     notificationEnabled = itemRequest.notificationEnabled,
-                    order = itemRequest.order,
                 )
             }
 

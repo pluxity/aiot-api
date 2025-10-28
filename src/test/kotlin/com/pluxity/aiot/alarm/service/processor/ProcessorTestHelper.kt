@@ -145,7 +145,6 @@ abstract class ProcessorTestHelper(
                 rightValue = params.rightValue,
                 booleanValue = params.booleanValue,
                 notificationEnabled = true,
-                order = 1,
             )
         eventConditionRepository.save(condition)
 
@@ -216,7 +215,6 @@ abstract class ProcessorTestHelper(
                 rightValue = params.rightValue,
                 booleanValue = params.booleanValue,
                 notificationEnabled = false,
-                order = 1,
             )
         eventConditionRepository.save(condition)
 
@@ -267,7 +265,6 @@ abstract class ProcessorTestHelper(
                     rightValue = params.rightValue,
                     booleanValue = params.booleanValue,
                     notificationEnabled = spec.notificationEnabled,
-                    order = index + 1,
                 )
             eventConditionRepository.save(condition)
         }

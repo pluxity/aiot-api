@@ -22,17 +22,15 @@ class EventCondition(
     @Column(name = "is_active")
     var isActivate: Boolean = false,
     var notificationEnabled: Boolean = false,
-    @Column(name = "condition_order")
-    var order: Int? = null,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var level: ConditionLevel,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var conditionType: ConditionType,
+    var conditionType: ConditionType?,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var operator: Operator,
+    var operator: Operator?,
     @Column(name = "threshold_value")
     var thresholdValue: Double? = null,
     @Column(name = "left_value")
@@ -43,9 +41,6 @@ class EventCondition(
     var booleanValue: Boolean? = null,
 ) {
     init {
-        if (order == null) {
-            this.order = getDefaultOrderByDeviceLevel()
-        }
         validate()
     }
 
@@ -114,7 +109,6 @@ class EventCondition(
         rightValue: Double?,
         booleanValue: Boolean?,
         notificationEnabled: Boolean,
-        order: Int?,
     ) {
         this.objectId = objectId
         this.fieldKey = fieldKey
@@ -127,7 +121,6 @@ class EventCondition(
         this.rightValue = rightValue
         this.booleanValue = booleanValue
         this.notificationEnabled = notificationEnabled
-        this.order = order ?: this.order
 
         validate()
     }

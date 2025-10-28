@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
+@Transactional(readOnly = true)
 class SiteService(
     private val siteRepository: SiteRepository,
 ) {
@@ -33,10 +34,8 @@ class SiteService(
         return siteRepository.save(site).id!!
     }
 
-    @Transactional(readOnly = true)
     fun findAll(): List<SiteResponse> = siteRepository.findAllByOrderByCreatedAtDesc().map { it.toSiteResponse() }
 
-    @Transactional(readOnly = true)
     fun findByIdResponse(id: Long): SiteResponse = findById(id).toSiteResponse()
 
     @Transactional
@@ -69,4 +68,16 @@ class SiteService(
         siteRepository
             .findByIdOrNull(id)
             ?: throw CustomException(NOT_FOUND_SITE, id)
+
+    fun findByIds(ids: List<Long>): List<Site> {
+        val sites = siteRepository.findAllById(ids)
+        val foundSiteIds = sites.map { it.id }
+        val missingSiteIds = ids.filter { it !in foundSiteIds }
+
+        if (missingSiteIds.isNotEmpty()) {
+            throw CustomException(NOT_FOUND_SITE, missingSiteIds.first())
+        }
+
+        return sites
+    }
 }

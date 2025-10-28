@@ -1,6 +1,7 @@
 package com.pluxity.aiot.global.utils
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -9,6 +10,8 @@ import java.time.format.DateTimeFormatter
 
 object DateTimeUtils {
     private val formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
+    private val formatterCompactDate = DateTimeFormatter.ofPattern("yyyyMMdd")
+    private val formatterCompactDateTime = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
 
     fun parseUtc(input: String): Instant {
         val ldt = LocalDateTime.parse(input, formatter)
@@ -29,4 +32,8 @@ object DateTimeUtils {
         val zonedKST = ZonedDateTime.of(localDateTime, ZoneId.of("Asia/Seoul"))
         return zonedKST.toInstant()
     }
+
+    fun parseCompactDate(dateString: String): LocalDate = LocalDate.parse(dateString, formatterCompactDate)
+
+    fun parseCompactDateTime(dateTimeString: String): LocalDateTime = LocalDateTime.parse(dateTimeString, formatterCompactDateTime)
 }

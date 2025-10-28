@@ -38,10 +38,6 @@ class DataService(
     private val featureService: FeatureService,
     private val siteService: SiteService,
 ) {
-    companion object {
-        private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-    }
-
     @Transactional(readOnly = true)
     fun getFeatureTimeSeries(
         deviceId: String,
@@ -137,8 +133,8 @@ class DataService(
 
     private fun Pair<String, String>.parseTimeRange(): Pair<LocalDateTime, LocalDateTime> =
         Pair(
-            LocalDateTime.parse(first, FORMATTER),
-            LocalDateTime.parse(second, FORMATTER),
+            DateTimeUtils.parseCompactDateTime(first),
+            DateTimeUtils.parseCompactDateTime(second),
         )
 
     private fun makeClimateData(

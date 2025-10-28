@@ -14,6 +14,7 @@ import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.site.SiteRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -29,10 +30,6 @@ class EventService(
     private val siteRepository: SiteRepository,
     private val jdbcTemplate: NamedParameterJdbcTemplate,
 ) {
-    companion object {
-        val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-    }
-
     fun findAll(
         from: String?,
         to: String?,
@@ -140,7 +137,7 @@ class EventService(
 
     private fun Pair<String, String>.parseTimeRange(): Pair<LocalDateTime, LocalDateTime> =
         Pair(
-            LocalDateTime.parse(first, FORMATTER),
-            LocalDateTime.parse(second, FORMATTER),
+            DateTimeUtils.parseCompactDateTime(first),
+            DateTimeUtils.parseCompactDateTime(second),
         )
 }

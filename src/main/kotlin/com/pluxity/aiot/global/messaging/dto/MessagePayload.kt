@@ -24,6 +24,7 @@ data class SensorAlarmPayload(
     val eventName: String,
     val minValue: Double,
     val maxValue: Double,
-    val notificationEnabled: Boolean,
     val actionResult: String,
+    val lon: Double,
+    val lat: Double,
 )

@@ -109,8 +109,9 @@ interface SensorDataProcessor {
                         unit = fieldUnit,
                         minValue = minValue,
                         maxValue = maxValue,
-                        notificationEnabled = condition.notificationEnabled,
                         actionResult = eventHistory.actionResult.name,
+                        lon = feature.longitude!!,
+                        lat = feature.latitude!!,
                     ),
                 )
             }

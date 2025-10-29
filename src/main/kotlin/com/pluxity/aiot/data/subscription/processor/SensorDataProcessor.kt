@@ -151,7 +151,7 @@ interface SensorDataProcessor {
             conditions
                 .filter { condition ->
                     condition.level != ConditionLevel.NORMAL
-                }.filter { it.notificationEnabled }
+                }.filter { it.isActivate }
                 .forEach { condition ->
                     if (isConditionMet(condition, value, fieldKey)) {
                         anyConditionMet[0] = true

@@ -2,10 +2,10 @@ package com.pluxity.aiot.feature.dto
 
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.sensor.type.SensorType
+import com.pluxity.aiot.sensor.type.dto.DeviceTypeResponse
+import com.pluxity.aiot.sensor.type.dto.toDeviceTypeResponse
 import com.pluxity.aiot.site.dto.SiteResponse
 import com.pluxity.aiot.site.dto.toSiteResponse
-import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
-import com.pluxity.aiot.system.device.type.dto.toDeviceTypeResponse
 
 data class FeatureResponse(
     val id: Long,

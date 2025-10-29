@@ -1,10 +1,10 @@
 package com.pluxity.aiot.feature.dto
 
 import com.pluxity.aiot.sensor.type.FieldType
+import com.pluxity.aiot.sensor.type.dto.DeviceProfileResponse
+import com.pluxity.aiot.sensor.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.site.dto.SiteResponse
 import com.pluxity.aiot.site.dto.dummySiteResponse
-import com.pluxity.aiot.system.device.type.dto.DeviceProfileResponse
-import com.pluxity.aiot.system.device.type.dto.DeviceTypeResponse
 
 fun dummyFeatureResponse(
     id: Long = 1L,

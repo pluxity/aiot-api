@@ -1,8 +1,8 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.alarm.entity.EventHistory
-import com.pluxity.aiot.alarm.entity.HistoryResult
-import com.pluxity.aiot.alarm.repository.EventHistoryRepository
+import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.file.extensions.getFileMapById
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode

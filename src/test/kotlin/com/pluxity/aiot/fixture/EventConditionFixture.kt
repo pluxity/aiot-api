@@ -1,9 +1,9 @@
 package com.pluxity.aiot.fixture
 
-import com.pluxity.aiot.system.event.condition.ConditionLevel
-import com.pluxity.aiot.system.event.condition.ConditionType
-import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.condition.Operator
+import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
+import com.pluxity.aiot.event.condition.Operator
 
 object EventConditionFixture {
     fun create(

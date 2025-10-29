@@ -5,9 +5,9 @@ import com.pluxity.aiot.file.dto.FileResponse
 import com.pluxity.aiot.file.dto.toFileResponse
 import com.pluxity.aiot.file.entity.FileEntity
 import com.pluxity.aiot.file.repository.FileRepository
-import com.pluxity.aiot.file.strategy.storage.FilePersistenceContext
-import com.pluxity.aiot.file.strategy.storage.FileProcessingContext
-import com.pluxity.aiot.file.strategy.storage.StorageStrategy
+import com.pluxity.aiot.file.strategy.FilePersistenceContext
+import com.pluxity.aiot.file.strategy.FileProcessingContext
+import com.pluxity.aiot.file.strategy.StorageStrategy
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.FileProperties

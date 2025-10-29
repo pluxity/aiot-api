@@ -1,6 +1,6 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.alarm.entity.EventHistory
+import com.pluxity.aiot.event.entity.EventHistory
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface ActionHistoryRepository : JpaRepository<ActionHistory, Long> {

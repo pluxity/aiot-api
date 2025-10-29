@@ -2,7 +2,7 @@ package com.pluxity.aiot.action
 
 import com.pluxity.aiot.action.entity.dummyActionHistory
 import com.pluxity.aiot.action.entity.dummyEventHistory
-import com.pluxity.aiot.alarm.repository.EventHistoryRepository
+import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException

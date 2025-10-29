@@ -2,9 +2,9 @@ package com.pluxity.aiot.global.config
 
 import com.pluxity.aiot.file.repository.FileRepository
 import com.pluxity.aiot.file.service.FileService
-import com.pluxity.aiot.file.strategy.storage.LocalStorageStrategy
-import com.pluxity.aiot.file.strategy.storage.S3StorageStrategy
-import com.pluxity.aiot.file.strategy.storage.StorageStrategy
+import com.pluxity.aiot.file.strategy.LocalStorageStrategy
+import com.pluxity.aiot.file.strategy.S3StorageStrategy
+import com.pluxity.aiot.file.strategy.StorageStrategy
 import com.pluxity.aiot.global.properties.FileProperties
 import com.pluxity.aiot.global.properties.S3Properties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty

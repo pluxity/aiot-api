@@ -1,7 +1,7 @@
 package com.pluxity.aiot.sensor.type
 
 import com.pluxity.aiot.data.dto.MetricDefinition
-import com.pluxity.aiot.system.device.type.dto.DeviceProfileResponse
+import com.pluxity.aiot.sensor.type.dto.DeviceProfileResponse
 
 enum class SensorType(
     val id: Long,

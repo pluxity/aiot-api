@@ -3,15 +3,15 @@ package com.pluxity.aiot.data.subscription.processor.impl
 import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.action.ActionHistoryService
-import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.data.measure.TemperatureHumidity
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
+import com.pluxity.aiot.event.condition.EventConditionRepository
+import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.system.event.condition.EventConditionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 

@@ -1,9 +1,14 @@
 package com.pluxity.aiot.data.subscription.processor
 
 import com.pluxity.aiot.action.ActionHistoryService
-import com.pluxity.aiot.alarm.entity.EventHistory
-import com.pluxity.aiot.alarm.repository.EventHistoryRepository
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
+import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
+import com.pluxity.aiot.event.condition.EventConditionRepository
+import com.pluxity.aiot.event.condition.Operator
+import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.constant.ErrorCode
@@ -12,11 +17,6 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.system.event.condition.ConditionLevel
-import com.pluxity.aiot.system.event.condition.ConditionType
-import com.pluxity.aiot.system.event.condition.EventCondition
-import com.pluxity.aiot.system.event.condition.EventConditionRepository
-import com.pluxity.aiot.system.event.condition.Operator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime

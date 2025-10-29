@@ -1,9 +1,9 @@
 package com.pluxity.aiot.action.entity
 
 import com.pluxity.aiot.action.ActionHistory
-import com.pluxity.aiot.alarm.entity.EventHistory
-import com.pluxity.aiot.alarm.entity.HistoryResult
 import com.pluxity.aiot.base.entity.withAudit
+import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.entity.HistoryResult
 import java.time.LocalDateTime
 
 fun dummyActionHistory(

@@ -5,11 +5,11 @@ import com.influxdb.client.QueryApi
 import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.data.AiotService
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.system.event.condition.ConditionLevel
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

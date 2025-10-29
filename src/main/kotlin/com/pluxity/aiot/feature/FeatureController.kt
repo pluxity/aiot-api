@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -61,9 +62,18 @@ class FeatureController(
     )
     @GetMapping
     fun findAll(
-        @Parameter(description = "검색 조건") searchCondition: FeatureSearchCondition,
+        @Parameter(description = "현장 아이디")
+        @RequestParam("siteId") siteId: Long? = null,
+        @Parameter(description = "디바이스 object 아이디")
+        @RequestParam("objectId") objectId: String? = null,
+        @Parameter(description = "이름")
+        @RequestParam("name") name: String? = null,
+        @Parameter(description = "디바이스 아이디")
+        @RequestParam("deviceId") deviceId: String? = null,
+        @Parameter(description = "활성화여부")
+        @RequestParam("isActive") isActive: Boolean? = null,
     ): ResponseEntity<DataResponseBody<List<FeatureResponse>>> =
-        ResponseEntity.ok(DataResponseBody(featureService.findAll(searchCondition)))
+        ResponseEntity.ok(DataResponseBody(featureService.findAll(FeatureSearchCondition(siteId, objectId, name, deviceId, isActive))))
 
     @Operation(summary = "피처 정보 수정", description = "피처 정보를 수정합니다")
     @ApiResponses(

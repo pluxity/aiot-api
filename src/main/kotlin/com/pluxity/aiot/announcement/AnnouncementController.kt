@@ -7,6 +7,7 @@ import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.global.response.PageResponse
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -76,6 +78,31 @@ class AnnouncementController(
         ],
     )
     @GetMapping
-    fun findAll(request: SearchRequest): ResponseEntity<DataResponseBody<PageResponse<AnnouncementResponse>>> =
-        ResponseEntity.ok(DataResponseBody(announcementService.findAll(request)))
+    fun findAll(
+        @Parameter(description = "조회 페이지번호", example = "1")
+        @RequestParam("page") page: Int = 1,
+        @Parameter(description = "페이지당 개수", example = "10")
+        @RequestParam("size") size: Int = 10,
+        @Parameter(
+            description = "시작일",
+            example = "20251001",
+        )
+        @RequestParam("from") from: String? = null,
+        @Parameter(
+            description = "종료일",
+            example = "20251001",
+        )
+        @RequestParam("to") to: String? = null,
+        @Parameter(
+            description = "송출자 아이디",
+            example = "admin",
+        )
+        @RequestParam("userId") userId: String? = null,
+        @Parameter(
+            description = "현장 아이디",
+            example = "1",
+        )
+        @RequestParam("siteId") siteId: Long? = null,
+    ): ResponseEntity<DataResponseBody<PageResponse<AnnouncementResponse>>> =
+        ResponseEntity.ok(DataResponseBody(announcementService.findAll(SearchRequest(page, size, from, to, userId, siteId))))
 }

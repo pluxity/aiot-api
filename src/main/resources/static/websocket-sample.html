@@ -8,7 +8,6 @@
 <div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
 <script>
@@ -41,15 +40,10 @@
         stompClient = Stomp.over(socket);
 
         const onConnect = async (payload) => {
-            console.log(payload)
-
             stompClient.subscribe(`/user/queue/connection-error`, function (data) {
                 console.log(data)
             });
 
-            // stompClient.subscribe(`/topic/aa`, function (data) {
-            //     console.log(data)
-            // });
             stompClient.send(`/app/test/connection-error`, {}, JSON.stringify({
                 siteId: 1,
                 deviceId: 'SNIOT-P-FIR-002',

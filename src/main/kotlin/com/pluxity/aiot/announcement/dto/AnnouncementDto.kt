@@ -23,35 +23,11 @@ data class BroadcastRequest(
 )
 
 data class SearchRequest(
-    @field:Schema(
-        description = "조회 페이지번호",
-        example = "1",
-    )
     val page: Int = 1,
-    @field:Schema(
-        description = "페이지당 개수",
-        example = "10",
-    )
     val size: Int = 10,
-    @field:Schema(
-        description = "시작일",
-        example = "20251001",
-    )
     val from: String? = null,
-    @field:Schema(
-        description = "종료일",
-        example = "20251001",
-    )
     val to: String? = null,
-    @field:Schema(
-        description = "송출자 아이디",
-        example = "admin",
-    )
     val userId: String? = null,
-    @field:Schema(
-        description = "현장 아이디",
-        example = "1",
-    )
     val siteId: Long? = null,
 )
 

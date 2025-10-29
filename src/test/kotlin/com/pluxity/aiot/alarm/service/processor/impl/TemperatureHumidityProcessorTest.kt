@@ -537,9 +537,9 @@ class TemperatureHumidityProcessorTest(
 
                 processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("notificationEnabled = false이므로 이벤트가 발생하지 않는다") {
+                Then("notificationEnabled = false여도 EventHistory가 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
+                    eventHistories shouldHaveSize 1
                 }
             }
         }

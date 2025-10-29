@@ -206,7 +206,7 @@ abstract class ProcessorTestHelper(
             EventCondition(
                 fieldKey = sensorType.deviceProfiles.first().fieldKey,
                 objectId = objectId,
-                isActivate = true,
+                isActivate = false,
                 level = level,
                 conditionType = params.conditionType,
                 operator = params.operator,

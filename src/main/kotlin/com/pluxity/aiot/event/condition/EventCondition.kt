@@ -26,10 +26,8 @@ class EventCondition(
     @Column(nullable = false)
     var level: ConditionLevel,
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     var conditionType: ConditionType?,
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     var operator: Operator?,
     @Column(name = "threshold_value")
     var thresholdValue: Double? = null,

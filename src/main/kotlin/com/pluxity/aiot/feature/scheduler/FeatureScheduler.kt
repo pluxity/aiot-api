@@ -83,7 +83,7 @@ class FeatureScheduler(
     )
 
     @Profile("!local")
-    @Scheduled(cron = "0 0 2 * * ?")
+    @Scheduled(cron = "0 0 8 * * ?")
     @Transactional
     fun scheduledBatteryDataUpdate() {
         val features = featureRepository.findAll()

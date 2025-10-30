@@ -45,9 +45,9 @@ class EventController(
         @Parameter(description = "현장 아이디", required = false)
         @RequestParam("siteId", required = false) siteId: Long?,
         @Parameter(description = "이벤트 상태", required = false)
-        @RequestParam("result", required = false) result: HistoryResult?,
+        @RequestParam("status", required = false) status: HistoryResult?,
     ): ResponseEntity<DataResponseBody<List<EventResponse>>> =
-        ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, result)))
+        ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status)))
 
     @Operation(summary = "이벤트 상태 수정", description = "ID로 특정 이벤트의 상태를 수정합니다.")
     @ApiResponses(

@@ -34,10 +34,10 @@ class EventService(
         from: String?,
         to: String?,
         siteId: Long?,
-        result: HistoryResult?,
+        status: HistoryResult?,
     ): List<EventResponse> {
         val siteList = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
-        return eventHistoryRepository.findEventList(from, to, siteId, result, siteList).map { it.toEventResponse() }
+        return eventHistoryRepository.findEventList(from, to, siteId, status, siteList).map { it.toEventResponse() }
     }
 
     @Transactional

@@ -20,4 +20,5 @@ data class EventConditionItemRequest(
     val rightValue: Double?, // 오른쪽 값
     val booleanValue: Boolean?, // Boolean 값
     val notificationEnabled: Boolean, // 알림 활성화 여부
+    val guideMessage: String?, // 알림 메시지
 )

@@ -27,4 +27,5 @@ data class SensorAlarmPayload(
     val actionResult: String,
     val lon: Double,
     val lat: Double,
+    val guideMessage: String?,
 )

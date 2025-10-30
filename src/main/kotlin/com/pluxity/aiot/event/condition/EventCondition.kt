@@ -37,6 +37,7 @@ class EventCondition(
     var rightValue: Double? = null,
     @Column(name = "boolean_value")
     var booleanValue: Boolean? = null,
+    var guideMessage: String? = null,
 ) {
     init {
         validate()

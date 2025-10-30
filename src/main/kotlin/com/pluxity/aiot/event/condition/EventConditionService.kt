@@ -52,6 +52,7 @@ class EventConditionService(
                     rightValue = itemRequest.rightValue,
                     booleanValue = itemRequest.booleanValue,
                     notificationEnabled = itemRequest.notificationEnabled,
+                    guideMessage = itemRequest.guideMessage,
                 )
             }
 
@@ -90,6 +91,7 @@ class EventConditionService(
                     rightValue = itemRequest.rightValue,
                     booleanValue = itemRequest.booleanValue,
                     notificationEnabled = itemRequest.notificationEnabled,
+                    guideMessage = itemRequest.guideMessage,
                 )
             }
 

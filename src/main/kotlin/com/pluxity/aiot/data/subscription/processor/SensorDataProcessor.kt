@@ -85,6 +85,7 @@ interface SensorDataProcessor {
                     occurredAt = parsedDate,
                     minValue = minValue,
                     maxValue = maxValue,
+                    guideMessage = condition.guideMessage,
                 ),
             )
 
@@ -112,6 +113,7 @@ interface SensorDataProcessor {
                         actionResult = eventHistory.actionResult.name,
                         lon = feature.longitude!!,
                         lat = feature.latitude!!,
+                        guideMessage = condition.guideMessage,
                     ),
                 )
             }

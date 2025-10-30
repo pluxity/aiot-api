@@ -45,6 +45,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -75,6 +76,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -105,6 +107,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -136,6 +139,7 @@ class EventConditionServiceTest(
                                     booleanValue = true,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -166,6 +170,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -199,6 +204,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -229,6 +235,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -261,6 +268,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -291,6 +299,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -324,6 +333,7 @@ class EventConditionServiceTest(
                                     booleanValue = true,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -356,6 +366,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -387,6 +398,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -418,6 +430,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -451,6 +464,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -482,6 +496,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -513,6 +528,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -546,6 +562,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -577,6 +594,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -610,6 +628,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                                 EventConditionItemRequest(
                                     fieldKey = "Temperature",
@@ -622,6 +641,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -652,6 +672,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                                 EventConditionItemRequest(
                                     fieldKey = "Angle-X",
@@ -664,6 +685,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -694,6 +716,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                                 EventConditionItemRequest(
                                     fieldKey = "Temperature",
@@ -706,6 +729,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -735,6 +759,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                                 EventConditionItemRequest(
                                     fieldKey = "Humidity", // 다른 fieldKey
@@ -747,6 +772,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -778,6 +804,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -808,6 +835,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -829,6 +857,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )
@@ -858,6 +887,7 @@ class EventConditionServiceTest(
                                     booleanValue = null,
                                     isActivate = true,
                                     notificationEnabled = true,
+                                    guideMessage = "안내 문구",
                                 ),
                             ),
                     )

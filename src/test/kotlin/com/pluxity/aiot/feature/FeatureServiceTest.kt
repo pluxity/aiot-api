@@ -191,7 +191,7 @@ class FeatureServiceTest(
                         ),
                     )
 
-                val updateRequest = FeatureUpdateRequest(isActive = false, height = 5.0)
+                val updateRequest = FeatureUpdateRequest(active = false, height = 5.0)
                 featureService.updateFeature(feature.id!!, updateRequest)
 
                 Then("isActive가 변경된다") {
@@ -201,7 +201,7 @@ class FeatureServiceTest(
             }
 
             When("존재하지 않는 Feature를 업데이트하면") {
-                val updateRequest = FeatureUpdateRequest(isActive = true, height = 5.0)
+                val updateRequest = FeatureUpdateRequest(active = true, height = 5.0)
 
                 val exception =
                     shouldThrow<CustomException> {

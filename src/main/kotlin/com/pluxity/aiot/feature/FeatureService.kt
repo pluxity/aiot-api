@@ -47,7 +47,7 @@ class FeatureService(
         request: FeatureUpdateRequest,
     ) {
         val feature = findById(id)
-        feature.updateActive(request.isActive)
+        feature.updateActive(request.active)
         feature.updateHeight(request.height)
     }
 

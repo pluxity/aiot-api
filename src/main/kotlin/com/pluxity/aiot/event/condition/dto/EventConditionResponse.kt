@@ -18,6 +18,7 @@ data class EventConditionResponse(
     val booleanValue: Boolean?,
     val isActivate: Boolean,
     val notificationEnabled: Boolean,
+    val guideMessage: String?,
 )
 
 fun EventCondition.toEventConditionResponse() =
@@ -34,4 +35,5 @@ fun EventCondition.toEventConditionResponse() =
         booleanValue = this.booleanValue,
         isActivate = this.isActivate,
         notificationEnabled = this.notificationEnabled,
+        guideMessage = this.guideMessage,
     )

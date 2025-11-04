@@ -140,7 +140,8 @@ class EventConditionService(
                     val range1 = condition1.getActualRange()!!
                     val range2 = condition2.getActualRange()!!
 
-                    throw IllegalArgumentException(
+                    throw CustomException(
+                        ErrorCode.DUPLICATE_EVENT_CONDITION,
                         "조건 범위가 겹칩니다. " +
                             "fieldKey='${condition1.fieldKey}', " +
                             "level1=${condition1.level} (${range1.first}~${range1.second}), " +

@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.condition.EventConditionService
 import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.event.condition.dto.EventConditionItemRequest
+import com.pluxity.aiot.global.exception.CustomException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -646,9 +647,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "조건 범위가 겹칩니다"
@@ -690,9 +691,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "조건 범위가 겹칩니다"

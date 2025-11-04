@@ -74,7 +74,7 @@ enum class ErrorCode(
     DUPLICATE_FEATURE_OTHER_DEVICE(HttpStatus.BAD_REQUEST, "피처 ID [%s]는 이미 다른 디바이스에 할당되어 있습니다."),
     DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다."),
     DUPLICATE_DEVICE_PROFILE_KEY(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 필드명입니다."),
-    DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "조건 범위가 중복됩니다: %s(%s)와 %s(%s) 사이에 중복된 범위가 있습니다."),
+    DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
 
     INVALID_PROFILE_COUNT(HttpStatus.BAD_REQUEST, "일부 프로필을 찾을 수 없습니다."),
     INVALID_PROFILE_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),

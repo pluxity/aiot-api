@@ -15,8 +15,8 @@ interface EventHistoryRepositoryCustom {
     fun findEventList(
         from: String?,
         to: String?,
-        siteId: Long?,
-        result: HistoryResult?,
+        siteId: Long? = null,
+        result: HistoryResult? = null,
         siteIds: List<Long>,
     ): List<EventHistory>
 }

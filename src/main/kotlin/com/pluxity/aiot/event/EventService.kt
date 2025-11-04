@@ -36,8 +36,8 @@ class EventService(
         siteId: Long?,
         status: HistoryResult?,
     ): List<EventResponse> {
-        val siteList = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
-        return eventHistoryRepository.findEventList(from, to, siteId, status, siteList).map { it.toEventResponse() }
+        val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
+        return eventHistoryRepository.findEventList(from, to, siteId, status, siteIds).map { it.toEventResponse() }
     }
 
     @Transactional

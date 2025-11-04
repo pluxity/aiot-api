@@ -43,7 +43,7 @@ class EventConditionService(
                 EventCondition(
                     objectId = request.objectId,
                     fieldKey = itemRequest.fieldKey,
-                    isActivate = itemRequest.isActivate,
+                    isActivate = itemRequest.activate,
                     level = itemRequest.level,
                     conditionType = itemRequest.conditionType,
                     operator = itemRequest.operator,
@@ -82,7 +82,7 @@ class EventConditionService(
                 EventCondition(
                     objectId = request.objectId,
                     fieldKey = itemRequest.fieldKey,
-                    isActivate = itemRequest.isActivate,
+                    isActivate = itemRequest.activate,
                     level = itemRequest.level,
                     conditionType = itemRequest.conditionType,
                     operator = itemRequest.operator,

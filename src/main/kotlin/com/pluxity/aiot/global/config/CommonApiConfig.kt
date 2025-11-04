@@ -1,6 +1,8 @@
 package com.pluxity.aiot.global.config
 
 import com.pluxity.aiot.global.properties.ServerDomainProperties
+import com.pluxity.aiot.global.swagger.SchemaRegistry
+import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
@@ -14,11 +16,15 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class CommonApiConfig(
     private val properties: ServerDomainProperties,
+    private val schemaRegistry: SchemaRegistry,
 ) {
     @Bean
     @ConditionalOnMissingBean(OpenAPI::class)
-    fun commonOpenAPI(): OpenAPI =
-        OpenAPI()
+    fun commonOpenAPI(): OpenAPI {
+        val components = Components()
+        schemaRegistry.registerAllSchemas(components)
+
+        return OpenAPI()
             .info(
                 Info()
                     .title("AIot API")
@@ -34,7 +40,8 @@ class CommonApiConfig(
                 listOf(
                     Server().url(properties.url),
                 ),
-            )
+            ).components(components)
+    }
 
     @Bean
     fun commonApi(): GroupedOpenApi =

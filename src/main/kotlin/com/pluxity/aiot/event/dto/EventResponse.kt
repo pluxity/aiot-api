@@ -15,6 +15,7 @@ data class EventResponse(
     val actionResult: String,
     val eventName: String?,
     val fieldKey: String?,
+    val guideMessage: String?,
 )
 
 fun EventHistory.toEventResponse() =
@@ -28,6 +29,7 @@ fun EventHistory.toEventResponse() =
         actionResult = this.actionResult.name,
         eventName = this.eventName,
         fieldKey = this.fieldKey,
+        guideMessage = this.guideMessage,
     )
 
 data class EventTimeSeriesDataResponse(

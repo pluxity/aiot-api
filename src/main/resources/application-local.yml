@@ -30,8 +30,8 @@ influx:
   bucket: aiot-bucket
 
 mediamtx:
-  api-url: ${MEDIAMTX_API_URL:http://192.168.4.8:9997}
-  view-url: ${MEDIAMTX_VIEW_URL:http://192.168.4.8:8889}
+  api-url: ${MEDIAMTX_API_URL:http://192.168.0.181:9997}
+  view-url: ${MEDIAMTX_VIEW_URL:http://192.168.0.181:8889}
 
 file:
   storage-strategy: s3
@@ -39,8 +39,8 @@ file:
     path: C:/Dev/Upload/
   s3:
 #    endpoint-url: http://127.0.0.1:9000
-    endpoint-url: ${S3_ENDPOINT_URL:http://192.168.4.8:9000}
-    public-url: ${S3_PUBLIC_URL:http://192.168.4.8:9000}
+    endpoint-url: ${S3_ENDPOINT_URL:http://192.168.0.181:9000}
+    public-url: ${S3_PUBLIC_URL:http://192.168.0.181:9000}
     bucket: aiot-bucket
     region: ap-northeast-2
     access-key: pluxity

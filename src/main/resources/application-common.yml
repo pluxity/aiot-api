@@ -51,3 +51,7 @@ logbook:
 
 user:
   init-password: qwer1234
+
+llm:
+  api:
+    base-url: ${LLM_API_BASE_URL:http://192.168.0.181:8000}

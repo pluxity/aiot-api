@@ -77,6 +77,7 @@ enum class ErrorCode(
     DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
     INVALID_EVENT_CONDITION_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
     INVALID_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
+    INVALID_DATE_TIME_FORMAT(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않습니다: 형식:%s, 입력:%s"),
 
     INVALID_PROFILE_COUNT(HttpStatus.BAD_REQUEST, "일부 프로필을 찾을 수 없습니다."),
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),

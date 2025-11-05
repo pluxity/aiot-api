@@ -12,7 +12,6 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 class SiteServiceTest(
     private val siteService: SiteService,
     private val siteRepository: SiteRepository,
-    @Autowired private val featureRepository: FeatureRepository,
+    private val featureRepository: FeatureRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)

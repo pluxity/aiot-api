@@ -1,7 +1,6 @@
 package com.pluxity.aiot.event.service.processor
 
 import com.influxdb.client.WriteApi
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.ConditionType
@@ -107,7 +106,6 @@ abstract class ProcessorTestHelper(
     val siteRepository: SiteRepository,
     val featureRepository: FeatureRepository,
     protected val eventHistoryRepository: EventHistoryRepository,
-    protected val actionHistoryService: ActionHistoryService,
     protected val eventConditionRepository: EventConditionRepository,
     protected val messageSenderMock: StompMessageSender,
     protected val writeApiMock: WriteApi,

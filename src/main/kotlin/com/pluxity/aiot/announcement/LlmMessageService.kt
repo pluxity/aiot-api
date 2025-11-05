@@ -19,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 private val log = KotlinLogging.logger {}
@@ -35,14 +36,19 @@ class LlmMessageService(
 
     @Transactional
     suspend fun generateAndSaveMessage() {
-        // 1. 어제와 오늘의 평균 온도 조회
+        // 1. 현재 시간 기준으로 이전 시간대의 평균 온도 조회
+        val now = LocalDateTime.now()
+        val currentHour = now.hour // 현재 시간 (예: 7시 30분이면 7)
+        val targetHour = if (currentHour > 0) currentHour - 1 else 23 // 이전 시간 (예: 7시 30분이면 6시)
+
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
 
-        val yesterdayAvgTemp = getAverageTemperature(yesterday)
-        val todayAvgTemp = getAverageTemperature(today)
+        // 어제와 오늘의 같은 시간대 (targetHour:00 ~ targetHour+1:00) 평균 온도 조회
+        val yesterdayAvgTemp = getHourlyAverageTemperature(yesterday, targetHour)
+        val todayAvgTemp = getHourlyAverageTemperature(today, targetHour)
 
-        log.info { "어제 평균 온도: $yesterdayAvgTemp°C, 오늘 평균 온도: $todayAvgTemp°C" }
+        log.info { "어제 ${targetHour}시~${targetHour + 1}시 평균 온도: $yesterdayAvgTemp°C, 오늘 ${targetHour}시~${targetHour + 1}시 평균 온도: $todayAvgTemp°C" }
 
         // 2. LLM API 호출을 위한 프롬프트 생성
         val prompt = "어제 평균온도는 ${yesterdayAvgTemp}도 이고 오늘 평균온도는 ${todayAvgTemp}도야. 이 상황에 공원 방문객을 위한 전광판 메시지를 한줄로 짧게 작성해줘."
@@ -79,10 +85,13 @@ class LlmMessageService(
         log.info { "LLM 메시지 저장 완료: ID=${llmMessage.id}" }
     }
 
-    private fun getAverageTemperature(date: LocalDate): Double {
-        // LocalDate를 Instant로 변환 (날짜의 시작 시간)
-        val startOfDay = date.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant()
-        val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant()
+    private fun getHourlyAverageTemperature(
+        date: LocalDate,
+        hour: Int,
+    ): Double {
+        // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
+        val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
+        val endOfHour = date.atTime(hour + 1, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
 
         // 온습도계 센서 타입 조회
         val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
@@ -92,7 +101,7 @@ class LlmMessageService(
         val query =
             Flux
                 .from(influxdbProperties.bucket)
-                .range(startOfDay, endOfDay)
+                .range(startOfHour, endOfHour)
                 .filter(
                     Restrictions.and(
                         Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
@@ -101,7 +110,7 @@ class LlmMessageService(
                 ).mean("_value")
                 .toString()
 
-        log.debug { "Temperature query: $query" }
+        log.debug { "Temperature query for ${date} ${hour}:00-${hour + 1}:00: $query" }
 
         // 쿼리 실행
         val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)

@@ -1,5 +1,7 @@
 package com.pluxity.aiot.event.condition
 
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.sensor.type.SensorType
 
 sealed class ValidationResult {
@@ -22,7 +24,7 @@ sealed class ValidationResult {
     fun orThrow(): Unit =
         when (this) {
             is Valid -> Unit
-            is Invalid -> throw IllegalArgumentException(errors.joinToString("; "))
+            is Invalid -> throw CustomException(ErrorCode.INVALID_EVENT_CONDITION, errors.joinToString("; "))
         }
 }
 
@@ -140,7 +142,7 @@ object EventConditionValidators {
     }
 
     val validateDisplacementGauge: Validator<EventCondition> = { condition ->
-        if (condition.objectId == "34957" && condition.conditionType == ConditionType.RANGE) {
+        if (condition.objectId == SensorType.DISPLACEMENT_GAUGE.objectId && condition.conditionType == ConditionType.RANGE) {
             condition.leftValue?.let { errorRange ->
                 condition.rightValue?.let { _ ->
                     if (errorRange > 0) {
@@ -155,6 +157,22 @@ object EventConditionValidators {
         }
     }
 
+    val validateGeneralRangeValues: Validator<EventCondition> = { condition ->
+        if (condition.objectId != SensorType.DISPLACEMENT_GAUGE.objectId && condition.conditionType == ConditionType.RANGE) {
+            condition.leftValue?.let { left ->
+                condition.rightValue?.let { right ->
+                    if (left <= right) {
+                        ValidationResult.Valid
+                    } else {
+                        ValidationResult.Invalid("leftValue는 rightValue보다 커야 합니다 (leftValue: $left, rightValue: $right)")
+                    }
+                } ?: ValidationResult.Invalid("rightValue가 필수입니다")
+            } ?: ValidationResult.Invalid("leftValue가 필수입니다")
+        } else {
+            ValidationResult.Valid
+        }
+    }
+
     fun validateAll(condition: EventCondition): ValidationResult =
         validateObjectId(condition)
             .and(validateFieldKey(condition))
@@ -162,6 +180,7 @@ object EventConditionValidators {
             .and(validateSingleType(condition))
             .and(validateRangeType(condition))
             .and(validateDisplacementGauge(condition))
+            .and(validateGeneralRangeValues(condition))
 }
 
 fun EventCondition.validate(): ValidationResult = EventConditionValidators.validateAll(this)

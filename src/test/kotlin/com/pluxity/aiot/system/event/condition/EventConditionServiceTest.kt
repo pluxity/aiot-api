@@ -210,9 +210,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "objectId"
@@ -241,9 +241,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "SensorType"
@@ -274,9 +274,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "fieldKey"
@@ -305,9 +305,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "fieldKey"
@@ -339,9 +339,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "Boolean"
@@ -372,9 +372,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "SINGLE"
@@ -404,9 +404,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "SINGLE"
@@ -436,9 +436,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "SINGLE"
@@ -470,9 +470,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "RANGE"
@@ -502,9 +502,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "RANGE"
@@ -534,9 +534,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "RANGE"
@@ -568,9 +568,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "errorRange"
@@ -600,9 +600,9 @@ class EventConditionServiceTest(
                             ),
                     )
 
-                Then("IllegalArgumentException 발생") {
+                Then("CustomException 발생") {
                     val exception =
-                        shouldThrow<IllegalArgumentException> {
+                        shouldThrow<CustomException> {
                             eventConditionService.createBatch(request)
                         }
                     exception.message shouldContain "errorRange"

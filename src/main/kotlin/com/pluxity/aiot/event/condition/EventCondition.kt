@@ -1,5 +1,6 @@
 package com.pluxity.aiot.event.condition
 
+import com.pluxity.aiot.sensor.type.SensorType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -62,7 +63,7 @@ class EventCondition(
         val right = rightValue ?: return null
 
         // DisplacementGauge인 경우: leftValue는 errorRange, rightValue는 centerValue
-        return if (objectId == "34957") {
+        return if (objectId == SensorType.DISPLACEMENT_GAUGE.objectId) {
             val errorRange = left
             val centerValue = right
             val minRange = centerValue - errorRange

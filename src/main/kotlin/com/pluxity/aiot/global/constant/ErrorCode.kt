@@ -75,9 +75,10 @@ enum class ErrorCode(
     DUPLICATE_ABBREVIATION(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 약어입니다."),
     DUPLICATE_DEVICE_PROFILE_KEY(HttpStatus.BAD_REQUEST, "[%s] 이미 사용 중인 필드명입니다."),
     DUPLICATE_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
+    INVALID_EVENT_CONDITION_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
+    INVALID_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
 
     INVALID_PROFILE_COUNT(HttpStatus.BAD_REQUEST, "일부 프로필을 찾을 수 없습니다."),
-    INVALID_PROFILE_MIN_MAX_VALUE(HttpStatus.BAD_REQUEST, "최소값(%s)이 최대값(%s)보다 클 수 없습니다."),
     NOT_FOUND_DEVICE_PROFILE(HttpStatus.NOT_FOUND, "ID가 %s인 디바이스 프로필을 찾을 수 없습니다."),
     NOT_FOUND_EVENT_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Event History를 찾을 수 없습니다."),
     NOT_FOUND_ACTION_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Action History를 찾을 수 없습니다."),

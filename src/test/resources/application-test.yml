@@ -92,3 +92,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com: DEBUG
+
+llm:
+  api:
+    base-url: ${LLM_API_BASE_URL:http://192.168.0.181:8000}

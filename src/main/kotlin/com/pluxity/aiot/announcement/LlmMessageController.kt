@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 private val log = KotlinLogging.logger {}
 
 @RestController
-@RequestMapping("/api/llm")
+@RequestMapping("/llm")
 class LlmMessageController(
     private val llmMessageService: LlmMessageService,
 ) {

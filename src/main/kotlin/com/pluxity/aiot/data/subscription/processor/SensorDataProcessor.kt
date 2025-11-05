@@ -1,6 +1,5 @@
 package com.pluxity.aiot.data.subscription.processor
 
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.ConditionType
@@ -60,7 +59,6 @@ interface SensorDataProcessor {
         parsedDate: LocalDateTime,
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
-        actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
     ) {
         val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
@@ -130,7 +128,6 @@ interface SensorDataProcessor {
         timestamp: String,
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
-        actionHistoryService: ActionHistoryService,
         featureRepository: FeatureRepository,
         eventConditionRepository: EventConditionRepository,
     ) {
@@ -181,7 +178,6 @@ interface SensorDataProcessor {
                                     parsedDate,
                                     messageSender,
                                     eventHistoryRepository,
-                                    actionHistoryService,
                                     featureRepository,
                                 )
                             }

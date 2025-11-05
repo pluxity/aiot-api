@@ -1,7 +1,6 @@
 package com.pluxity.aiot.event.service.processor.impl
 
 import com.influxdb.client.WriteApi
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.subscription.processor.impl.TemperatureHumidityProcessor
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
@@ -18,7 +17,6 @@ class TemperatureHumidityProcessorTestHelper(
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
-    actionHistoryService: ActionHistoryService,
     messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
@@ -26,7 +24,6 @@ class TemperatureHumidityProcessorTestHelper(
         siteRepository,
         featureRepository,
         eventHistoryRepository,
-        actionHistoryService,
         eventConditionRepository,
         messageSenderMock,
         writeApiMock,
@@ -60,7 +57,6 @@ class TemperatureHumidityProcessorTestHelper(
         TemperatureHumidityProcessor(
             messageSenderMock,
             eventHistoryRepository,
-            actionHistoryService,
             featureRepository,
             eventConditionRepository,
             writeApiMock,

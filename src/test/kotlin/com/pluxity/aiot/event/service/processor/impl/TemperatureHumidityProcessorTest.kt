@@ -1,7 +1,6 @@
 package com.pluxity.aiot.event.service.processor.impl
 
 import com.influxdb.client.WriteApi
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.entity.HistoryResult
@@ -28,7 +27,6 @@ class TemperatureHumidityProcessorTest(
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
-    actionHistoryService: ActionHistoryService,
     eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
         isolationMode = IsolationMode.InstancePerLeaf
@@ -44,7 +42,6 @@ class TemperatureHumidityProcessorTest(
                 siteRepository,
                 featureRepository,
                 eventHistoryRepository,
-                actionHistoryService,
                 messageSenderMock,
                 writeApiMock,
                 eventConditionRepository,

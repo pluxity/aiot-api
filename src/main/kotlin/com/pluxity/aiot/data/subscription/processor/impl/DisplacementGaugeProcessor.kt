@@ -2,7 +2,6 @@ package com.pluxity.aiot.data.subscription.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.measure.DisplacementGauge
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
@@ -24,7 +23,6 @@ private val log = KotlinLogging.logger {}
 class DisplacementGaugeProcessor(
     private val messageSender: StompMessageSender,
     private val eventHistoryRepository: EventHistoryRepository,
-    private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
     private val eventConditionRepository: EventConditionRepository,
     private val writeApi: WriteApi,
@@ -51,11 +49,10 @@ class DisplacementGaugeProcessor(
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
-                actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
                 eventConditionRepository = eventConditionRepository,
             )
-            log.debug { "Angle-X value: \$it" }
+            log.debug { "Angle-X value: $it" }
         }
         data.angleY?.let {
             processEventConditions(
@@ -66,15 +63,14 @@ class DisplacementGaugeProcessor(
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
-                actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
                 eventConditionRepository = eventConditionRepository,
             )
-            log.debug { "Angle-Y value: \$it" }
+            log.debug { "Angle-Y value: $it" }
         }
         log.info {
-            "\${SensorType.DISPLACEMENT_GAUGE.description} - DeviceId: \$deviceId, " +
-                "Timestamp: \${data.timestamp}, Period: \${data.period}"
+            "${SensorType.DISPLACEMENT_GAUGE.description} - DeviceId: $deviceId, " +
+                "Timestamp: ${data.timestamp}, Period: ${data.period}"
         }
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }

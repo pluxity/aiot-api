@@ -2,7 +2,6 @@ package com.pluxity.aiot.data.subscription.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.measure.FireAlarm
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
@@ -21,7 +20,6 @@ private val log = KotlinLogging.logger {}
 class FireAlarmProcessor(
     private val messageSender: StompMessageSender,
     private val eventHistoryRepository: EventHistoryRepository,
-    private val actionHistoryService: ActionHistoryService,
     private val featureRepository: FeatureRepository,
     private val eventConditionRepository: EventConditionRepository,
     private val writeApi: WriteApi,
@@ -47,7 +45,6 @@ class FireAlarmProcessor(
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
-                actionHistoryService = actionHistoryService,
                 featureRepository = featureRepository,
                 eventConditionRepository = eventConditionRepository,
             )

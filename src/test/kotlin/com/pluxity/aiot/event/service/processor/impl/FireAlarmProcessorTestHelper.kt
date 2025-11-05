@@ -1,7 +1,6 @@
 package com.pluxity.aiot.event.service.processor.impl
 
 import com.influxdb.client.WriteApi
-import com.pluxity.aiot.action.ActionHistoryService
 import com.pluxity.aiot.data.subscription.processor.impl.FireAlarmProcessor
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.repository.EventHistoryRepository
@@ -17,7 +16,6 @@ class FireAlarmProcessorTestHelper(
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
-    actionHistoryService: ActionHistoryService,
     messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
@@ -25,7 +23,6 @@ class FireAlarmProcessorTestHelper(
         siteRepository,
         featureRepository,
         eventHistoryRepository,
-        actionHistoryService,
         eventConditionRepository,
         messageSenderMock,
         writeApiMock,
@@ -37,7 +34,6 @@ class FireAlarmProcessorTestHelper(
         FireAlarmProcessor(
             messageSenderMock,
             eventHistoryRepository,
-            actionHistoryService,
             featureRepository,
             eventConditionRepository,
             writeApiMock,

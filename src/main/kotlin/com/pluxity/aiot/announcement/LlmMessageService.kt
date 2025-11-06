@@ -11,7 +11,12 @@ import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.properties.LlmProperties
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
+import com.pluxity.aiot.site.Site
+import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,6 +26,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val log = KotlinLogging.logger {}
 
@@ -29,6 +35,7 @@ class LlmMessageService(
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxdbProperties,
     private val llmMessageRepository: LlmMessageRepository,
+    private val siteRepository: SiteRepository,
     llmProperties: LlmProperties,
     webClientBuilder: WebClient.Builder,
 ) {
@@ -36,60 +43,92 @@ class LlmMessageService(
 
     @Transactional
     suspend fun generateAndSaveMessage() {
-        // 1. 현재 시간 기준으로 이전 시간대의 평균 온도 조회
+        // 1. 모든 사이트 조회
+        val sites = siteRepository.findAll()
+
+        if (sites.isEmpty()) {
+            log.warn { "등록된 사이트가 없습니다." }
+            return
+        }
+
+        // 2. 현재 시간 기준으로 이전 시간대 계산
         val now = LocalDateTime.now()
-        val currentHour = now.hour // 현재 시간 (예: 7시 30분이면 7)
-        val targetHour = if (currentHour > 0) currentHour - 1 else 23 // 이전 시간 (예: 7시 30분이면 6시)
+        val currentHour = now.hour
+        val targetHour = if (currentHour > 0) currentHour - 1 else 23
 
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
 
-        // 어제와 오늘의 같은 시간대 (targetHour:00 ~ targetHour+1:00) 평균 온도 조회
-        val yesterdayAvgTemp = getHourlyAverageTemperature(yesterday, targetHour)
-        val todayAvgTemp = getHourlyAverageTemperature(today, targetHour)
+        // 3. 각 사이트별로 병렬로 메시지 생성
+        coroutineScope {
+            sites.map { site ->
+                async {
+                    try {
+                        generateMessageForSite(site, yesterday, today, targetHour)
+                    } catch (e: Exception) {
+                        log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                    }
+                }
+            }.awaitAll()
+        }
+
+        log.info { "모든 사이트의 LLM 메시지 생성 완료" }
+    }
+
+    private suspend fun generateMessageForSite(
+        site: Site,
+        yesterday: LocalDate,
+        today: LocalDate,
+        targetHour: Int,
+    ) {
+        val siteId = site.id!!
+
+        // 1. 해당 사이트의 어제와 오늘 평균 온도 조회
+        val yesterdayAvgTemp = getHourlyAverageTemperature(yesterday, targetHour, siteId)
+        val todayAvgTemp = getHourlyAverageTemperature(today, targetHour, siteId)
 
         log.info {
-            "어제 ${targetHour}시~${targetHour + 1}시 평균 온도: $yesterdayAvgTemp°C, 오늘 ${targetHour}시~${targetHour + 1}시 평균 온도: $todayAvgTemp°C"
+            "[${site.name}] 어제 ${targetHour}시~${targetHour + 1}시 평균: $yesterdayAvgTemp°C, " +
+                "오늘 ${targetHour}시~${targetHour + 1}시 평균: $todayAvgTemp°C"
         }
 
         // 2. LLM API 호출을 위한 프롬프트 생성
-        val prompt = "어제 평균온도는 ${yesterdayAvgTemp}도 이고 오늘 평균온도는 ${todayAvgTemp}도야. 이 상황에 공원 방문객을 위한 전광판 메시지를 한줄로 짧게 작성해줘."
-
         val llmRequest =
             LlmRequest(
-                prompt = prompt,
-                max_new_tokens = 100,
-                temperature = 0.7,
+                yesterday_temp = yesterdayAvgTemp,
+                today_temp = todayAvgTemp,
             )
 
         // 3. 외부 LLM API 호출
         val llmResponse =
             webClient
                 .post()
-                .uri("/generate")
+                .uri("/generate/temperature")
                 .bodyValue(llmRequest)
                 .retrieve()
                 .awaitBody<LlmResponse>()
 
         val generatedMessage = llmResponse.generated_text
-        log.info { "생성된 LLM 메시지: $generatedMessage" }
+        log.info { "[${site.name}] 생성된 LLM 메시지: $generatedMessage" }
 
         // 4. DB에 저장
         val llmMessage =
             LlmMessage(
+                site = site,
                 yesterdayAvgTemp = yesterdayAvgTemp,
                 todayAvgTemp = todayAvgTemp,
-                prompt = prompt,
+                prompt = llmRequest.toString(),
                 message = generatedMessage,
             )
 
         llmMessageRepository.save(llmMessage)
-        log.info { "LLM 메시지 저장 완료: ID=${llmMessage.id}" }
+        log.info { "[${site.name}] LLM 메시지 저장 완료: ID=${llmMessage.id}" }
     }
 
     private fun getHourlyAverageTemperature(
         date: LocalDate,
         hour: Int,
+        siteId: Long,
     ): Double {
         // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
         val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
@@ -99,7 +138,7 @@ class LlmMessageService(
         val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
         val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
 
-        // InfluxDB 쿼리 생성
+        // InfluxDB 쿼리 생성 (facilityId로 필터링)
         val query =
             Flux
                 .from(influxdbProperties.bucket)
@@ -108,11 +147,12 @@ class LlmMessageService(
                     Restrictions.and(
                         Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
                         Restrictions.field().equal(temperatureField),
+                        Restrictions.tag("facilityId").equal(siteId.toString()),
                     ),
                 ).mean("_value")
                 .toString()
 
-        log.debug { "Temperature query for $date $hour:00-${hour + 1}:00: $query" }
+        log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
 
         // 쿼리 실행
         val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
@@ -128,8 +168,40 @@ class LlmMessageService(
     }
 
     @Transactional(readOnly = true)
-    fun findAll(): List<LlmMessageResponse> {
-        val messages = llmMessageRepository.findAll()
+    fun findAll(
+        siteId: Long? = null,
+        from: String? = null,
+        to: String? = null,
+    ): List<LlmMessageResponse> {
+        // String 날짜를 LocalDateTime으로 파싱
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+        val startDate = from?.let { LocalDateTime.parse(it, dateFormatter) }
+        val endDate = to?.let { LocalDateTime.parse(it, dateFormatter) }
+
+        val messages =
+            when {
+                // siteId와 날짜 범위가 모두 있는 경우
+                siteId != null && startDate != null && endDate != null -> {
+                    val site =
+                        siteRepository.findByIdOrNull(siteId)
+                            ?: throw IllegalArgumentException("사이트를 찾을 수 없습니다. ID: $siteId")
+                    llmMessageRepository.findAllBySiteAndCreatedAtBetween(site, startDate, endDate)
+                }
+                // siteId만 있는 경우
+                siteId != null -> {
+                    val site =
+                        siteRepository.findByIdOrNull(siteId)
+                            ?: throw IllegalArgumentException("사이트를 찾을 수 없습니다. ID: $siteId")
+                    llmMessageRepository.findAllBySite(site)
+                }
+                // 날짜 범위만 있는 경우
+                startDate != null && endDate != null -> {
+                    llmMessageRepository.findAllByCreatedAtBetween(startDate, endDate)
+                }
+                // 필터가 없는 경우
+                else -> llmMessageRepository.findAll()
+            }
+
         return messages.map { LlmMessageResponse.from(it) }
     }
 

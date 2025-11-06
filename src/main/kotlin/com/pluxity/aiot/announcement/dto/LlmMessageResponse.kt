@@ -5,6 +5,8 @@ import java.time.LocalDateTime
 
 data class LlmMessageResponse(
     val id: Long,
+    val siteId: Long,
+    val siteName: String,
     val yesterdayAvgTemp: Double,
     val todayAvgTemp: Double,
     val prompt: String,
@@ -16,6 +18,8 @@ data class LlmMessageResponse(
         fun from(llmMessage: LlmMessage): LlmMessageResponse =
             LlmMessageResponse(
                 id = llmMessage.id!!,
+                siteId = llmMessage.site.id!!,
+                siteName = llmMessage.site.name,
                 yesterdayAvgTemp = llmMessage.yesterdayAvgTemp,
                 todayAvgTemp = llmMessage.todayAvgTemp,
                 prompt = llmMessage.prompt,

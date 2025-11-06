@@ -1,5 +1,6 @@
 package com.pluxity.aiot.event.entity
 
+import com.pluxity.aiot.global.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -39,7 +40,7 @@ class EventHistory(
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
-) {
+) : BaseEntity() {
     fun changeActionResult(actionResult: HistoryResult) {
         this.actionResult = actionResult
     }

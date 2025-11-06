@@ -18,6 +18,8 @@ data class EventResponse(
     val guideMessage: String?,
     val longitude: Double?,
     val latitude: Double?,
+    val updatedAt: String,
+    val updatedBy: String?,
 )
 
 fun EventHistory.toEventResponse() =
@@ -34,6 +36,8 @@ fun EventHistory.toEventResponse() =
         guideMessage = this.guideMessage,
         longitude = this.longitude,
         latitude = this.latitude,
+        updatedAt = this.updatedAt.toString(),
+        updatedBy = this.updatedBy,
     )
 
 data class EventTimeSeriesDataResponse(

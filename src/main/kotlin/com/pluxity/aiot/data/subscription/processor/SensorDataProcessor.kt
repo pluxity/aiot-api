@@ -66,6 +66,11 @@ interface SensorDataProcessor {
 
         val eventName = "${condition.level.name}_$fieldKey"
 
+        if (feature.eventStatus == condition.level.toString()) {
+            log.info { "이벤트 상태가 이전과 동일 deviceId: $deviceId, status: ${feature.eventStatus}" }
+            return
+        }
+
         // Feature의 이벤트 상태 업데이트
         updateFeatureEventStatus(feature, condition.level.toString(), featureRepository)
 

@@ -48,7 +48,9 @@ class LlmMessageService(
         val yesterdayAvgTemp = getHourlyAverageTemperature(yesterday, targetHour)
         val todayAvgTemp = getHourlyAverageTemperature(today, targetHour)
 
-        log.info { "어제 ${targetHour}시~${targetHour + 1}시 평균 온도: $yesterdayAvgTemp°C, 오늘 ${targetHour}시~${targetHour + 1}시 평균 온도: $todayAvgTemp°C" }
+        log.info {
+            "어제 ${targetHour}시~${targetHour + 1}시 평균 온도: $yesterdayAvgTemp°C, 오늘 ${targetHour}시~${targetHour + 1}시 평균 온도: $todayAvgTemp°C"
+        }
 
         // 2. LLM API 호출을 위한 프롬프트 생성
         val prompt = "어제 평균온도는 ${yesterdayAvgTemp}도 이고 오늘 평균온도는 ${todayAvgTemp}도야. 이 상황에 공원 방문객을 위한 전광판 메시지를 한줄로 짧게 작성해줘."
@@ -110,7 +112,7 @@ class LlmMessageService(
                 ).mean("_value")
                 .toString()
 
-        log.debug { "Temperature query for ${date} ${hour}:00-${hour + 1}:00: $query" }
+        log.debug { "Temperature query for $date $hour:00-${hour + 1}:00: $query" }
 
         // 쿼리 실행
         val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)

@@ -115,7 +115,7 @@ interface SensorDataProcessor {
                         unit = fieldUnit,
                         minValue = minValue,
                         maxValue = maxValue,
-                        actionResult = eventHistory.actionResult.name,
+                        status = eventHistory.actionResult.name,
                         lon = feature.longitude!!,
                         lat = feature.latitude!!,
                         guideMessage = condition.guideMessage,

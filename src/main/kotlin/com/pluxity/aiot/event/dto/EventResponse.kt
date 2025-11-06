@@ -20,6 +20,7 @@ data class EventResponse(
     val latitude: Double?,
     val updatedAt: String,
     val updatedBy: String?,
+    val value: Double? = null,
 )
 
 fun EventHistory.toEventResponse() =
@@ -38,6 +39,7 @@ fun EventHistory.toEventResponse() =
         latitude = this.latitude,
         updatedAt = this.updatedAt.toString(),
         updatedBy = this.updatedBy,
+        value = this.value,
     )
 
 data class EventTimeSeriesDataResponse(

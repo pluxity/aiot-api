@@ -32,15 +32,13 @@ class EventHistory(
     var eventName: String? = null,
     @Column(nullable = false)
     var occurredAt: LocalDateTime = LocalDateTime.now(),
-    @Column
     var minValue: Double? = null,
-    @Column
     var maxValue: Double? = null,
-    @Column
     @Enumerated(EnumType.STRING)
     var actionResult: HistoryResult = HistoryResult.PENDING,
-    @Column
     var guideMessage: String? = null,
+    var longitude: Double? = null,
+    var latitude: Double? = null,
 ) {
     fun changeActionResult(actionResult: HistoryResult) {
         this.actionResult = actionResult

@@ -89,6 +89,8 @@ interface SensorDataProcessor {
                     minValue = minValue,
                     maxValue = maxValue,
                     guideMessage = condition.guideMessage,
+                    longitude = feature.longitude,
+                    latitude = feature.latitude,
                 ),
             )
 

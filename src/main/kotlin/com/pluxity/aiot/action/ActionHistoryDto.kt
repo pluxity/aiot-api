@@ -14,6 +14,8 @@ data class ActionHistoryResponse(
     var eventHistoryId: Long? = null,
     var content: String,
     var files: List<FileResponse>? = null,
+    var longitude: Double? = null,
+    var latitude: Double? = null,
     @field:JsonUnwrapped var baseResponse: BaseResponse? = null,
 )
 
@@ -25,6 +27,8 @@ fun ActionHistory.toActionHistoryResponse(fileMap: Map<Long, FileResponse>): Act
         eventHistoryId = this.eventHistory.id,
         content = this.content,
         files = this.historyFiles.mapNotNull { fileMap[it.fileId] },
+        longitude = this.eventHistory.longitude,
+        latitude = this.eventHistory.latitude,
         baseResponse = this.toBaseResponse(),
     )
 

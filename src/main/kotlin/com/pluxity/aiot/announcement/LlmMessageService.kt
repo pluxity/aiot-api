@@ -61,15 +61,16 @@ class LlmMessageService(
 
         // 3. 각 사이트별로 병렬로 메시지 생성
         coroutineScope {
-            sites.map { site ->
-                async {
-                    try {
-                        generateMessageForSite(site, yesterday, today, targetHour)
-                    } catch (e: Exception) {
-                        log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+            sites
+                .map { site ->
+                    async {
+                        try {
+                            generateMessageForSite(site, yesterday, today, targetHour)
+                        } catch (e: Exception) {
+                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                        }
                     }
-                }
-            }.awaitAll()
+                }.awaitAll()
         }
 
         log.info { "모든 사이트의 LLM 메시지 생성 완료" }

@@ -7,6 +7,8 @@ import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.announcement.dto.LlmMessageResponse
 import com.pluxity.aiot.announcement.dto.LlmRequest
 import com.pluxity.aiot.announcement.dto.LlmResponse
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.properties.LlmProperties
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
@@ -185,14 +187,14 @@ class LlmMessageService(
                 siteId != null && startDate != null && endDate != null -> {
                     val site =
                         siteRepository.findByIdOrNull(siteId)
-                            ?: throw IllegalArgumentException("사이트를 찾을 수 없습니다. ID: $siteId")
+                            ?: throw CustomException(ErrorCode.NOT_FOUND_SITE, siteId)
                     llmMessageRepository.findAllBySiteAndCreatedAtBetween(site, startDate, endDate)
                 }
                 // siteId만 있는 경우
                 siteId != null -> {
                     val site =
                         siteRepository.findByIdOrNull(siteId)
-                            ?: throw IllegalArgumentException("사이트를 찾을 수 없습니다. ID: $siteId")
+                            ?: throw CustomException(ErrorCode.NOT_FOUND_SITE, siteId)
                     llmMessageRepository.findAllBySite(site)
                 }
                 // 날짜 범위만 있는 경우
@@ -210,7 +212,7 @@ class LlmMessageService(
     fun findById(id: Long): LlmMessageResponse {
         val message =
             llmMessageRepository.findByIdOrNull(id)
-                ?: throw IllegalArgumentException("LLM 메시지를 찾을 수 없습니다. ID: $id")
+                ?: throw CustomException(ErrorCode.NOT_FOUND_LLM_MESSAGE, id)
         return LlmMessageResponse.from(message)
     }
 

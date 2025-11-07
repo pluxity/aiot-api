@@ -15,4 +15,6 @@ data class SiteRequest(
     @field:Schema(description = "현장 설명", example = "description")
     @field:Size(max = 255, message = "현장 설명은 최대 255자까지 입력 가능합니다.")
     val description: String?,
+    @field:Schema(description = "현장 썸네일 아이디", example = "1")
+    val thumbnailId: Long? = null,
 )

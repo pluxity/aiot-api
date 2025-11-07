@@ -1,5 +1,7 @@
 package com.pluxity.aiot.site
 
+import com.pluxity.aiot.file.extensions.getFileMapById
+import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.constant.ErrorCode.NOT_FOUND_SITE
 import com.pluxity.aiot.global.exception.CustomException
@@ -18,7 +20,12 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class SiteService(
     private val siteRepository: SiteRepository,
+    private val fileService: FileService,
 ) {
+    companion object {
+        private const val SITE_PATH: String = "sites/"
+    }
+
     private val gf = GeometryFactory(PrecisionModel(), 4326)
     private val wktReader = WKTReader(gf)
 
@@ -30,13 +37,27 @@ class SiteService(
                 name = request.name,
                 description = request.description,
                 location = location,
+                thumbnailId = request.thumbnailId,
             )
+
+        request.thumbnailId?.let { fileId ->
+            val fileEntity = fileService.finalizeUpload(fileId, "${SITE_PATH}${site.id}/")
+        }
+
         return siteRepository.save(site).id!!
     }
 
-    fun findAll(): List<SiteResponse> = siteRepository.findAllByOrderByCreatedAtDesc().map { it.toSiteResponse() }
+    fun findAll(): List<SiteResponse> {
+        val sites = siteRepository.findAllByOrderByCreatedAtDesc()
+        val fileMap = fileService.getFileMapById(sites) { it.thumbnailId }
+        return sites.map { it.toSiteResponse(fileMap) }
+    }
 
-    fun findByIdResponse(id: Long): SiteResponse = findById(id).toSiteResponse()
+    fun findByIdResponse(id: Long): SiteResponse {
+        val site = findById(id)
+        val fileMap = fileService.getFileMapById(listOf(site)) { it.thumbnailId }
+        return site.toSiteResponse(fileMap)
+    }
 
     @Transactional
     fun putUpdate(
@@ -48,6 +69,13 @@ class SiteService(
         site.updateName(request.name)
         site.updateDescription(request.description)
         site.updateLocation(location)
+
+        if (request.thumbnailId != site.thumbnailId) {
+            request.thumbnailId?.let { thumbnailId ->
+                fileService.finalizeUpload(thumbnailId, "${SITE_PATH}${site.id}/")
+                site.updateThumbnailId(request.thumbnailId)
+            } ?: site.updateThumbnailId(null)
+        }
     }
 
     @Transactional

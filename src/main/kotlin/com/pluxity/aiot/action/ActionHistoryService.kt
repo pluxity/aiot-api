@@ -50,7 +50,7 @@ class ActionHistoryService(
         requestDto.fileIds?.let { fileIds ->
             // 파일 업로드 finalize를 먼저 배치 처리
             fileIds.forEach { fileId ->
-                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}${savedActionHistory.id}")
+                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}${savedActionHistory.id}/")
             }
 
             // ActionHistoryFile 엔티티들을 배치로 저장
@@ -91,7 +91,7 @@ class ActionHistoryService(
             actionHistoryFileRepository.deleteByIdIn(existIds.minus(it.toSet()))
             val filesToAdd = it.minus(existIds.toSet())
             filesToAdd.forEach { fileId ->
-                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}$id")
+                fileService.finalizeUpload(fileId, "${ACTION_HISTORIES}$id/")
             }
             val newActionHistoryFiles =
                 filesToAdd.map { fileId ->

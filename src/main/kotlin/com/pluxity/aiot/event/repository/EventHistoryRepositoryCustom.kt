@@ -19,4 +19,14 @@ interface EventHistoryRepositoryCustom {
         result: EventStatus? = null,
         siteIds: List<Long>,
     ): List<EventHistory>
+
+    fun findEventListWithPaging(
+        from: String?,
+        to: String?,
+        siteId: Long? = null,
+        result: EventStatus? = null,
+        siteIds: List<Long>,
+        size: Int,
+        lastId: Long? = null,
+    ): List<EventHistory>
 }

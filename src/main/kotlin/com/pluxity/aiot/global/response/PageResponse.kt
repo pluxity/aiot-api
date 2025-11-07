@@ -20,3 +20,19 @@ fun <T, R> Page<T?>.toPageResponse(transform: (T) -> R): PageResponse<R> =
         last = this.isLast,
         first = this.isFirst,
     )
+
+data class CursorPageResponse<T>(
+    val content: List<T>,
+    val nextCursor: Long?,
+    val hasNext: Boolean,
+)
+
+fun <T> List<T>.toCursorPageResponse(
+    hasNext: Boolean,
+    getCursor: (T) -> Long?,
+): CursorPageResponse<T> =
+    CursorPageResponse(
+        content = if (hasNext) this.dropLast(1) else this,
+        nextCursor = if (hasNext) this.lastOrNull()?.let(getCursor) else null,
+        hasNext = hasNext,
+    )

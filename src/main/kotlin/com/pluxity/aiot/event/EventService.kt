@@ -14,6 +14,8 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.response.CursorPageResponse
+import com.pluxity.aiot.global.response.toCursorPageResponse
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.site.SiteRepository
 import org.springframework.data.repository.findByIdOrNull
@@ -35,9 +37,16 @@ class EventService(
         to: String?,
         siteId: Long?,
         status: EventStatus?,
-    ): List<EventResponse> {
+        size: Int,
+        lastId: Long? = null,
+    ): CursorPageResponse<EventResponse> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
-        return eventHistoryRepository.findEventList(from, to, siteId, status, siteIds).map { it.toEventResponse() }
+        val eventList =
+            eventHistoryRepository
+                .findEventListWithPaging(from, to, siteId, status, siteIds, size, lastId)
+                .map { it.toEventResponse() }
+        val hasNext = eventList.size > size
+        return eventList.toCursorPageResponse(hasNext) { it.eventId }
     }
 
     @Transactional

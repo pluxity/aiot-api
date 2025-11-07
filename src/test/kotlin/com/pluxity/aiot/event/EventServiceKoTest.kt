@@ -56,12 +56,12 @@ class EventServiceKoTest :
                 } returns sites
 
                 every {
-                    eventHistoryRepository.findEventList(from, to, siteId, result, listOf(1L, 2L))
+                    eventHistoryRepository.findEventListWithPaging(from, to, siteId, result, listOf(1L, 2L), 20)
                 } returns eventHistories
 
                 Then("이벤트 목록 반환") {
-                    val results = eventService.findAll(from, to, siteId, result)
-                    results.size shouldBe 2
+                    val results = eventService.findAll(from, to, siteId, result, size = 20)
+                    results.content.size shouldBe 2
                 }
             }
 
@@ -74,12 +74,12 @@ class EventServiceKoTest :
                 } returns sites
 
                 every {
-                    eventHistoryRepository.findEventList(null, null, null, null, listOf(1L))
+                    eventHistoryRepository.findEventListWithPaging(null, null, null, null, listOf(1L), 20)
                 } returns eventHistories
 
                 Then("전체 이벤트 목록 반환") {
-                    val results = eventService.findAll(null, null, null, null)
-                    results.size shouldBe 1
+                    val results = eventService.findAll(null, null, null, null, 20)
+                    results.content.size shouldBe 1
                 }
             }
         }

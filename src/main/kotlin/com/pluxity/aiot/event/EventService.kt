@@ -77,7 +77,7 @@ class EventService(
 
         val result =
             jdbcTemplate.query(
-                buildPeriodDataQuery(interval),
+                buildPeriodDataQuery(interval, from, to),
                 params,
             ) { rs, _ ->
                 val bucket = rs.getObject("bucket_start", LocalDateTime::class.java)
@@ -131,17 +131,30 @@ class EventService(
             }
         }
 
-    private fun buildPeriodDataQuery(interval: DataInterval): String =
+    private fun buildPeriodDataQuery(
+        interval: DataInterval,
+        from: String,
+        to: String,
+    ): String =
         """
+        WITH buckets AS (
+            SELECT generate_series(
+                date_trunc('${interval.pgUnit}', to_timestamp('$from', 'YYYYMMDDHH24MISS')),
+                date_trunc('${interval.pgUnit}', to_timestamp('$to', 'YYYYMMDDHH24MISS')),
+                (interval '1 ${interval.pgUnit}')::interval
+            ) AS bucket_start
+        )
         SELECT
-            date_trunc('${interval.unit}', e.occurred_at) AS bucket_start,
-            COALESCE(COUNT(CASE WHEN status = 'PENDING' THEN 1 END), 0) AS pending_cnt,
-            COALESCE(COUNT(CASE WHEN status = 'WORKING' THEN 1 END), 0) AS working_cnt,
-            COALESCE(COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END), 0) AS completed_cnt
-        FROM event_history e
-        WHERE e.occurred_at BETWEEN :start AND :end
-        GROUP BY date_trunc('${interval.unit}', e.occurred_at)
-        ORDER BY date_trunc('${interval.unit}', e.occurred_at) ASC
+            b.bucket_start::timestamp AS bucket_start,
+            COUNT(*) FILTER (WHERE e.status = 'PENDING')   AS pending_cnt,
+            COUNT(*) FILTER (WHERE e.status = 'WORKING')   AS working_cnt,
+            COUNT(*) FILTER (WHERE e.status = 'COMPLETED') AS completed_cnt
+        FROM buckets b
+        LEFT JOIN event_history e
+          ON e.occurred_at >= b.bucket_start
+         AND e.occurred_at <  b.bucket_start + (interval '1 ${interval.pgUnit}')::interval
+        GROUP BY b.bucket_start
+        ORDER BY b.bucket_start;
         """.trimIndent()
 
     private fun Pair<String, String>.parseTimeRange(): Pair<LocalDateTime, LocalDateTime> =

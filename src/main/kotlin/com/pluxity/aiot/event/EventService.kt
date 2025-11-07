@@ -135,9 +135,9 @@ class EventService(
         """
         SELECT
             date_trunc('${interval.unit}', e.occurred_at) AS bucket_start,
-            COALESCE(COUNT(CASE WHEN action_result = 'PENDING' THEN 1 END), 0) AS pending_cnt,
-            COALESCE(COUNT(CASE WHEN action_result = 'WORKING' THEN 1 END), 0) AS working_cnt,
-            COALESCE(COUNT(CASE WHEN action_result = 'COMPLETED' THEN 1 END), 0) AS completed_cnt
+            COALESCE(COUNT(CASE WHEN status = 'PENDING' THEN 1 END), 0) AS pending_cnt,
+            COALESCE(COUNT(CASE WHEN status = 'WORKING' THEN 1 END), 0) AS working_cnt,
+            COALESCE(COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END), 0) AS completed_cnt
         FROM event_history e
         WHERE e.occurred_at BETWEEN :start AND :end
         GROUP BY date_trunc('${interval.unit}', e.occurred_at)

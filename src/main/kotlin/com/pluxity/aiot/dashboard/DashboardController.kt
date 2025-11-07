@@ -1,7 +1,7 @@
 package com.pluxity.aiot.dashboard
 
 import com.pluxity.aiot.event.dto.EventResponse
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.global.response.DataResponseBody
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -56,6 +56,6 @@ class DashboardController(
         @RequestParam("from", required = false) from: String?,
         @Parameter(description = "조회 종료일(yyyyMMddHHmmss)", required = false)
         @RequestParam("to", required = false) to: String?,
-    ): ResponseEntity<DataResponseBody<Map<HistoryResult, List<EventResponse>>>> =
+    ): ResponseEntity<DataResponseBody<Map<EventStatus, List<EventResponse>>>> =
         ResponseEntity.ok(DataResponseBody(dashboardService.getEventSummary(from, to)))
 }

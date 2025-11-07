@@ -1,6 +1,6 @@
 package com.pluxity.aiot.event.entity
 
-enum class HistoryResult(
+enum class EventStatus(
     val description: String,
 ) {
     PENDING("미조치"),

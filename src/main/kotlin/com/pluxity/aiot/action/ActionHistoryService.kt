@@ -1,7 +1,7 @@
 package com.pluxity.aiot.action
 
 import com.pluxity.aiot.event.entity.EventHistory
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.file.extensions.getFileMapById
 import com.pluxity.aiot.file.service.FileService
@@ -63,7 +63,7 @@ class ActionHistoryService(
                 }
             actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
-        eventHistory.changeActionResult(HistoryResult.COMPLETED)
+        eventHistory.changeStatus(EventStatus.COMPLETED)
         return savedActionHistory.id!!
     }
 

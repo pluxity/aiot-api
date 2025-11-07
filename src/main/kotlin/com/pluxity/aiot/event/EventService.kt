@@ -10,7 +10,7 @@ import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.event.dto.toEventResponse
 import com.pluxity.aiot.event.entity.EventHistory
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -34,7 +34,7 @@ class EventService(
         from: String?,
         to: String?,
         siteId: Long?,
-        status: HistoryResult?,
+        status: EventStatus?,
     ): List<EventResponse> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         return eventHistoryRepository.findEventList(from, to, siteId, status, siteIds).map { it.toEventResponse() }
@@ -43,10 +43,10 @@ class EventService(
     @Transactional
     fun updateStatus(
         id: Long,
-        result: HistoryResult,
+        result: EventStatus,
     ) {
         val eventHistory = findById(id)
-        eventHistory.changeActionResult(result)
+        eventHistory.changeStatus(result)
     }
 
     fun findById(id: Long): EventHistory =

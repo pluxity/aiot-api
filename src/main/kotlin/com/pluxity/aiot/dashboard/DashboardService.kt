@@ -2,7 +2,7 @@ package com.pluxity.aiot.dashboard
 
 import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.toEventResponse
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
@@ -73,12 +73,12 @@ class DashboardService(
     fun getEventSummary(
         from: String?,
         to: String?,
-    ): Map<HistoryResult, List<EventResponse>> {
+    ): Map<EventStatus, List<EventResponse>> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         val eventList = eventHistoryRepository.findEventList(from = from, to = to, siteIds = siteIds)
-        val events = mutableMapOf<HistoryResult, List<EventResponse>>()
-        HistoryResult.entries.forEach { result ->
-            events[result] = eventList.filter { it.actionResult == result }.map { it.toEventResponse() }
+        val events = mutableMapOf<EventStatus, List<EventResponse>>()
+        EventStatus.entries.forEach { result ->
+            events[result] = eventList.filter { it.status == result }.map { it.toEventResponse() }
         }
         return events
     }

@@ -3,7 +3,7 @@ package com.pluxity.aiot.event.service.processor.impl
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
@@ -100,7 +100,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 84.0
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
 
@@ -127,7 +127,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 96.0
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
 
@@ -187,7 +187,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.5
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
 
@@ -242,7 +242,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe 3.5
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
 
@@ -332,7 +332,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 100.0
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
         }

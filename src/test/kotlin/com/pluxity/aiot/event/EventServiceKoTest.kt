@@ -3,7 +3,7 @@ package com.pluxity.aiot.event
 import com.pluxity.aiot.action.entity.dummyEventHistory
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.EventService.EventListDto
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -39,7 +39,7 @@ class EventServiceKoTest :
                 val from = "20240101000000"
                 val to = "20240131235959"
                 val siteId = 1L
-                val result = HistoryResult.PENDING
+                val result = EventStatus.PENDING
                 val sites =
                     listOf(
                         dummySite(id = 1L),
@@ -87,7 +87,7 @@ class EventServiceKoTest :
         Given("이벤트 상태를 변경할 때") {
             When("유효한 ID와 상태로 변경 요청") {
                 val eventId = 1L
-                val newResult = HistoryResult.COMPLETED
+                val newResult = EventStatus.COMPLETED
                 val eventHistory = dummyEventHistory(id = eventId)
 
                 every {
@@ -96,13 +96,13 @@ class EventServiceKoTest :
 
                 Then("상태 변경 성공") {
                     eventService.updateStatus(eventId, newResult)
-                    eventHistory.actionResult shouldBe newResult
+                    eventHistory.status shouldBe newResult
                 }
             }
 
             When("존재하지 않는 ID로 상태 변경 요청") {
                 val eventId = 999L
-                val newResult = HistoryResult.COMPLETED
+                val newResult = EventStatus.COMPLETED
 
                 every {
                     eventHistoryRepository.findByIdOrNull(eventId)

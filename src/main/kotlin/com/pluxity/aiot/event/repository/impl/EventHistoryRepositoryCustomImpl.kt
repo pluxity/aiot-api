@@ -2,7 +2,7 @@ package com.pluxity.aiot.event.repository.impl
 
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
 import com.pluxity.aiot.event.entity.EventHistory
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepositoryCustom
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.utils.DateTimeUtils
@@ -45,7 +45,7 @@ class EventHistoryRepositoryCustomImpl(
         from: String?,
         to: String?,
         siteId: Long?,
-        result: HistoryResult?,
+        result: EventStatus?,
         siteIds: List<Long>,
     ): List<EventHistory> =
         kotlinJdslJpqlExecutor
@@ -60,7 +60,7 @@ class EventHistoryRepositoryCustomImpl(
                             from?.let { path(EventHistory::occurredAt).greaterThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
                             to?.let { path(EventHistory::occurredAt).lessThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
                             siteId?.let { path(Site::id).eq(it) },
-                            result?.let { path(EventHistory::actionResult).eq(it) },
+                            result?.let { path(EventHistory::status).eq(it) },
                             path(Site::id).`in`(siteIds),
                         ),
                     )

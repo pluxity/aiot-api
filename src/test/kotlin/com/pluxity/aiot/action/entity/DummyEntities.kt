@@ -3,7 +3,7 @@ package com.pluxity.aiot.action.entity
 import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.base.entity.withAudit
 import com.pluxity.aiot.event.entity.EventHistory
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import java.time.LocalDateTime
 
 fun dummyActionHistory(
@@ -28,7 +28,7 @@ fun dummyEventHistory(
     occurredAt: LocalDateTime = LocalDateTime.now(),
     minValue: Double? = null,
     maxValue: Double? = null,
-    actionResult: HistoryResult = HistoryResult.PENDING,
+    eventStatus: EventStatus = EventStatus.PENDING,
     guideMessage: String? = null,
 ) = EventHistory(
     id = id,
@@ -42,6 +42,6 @@ fun dummyEventHistory(
     occurredAt = occurredAt,
     minValue = minValue,
     maxValue = maxValue,
-    actionResult = actionResult,
+    status = eventStatus,
     guideMessage = guideMessage,
 )

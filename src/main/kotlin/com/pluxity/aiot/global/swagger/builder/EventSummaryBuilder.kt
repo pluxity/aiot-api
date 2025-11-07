@@ -18,7 +18,7 @@ class EventSummaryBuilder {
             .addProperty("occurredAt", StringSchema())
             .addProperty("minValue", NumberSchema().format("double"))
             .addProperty("maxValue", NumberSchema().format("double"))
-            .addProperty("actionResult", StringSchema())
+            .addProperty("status", StringSchema())
             .addProperty("eventName", StringSchema())
             .addProperty("fieldKey", StringSchema())
             .addProperty("guideMessage", StringSchema())
@@ -43,7 +43,7 @@ class EventSummaryBuilder {
                 "occurredAt" to "2025-11-04T10:00:00Z",
                 "minValue" to 0.1,
                 "maxValue" to 9.9,
-                "actionResult" to "PENDING",
+                "status" to "PENDING",
                 "eventName" to "string",
                 "fieldKey" to "Angle-X",
                 "guideMessage" to "Check",

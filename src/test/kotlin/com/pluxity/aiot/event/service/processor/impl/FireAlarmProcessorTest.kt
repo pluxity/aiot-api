@@ -3,7 +3,7 @@ package com.pluxity.aiot.event.service.processor.impl
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
@@ -71,7 +71,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "DANGER_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
 
@@ -129,7 +129,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 0.0
                     eventHistories.first().eventName shouldBe "WARNING_Fire Alarm"
-                    eventHistories.first().actionResult shouldBe HistoryResult.PENDING
+                    eventHistories.first().status shouldBe EventStatus.PENDING
                 }
             }
         }

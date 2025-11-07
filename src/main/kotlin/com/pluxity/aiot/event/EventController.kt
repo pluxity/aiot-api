@@ -3,7 +3,7 @@ package com.pluxity.aiot.event
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import io.swagger.v3.oas.annotations.Operation
@@ -45,7 +45,7 @@ class EventController(
         @Parameter(description = "현장 아이디", required = false)
         @RequestParam("siteId", required = false) siteId: Long?,
         @Parameter(description = "이벤트 상태", required = false)
-        @RequestParam("status", required = false) status: HistoryResult?,
+        @RequestParam("status", required = false) status: EventStatus?,
     ): ResponseEntity<DataResponseBody<List<EventResponse>>> =
         ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status)))
 
@@ -70,7 +70,7 @@ class EventController(
     fun update(
         @Parameter(description = "이벤트 ID", required = true) @PathVariable id: Long,
         @Parameter(description = "이벤트 상태", required = false)
-        @RequestParam("result", required = false) result: HistoryResult,
+        @RequestParam("result", required = false) result: EventStatus,
     ): ResponseEntity<Void> {
         eventService.updateStatus(id, result)
         return ResponseEntity.noContent().build()

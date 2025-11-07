@@ -1,7 +1,7 @@
 package com.pluxity.aiot.event.repository
 
 import com.pluxity.aiot.event.entity.EventHistory
-import com.pluxity.aiot.event.entity.HistoryResult
+import com.pluxity.aiot.event.entity.EventStatus
 import java.time.LocalDateTime
 
 interface EventHistoryRepositoryCustom {
@@ -16,7 +16,7 @@ interface EventHistoryRepositoryCustom {
         from: String?,
         to: String?,
         siteId: Long? = null,
-        result: HistoryResult? = null,
+        result: EventStatus? = null,
         siteIds: List<Long>,
     ): List<EventHistory>
 }

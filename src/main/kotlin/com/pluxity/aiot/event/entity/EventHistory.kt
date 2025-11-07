@@ -36,12 +36,12 @@ class EventHistory(
     var minValue: Double? = null,
     var maxValue: Double? = null,
     @Enumerated(EnumType.STRING)
-    var actionResult: HistoryResult = HistoryResult.PENDING,
+    var status: EventStatus = EventStatus.PENDING,
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
 ) : BaseEntity() {
-    fun changeActionResult(actionResult: HistoryResult) {
-        this.actionResult = actionResult
+    fun changeStatus(status: EventStatus) {
+        this.status = status
     }
 }

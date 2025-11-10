@@ -91,8 +91,6 @@ enum class DeviceProfileEnum(
         private val map = entries.associateBy(DeviceProfileEnum::id)
 
         fun findById(id: Long) = map[id] ?: throw IllegalArgumentException("Unknown id: $id")
-
-        fun getDescriptionByFieldKey(fieldKey: String) = entries.find { it.fieldKey == fieldKey }?.description
     }
 }
 

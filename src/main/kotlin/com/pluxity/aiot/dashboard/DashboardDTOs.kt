@@ -18,11 +18,3 @@ data class SensorTypeStatus(
     val fire: Long,
     val displacement: Long,
 )
-
-data class ActionHistorySummary(
-    val siteName: String?,
-    val deviceName: String,
-    val eventName: String?,
-    val status: String,
-    val createdAt: String,
-)

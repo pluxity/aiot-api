@@ -110,7 +110,7 @@ class DashboardService(
                     join(Feature::site),
                 ).where(
                     path(Site::id).`in`(siteIds),
-                )
+                ).orderBy(path(ActionHistory::createdAt).desc())
             }
         val histories =
             entityManager

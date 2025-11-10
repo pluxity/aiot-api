@@ -1,6 +1,9 @@
 package com.pluxity.aiot.feature.dto
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.pluxity.aiot.feature.Feature
+import com.pluxity.aiot.global.response.BaseResponse
+import com.pluxity.aiot.global.response.toBaseResponse
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.sensor.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.sensor.type.dto.toDeviceTypeResponse
@@ -20,6 +23,7 @@ data class FeatureResponse(
     val height: Double?,
     val siteResponse: SiteResponse?,
     val deviceTypeResponse: DeviceTypeResponse,
+    @field:JsonUnwrapped var baseResponse: BaseResponse,
 )
 
 fun Feature.toFeatureResponse() =
@@ -36,4 +40,5 @@ fun Feature.toFeatureResponse() =
         height = this.height,
         siteResponse = this.site?.toSiteResponse(),
         deviceTypeResponse = SensorType.fromObjectId(this.objectId.take(5)).toDeviceTypeResponse(),
+        baseResponse = this.toBaseResponse(),
     )

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.feature.dto
 
+import com.pluxity.aiot.base.dummyBaseResponse
 import com.pluxity.aiot.sensor.type.FieldType
 import com.pluxity.aiot.sensor.type.dto.DeviceProfileResponse
 import com.pluxity.aiot.sensor.type.dto.DeviceTypeResponse
@@ -33,6 +34,7 @@ fun dummyFeatureResponse(
         height = height,
         siteResponse = siteResponse,
         deviceTypeResponse = deviceTypeResponse,
+        baseResponse = dummyBaseResponse(),
     )
 
 fun dummyDeviceTypeResponse(

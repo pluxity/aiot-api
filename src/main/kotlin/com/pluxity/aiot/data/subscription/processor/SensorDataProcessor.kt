@@ -91,6 +91,7 @@ interface SensorDataProcessor {
                     guideMessage = condition.guideMessage,
                     longitude = feature.longitude,
                     latitude = feature.latitude,
+                    level = condition.level,
                 ),
             )
 

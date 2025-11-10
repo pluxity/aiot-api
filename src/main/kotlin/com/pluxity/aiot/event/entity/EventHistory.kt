@@ -1,5 +1,6 @@
 package com.pluxity.aiot.event.entity
 
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.global.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -40,6 +41,8 @@ class EventHistory(
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
+    @Enumerated(EnumType.STRING)
+    var level: ConditionLevel? = null,
 ) : BaseEntity() {
     fun changeStatus(status: EventStatus) {
         this.status = status

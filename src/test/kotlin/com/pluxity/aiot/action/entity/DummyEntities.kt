@@ -2,6 +2,7 @@ package com.pluxity.aiot.action.entity
 
 import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.base.entity.withAudit
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
 import java.time.LocalDateTime
@@ -30,6 +31,7 @@ fun dummyEventHistory(
     maxValue: Double? = null,
     eventStatus: EventStatus = EventStatus.PENDING,
     guideMessage: String? = null,
+    level: ConditionLevel? = ConditionLevel.CAUTION,
 ) = EventHistory(
     id = id,
     deviceId = deviceId,
@@ -44,4 +46,5 @@ fun dummyEventHistory(
     maxValue = maxValue,
     status = eventStatus,
     guideMessage = guideMessage,
+    level = level,
 )

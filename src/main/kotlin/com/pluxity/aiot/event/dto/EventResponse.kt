@@ -21,6 +21,7 @@ data class EventResponse(
     val updatedAt: String,
     val updatedBy: String?,
     val value: Double? = null,
+    val level: String? = null,
 )
 
 fun EventHistory.toEventResponse() =
@@ -40,6 +41,7 @@ fun EventHistory.toEventResponse() =
         updatedAt = this.updatedAt.toString(),
         updatedBy = this.updatedBy,
         value = this.value,
+        level = this.level?.name,
     )
 
 data class EventTimeSeriesDataResponse(

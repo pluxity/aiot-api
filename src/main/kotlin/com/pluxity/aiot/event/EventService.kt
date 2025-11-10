@@ -5,6 +5,7 @@ import com.pluxity.aiot.data.dto.ListMetricData
 import com.pluxity.aiot.data.dto.ListQueryInfo
 import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.enum.DataInterval
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.dto.EventMetrics
 import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
@@ -17,6 +18,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.response.CursorPageResponse
 import com.pluxity.aiot.global.response.toCursorPageResponse
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -37,13 +39,15 @@ class EventService(
         to: String?,
         siteId: Long?,
         status: EventStatus?,
+        level: ConditionLevel?,
+        sensorType: SensorType?,
         size: Int,
         lastId: Long? = null,
     ): CursorPageResponse<EventResponse> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         val eventList =
             eventHistoryRepository
-                .findEventListWithPaging(from, to, siteId, status, siteIds, size, lastId)
+                .findEventListWithPaging(from, to, siteId, status, level, sensorType, siteIds, size, lastId)
                 .map { it.toEventResponse() }
         val hasNext = eventList.size > size
         return eventList.toCursorPageResponse(hasNext) { it.eventId }

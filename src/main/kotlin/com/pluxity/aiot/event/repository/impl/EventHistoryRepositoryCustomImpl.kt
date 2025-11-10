@@ -4,11 +4,13 @@ import com.linecorp.kotlinjdsl.dsl.jpql.jpql
 import com.linecorp.kotlinjdsl.render.jpql.JpqlRenderContext
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.extension.createQuery
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepositoryCustom
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Repository
@@ -77,10 +79,13 @@ class EventHistoryRepositoryCustomImpl(
         to: String?,
         siteId: Long?,
         result: EventStatus?,
+        level: ConditionLevel?,
+        sensorType: SensorType?,
         siteIds: List<Long>,
         size: Int,
         lastId: Long?,
     ): List<EventHistory> {
+        val fieldKeys = sensorType?.deviceProfiles?.map { it.fieldKey }
         val query =
             jpql {
                 select(entity(EventHistory::class))
@@ -94,8 +99,10 @@ class EventHistoryRepositoryCustomImpl(
                             to?.let { path(EventHistory::occurredAt).lessThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
                             siteId?.let { path(Site::id).eq(it) },
                             result?.let { path(EventHistory::status).eq(it) },
+                            level?.let { path(EventHistory::level).eq(it) },
                             path(Site::id).`in`(siteIds),
                             lastId?.let { path(EventHistory::id).lt(it) },
+                            fieldKeys?.takeIf { it.isNotEmpty() }?.let { path(EventHistory::fieldKey).`in`(fieldKeys) },
                         ),
                     ).orderBy(path(EventHistory::id).desc())
             }

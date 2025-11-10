@@ -3,10 +3,12 @@ package com.pluxity.aiot.event
 import com.pluxity.aiot.action.entity.dummyEventHistory
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.EventService.EventListDto
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrowExactly
@@ -56,11 +58,29 @@ class EventServiceKoTest :
                 } returns sites
 
                 every {
-                    eventHistoryRepository.findEventListWithPaging(from, to, siteId, result, listOf(1L, 2L), 20)
+                    eventHistoryRepository.findEventListWithPaging(
+                        from,
+                        to,
+                        siteId,
+                        result,
+                        ConditionLevel.CAUTION,
+                        SensorType.DISPLACEMENT_GAUGE,
+                        listOf(1L, 2L),
+                        20,
+                    )
                 } returns eventHistories
 
                 Then("이벤트 목록 반환") {
-                    val results = eventService.findAll(from, to, siteId, result, size = 20)
+                    val results =
+                        eventService.findAll(
+                            from,
+                            to,
+                            siteId,
+                            result,
+                            ConditionLevel.CAUTION,
+                            SensorType.DISPLACEMENT_GAUGE,
+                            size = 20,
+                        )
                     results.content.size shouldBe 2
                 }
             }
@@ -74,11 +94,20 @@ class EventServiceKoTest :
                 } returns sites
 
                 every {
-                    eventHistoryRepository.findEventListWithPaging(null, null, null, null, listOf(1L), 20)
+                    eventHistoryRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        null,
+                        null,
+                        ConditionLevel.CAUTION,
+                        SensorType.DISPLACEMENT_GAUGE,
+                        listOf(1L),
+                        20,
+                    )
                 } returns eventHistories
 
                 Then("전체 이벤트 목록 반환") {
-                    val results = eventService.findAll(null, null, null, null, 20)
+                    val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.DISPLACEMENT_GAUGE, 20)
                     results.content.size shouldBe 1
                 }
             }

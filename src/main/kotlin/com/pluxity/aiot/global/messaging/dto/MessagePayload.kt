@@ -11,6 +11,7 @@ data class ConnectionErrorPayload(
 
 data class SensorAlarmPayload(
     val siteId: Long,
+    val siteName: String,
     val sensorType: String,
     val message: String,
     val level: String,

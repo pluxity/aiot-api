@@ -92,7 +92,7 @@ enum class DeviceProfileEnum(
 
         fun findById(id: Long) = map[id] ?: throw IllegalArgumentException("Unknown id: $id")
 
-        fun getAllResponses() = entries.map { it.toResponse() }
+        fun getDescriptionByFieldKey(fieldKey: String) = entries.find { it.fieldKey == fieldKey }?.description
     }
 }
 

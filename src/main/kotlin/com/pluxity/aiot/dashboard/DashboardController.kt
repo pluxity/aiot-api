@@ -58,4 +58,17 @@ class DashboardController(
         @RequestParam("to", required = false) to: String?,
     ): ResponseEntity<DataResponseBody<Map<EventStatus, List<EventResponse>>>> =
         ResponseEntity.ok(DataResponseBody(dashboardService.getEventSummary(from, to)))
+
+    @Operation(summary = "최근 조치 이력 정보 조회", description = "최근 조치이력 정보를 조회합니다.")
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+            ),
+        ],
+    )
+    @GetMapping("/action-histories")
+    fun getEventSummary(): ResponseEntity<DataResponseBody<List<ActionHistorySummary>>> =
+        ResponseEntity.ok(DataResponseBody(dashboardService.getActionHistories()))
 }

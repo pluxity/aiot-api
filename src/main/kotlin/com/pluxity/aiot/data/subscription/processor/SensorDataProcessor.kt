@@ -104,6 +104,7 @@ interface SensorDataProcessor {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
                         siteId = it.id!!,
+                        siteName = it.name,
                         sensorType = sensorType.description,
                         fieldKey = fieldKey,
                         message = message,

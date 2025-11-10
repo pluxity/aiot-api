@@ -35,7 +35,10 @@ class FeatureService(
                                 searchCondition?.objectId?.let { path(Feature::objectId).like("$it%") },
                                 searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
                             ),
-                        ).orderBy(path(Feature::site).asc())
+                        ).orderBy(
+                            path(Feature::site).asc(),
+                            path(Feature::id).asc(),
+                        )
                 }.filterNotNull()
 
         return features.map { it.toFeatureResponse() }

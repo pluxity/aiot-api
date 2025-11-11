@@ -3,6 +3,7 @@ package com.pluxity.aiot.action.entity
 import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.base.entity.withAudit
 import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.dto.EventHistoryRow
 import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
 import java.time.LocalDateTime
@@ -47,4 +48,44 @@ fun dummyEventHistory(
     status = eventStatus,
     guideMessage = guideMessage,
     level = level,
+)
+
+fun dummyEventHistoryRow(
+    eventId: Long = 999L,
+    deviceId: String? = null,
+    objectId: String? = null,
+    occurredAt: LocalDateTime = LocalDateTime.now(),
+    minValue: Double? = null,
+    maxValue: Double? = null,
+    status: EventStatus = EventStatus.PENDING,
+    eventName: String? = null,
+    fieldKey: String? = "Temperature",
+    guideMessage: String? = null,
+    longitude: Double? = null,
+    latitude: Double? = null,
+    updatedBy: String = "system",
+    updatedAt: LocalDateTime = LocalDateTime.now(),
+    value: Double? = null,
+    level: ConditionLevel? = ConditionLevel.CAUTION,
+    siteName: String = "현장",
+    sensorDescription: String? = null,
+) = EventHistoryRow(
+    eventId = eventId,
+    deviceId = deviceId,
+    objectId = objectId,
+    occurredAt = occurredAt,
+    minValue = minValue,
+    maxValue = maxValue,
+    status = status,
+    eventName = eventName,
+    fieldKey = fieldKey,
+    guideMessage = guideMessage,
+    longitude = longitude,
+    latitude = latitude,
+    updatedBy = updatedBy,
+    updatedAt = updatedAt,
+    value = value,
+    level = level,
+    siteName = siteName,
+    sensorDescription = sensorDescription,
 )

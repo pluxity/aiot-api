@@ -30,4 +30,5 @@ data class SensorAlarmPayload(
     val lat: Double,
     val guideMessage: String?,
     val profileDescription: String?,
+    val eventId: Long,
 )

@@ -123,6 +123,7 @@ interface SensorDataProcessor {
                         lat = feature.latitude!!,
                         guideMessage = condition.guideMessage,
                         profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(fieldKey),
+                        eventId = eventHistory.id!!,
                     ),
                 )
             }

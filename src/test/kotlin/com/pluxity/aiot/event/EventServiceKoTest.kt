@@ -1,6 +1,7 @@
 package com.pluxity.aiot.event
 
 import com.pluxity.aiot.action.entity.dummyEventHistory
+import com.pluxity.aiot.action.entity.dummyEventHistoryRow
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.EventService.EventListDto
 import com.pluxity.aiot.event.condition.ConditionLevel
@@ -49,8 +50,8 @@ class EventServiceKoTest :
                     )
                 val eventHistories =
                     listOf(
-                        dummyEventHistory(id = 1L),
-                        dummyEventHistory(id = 2L),
+                        dummyEventHistoryRow(),
+                        dummyEventHistoryRow(),
                     )
 
                 every {
@@ -87,7 +88,7 @@ class EventServiceKoTest :
 
             When("필터 없이 조회 요청") {
                 val sites = listOf(dummySite(id = 1L))
-                val eventHistories = listOf(dummyEventHistory(id = 1L))
+                val eventHistories = listOf(dummyEventHistoryRow())
 
                 every {
                     siteRepository.findAllByOrderByCreatedAtDesc()

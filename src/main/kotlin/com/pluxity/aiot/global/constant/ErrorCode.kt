@@ -123,11 +123,9 @@ enum class ErrorCode(
 
     INVALID_RESOURCE_IDS_INCLUDED(HttpStatus.BAD_REQUEST, "요청한 리소스 ID %s 는 유효하지 않습니다."),
     MEDIAMTX_ADD_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
-    MEDIAMTX_PATCH_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
     MEDIAMTX_DELETE_ERROR(HttpStatus.BAD_REQUEST, "MediaMtx등록 실패: %s"),
 
     NOT_FOUND_INVALID_NUMERIC_VALUE(HttpStatus.BAD_REQUEST, "유효한 숫자가 아닙니다."),
-    NOT_FOUND_DEVICE_PROFILE_FIELD_KEY(HttpStatus.BAD_REQUEST, "유효한 field key(%s)가 아닙니다."),
     NOT_FOUND_INVALID_BOOLEAN_VALUE(HttpStatus.BAD_REQUEST, "유효한 Boolean 값이 아닙니다."),
     NOT_SUPPORTED_OPERATOR(HttpStatus.BAD_REQUEST, "지원하지 않는 연산자입니다."),
     ;

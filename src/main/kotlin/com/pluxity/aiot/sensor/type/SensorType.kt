@@ -29,7 +29,7 @@ enum class SensorType(
     FIRE(
         2,
         "34956",
-        "화재 감지",
+        "화재감지기",
         "1.0",
         "fire_alarm",
         AbbreviationData("fir", "화재감지기"),
@@ -38,7 +38,7 @@ enum class SensorType(
     DISPLACEMENT_GAUGE(
         3,
         "34957",
-        "DISPLACEMENT_GAUGE",
+        "변위계",
         "1.0",
         "displacement_gauge",
         AbbreviationData("tst", "변위계"),

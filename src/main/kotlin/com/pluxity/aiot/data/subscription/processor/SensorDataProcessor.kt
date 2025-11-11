@@ -15,6 +15,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
@@ -121,6 +122,7 @@ interface SensorDataProcessor {
                         lon = feature.longitude!!,
                         lat = feature.latitude!!,
                         guideMessage = condition.guideMessage,
+                        profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(fieldKey),
                     ),
                 )
             }

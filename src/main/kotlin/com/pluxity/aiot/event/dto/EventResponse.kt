@@ -25,7 +25,7 @@ data class EventResponse(
     val updatedBy: String?,
     val value: Double? = null,
     val level: String? = null,
-    val siteId: Long,
+    val siteId: Long? = null,
     val siteName: String? = null,
     val sensorDescription: String? = null,
     val profileDescription: String? = null,

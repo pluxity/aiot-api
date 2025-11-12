@@ -25,6 +25,7 @@ data class EventResponse(
     val updatedBy: String?,
     val value: Double? = null,
     val level: String? = null,
+    val siteId: Long,
     val siteName: String? = null,
     val sensorDescription: String? = null,
     val profileDescription: String? = null,
@@ -62,6 +63,7 @@ data class EventHistoryRow(
     val updatedAt: LocalDateTime,
     val value: Double?,
     val level: ConditionLevel?,
+    val siteId: Long,
     val siteName: String,
     val sensorDescription: String?,
 )
@@ -84,6 +86,7 @@ fun EventHistoryRow.toEventResponse() =
         updatedAt = this.updatedAt.toString(),
         value = this.value,
         level = this.level?.name,
+        siteId = this.siteId,
         siteName = this.siteName,
         sensorDescription = this.sensorDescription,
         profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(this.fieldKey!!),

@@ -67,6 +67,7 @@ fun dummyEventHistoryRow(
     updatedAt: LocalDateTime = LocalDateTime.now(),
     value: Double? = null,
     level: ConditionLevel? = ConditionLevel.CAUTION,
+    siteId: Long = 1,
     siteName: String = "현장",
     sensorDescription: String? = null,
 ) = EventHistoryRow(
@@ -86,6 +87,7 @@ fun dummyEventHistoryRow(
     updatedAt = updatedAt,
     value = value,
     level = level,
+    siteId = siteId,
     siteName = siteName,
     sensorDescription = sensorDescription,
 )

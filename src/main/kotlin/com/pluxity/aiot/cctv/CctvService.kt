@@ -25,7 +25,8 @@ class CctvService(
 ) {
     @PostConstruct
     fun init() {
-        synchronizeCctv()
+        // TODO 미디어서버 변경 후 수정 필요
+//        synchronizeCctv()
     }
 
     @Transactional

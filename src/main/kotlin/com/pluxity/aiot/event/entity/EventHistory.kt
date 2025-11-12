@@ -37,7 +37,7 @@ class EventHistory(
     var minValue: Double? = null,
     var maxValue: Double? = null,
     @Enumerated(EnumType.STRING)
-    var status: EventStatus = EventStatus.PENDING,
+    var status: EventStatus = EventStatus.ACTIVE,
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,

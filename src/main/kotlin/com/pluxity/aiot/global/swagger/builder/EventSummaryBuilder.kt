@@ -1,5 +1,6 @@
 package com.pluxity.aiot.global.swagger.builder
 
+import com.pluxity.aiot.event.entity.EventStatus
 import io.swagger.v3.oas.models.media.ArraySchema
 import io.swagger.v3.oas.models.media.IntegerSchema
 import io.swagger.v3.oas.models.media.MapSchema
@@ -43,7 +44,7 @@ class EventSummaryBuilder {
                 "occurredAt" to "2025-11-04T10:00:00Z",
                 "minValue" to 0.1,
                 "maxValue" to 9.9,
-                "status" to "PENDING",
+                "status" to EventStatus.ACTIVE.name,
                 "eventName" to "string",
                 "fieldKey" to "Angle-X",
                 "guideMessage" to "Check",
@@ -53,9 +54,9 @@ class EventSummaryBuilder {
     private fun createEventSummaryExample(): Map<String, Any> {
         val exampleList = createEventResponseListExample()
         return mapOf(
-            "PENDING" to exampleList,
-            "WORKING" to exampleList,
-            "COMPLETED" to exampleList,
+            EventStatus.ACTIVE.name to exampleList,
+            EventStatus.IN_PROGRESS.name to exampleList,
+            EventStatus.RESOLVED.name to exampleList,
         )
     }
 }

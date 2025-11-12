@@ -77,7 +77,7 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.eventName shouldBe "WARNING_Temperature"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
-                    eventHistory.status shouldBe EventStatus.PENDING
+                    eventHistory.status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -446,7 +446,7 @@ class TemperatureHumidityProcessorTest(
                     val actualValue = eventHistories.first().value
                     actualValue.shouldNotBeNull()
                     (actualValue in 81.37..81.39) shouldBe true
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -576,8 +576,8 @@ class TemperatureHumidityProcessorTest(
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 2
                     eventHistories.map { it.eventName }.toSet() shouldBe setOf("WARNING_Temperature", "DANGER_Temperature")
-                    eventHistories.first { it.eventName == "WARNING_Temperature" }.status shouldBe EventStatus.PENDING
-                    eventHistories.first { it.eventName == "DANGER_Temperature" }.status shouldBe EventStatus.PENDING
+                    eventHistories.first { it.eventName == "WARNING_Temperature" }.status shouldBe EventStatus.ACTIVE
+                    eventHistories.first { it.eventName == "DANGER_Temperature" }.status shouldBe EventStatus.ACTIVE
                 }
             }
         }

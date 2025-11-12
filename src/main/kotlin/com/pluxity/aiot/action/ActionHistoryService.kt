@@ -63,7 +63,7 @@ class ActionHistoryService(
                 }
             actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
-        eventHistory.changeStatus(EventStatus.COMPLETED)
+        eventHistory.changeStatus(EventStatus.RESOLVED)
         return savedActionHistory.id!!
     }
 

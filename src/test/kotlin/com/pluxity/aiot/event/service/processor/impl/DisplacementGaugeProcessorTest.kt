@@ -100,7 +100,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 84.0
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -127,7 +127,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 96.0
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -187,7 +187,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe -3.5
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -242,7 +242,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-Y"
                     eventHistories.first().value shouldBe 3.5
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -332,7 +332,7 @@ class DisplacementGaugeProcessorTest(
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "Angle-X"
                     eventHistories.first().value shouldBe 100.0
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
         }

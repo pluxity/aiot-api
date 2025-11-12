@@ -71,7 +71,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "DANGER_Fire Alarm"
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
 
@@ -129,7 +129,7 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 0.0
                     eventHistories.first().eventName shouldBe "WARNING_Fire Alarm"
-                    eventHistories.first().status shouldBe EventStatus.PENDING
+                    eventHistories.first().status shouldBe EventStatus.ACTIVE
                 }
             }
         }

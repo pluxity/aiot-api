@@ -70,7 +70,10 @@ class EventHistoryRepositoryCustomImpl(
                             lastId?.let { path(EventHistory::id).lt(it) },
                             fieldKeys?.takeIf { it.isNotEmpty() }?.let { path(EventHistory::fieldKey).`in`(fieldKeys) },
                         ),
-                    ).orderBy(path(EventHistory::id).desc())
+                    ).orderBy(
+                        path(EventHistory::status).asc(),
+                        path(EventHistory::id).desc(),
+                    )
             }
 
         return entityManager

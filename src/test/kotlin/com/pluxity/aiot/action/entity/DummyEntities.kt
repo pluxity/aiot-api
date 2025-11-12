@@ -30,7 +30,7 @@ fun dummyEventHistory(
     occurredAt: LocalDateTime = LocalDateTime.now(),
     minValue: Double? = null,
     maxValue: Double? = null,
-    eventStatus: EventStatus = EventStatus.PENDING,
+    eventStatus: EventStatus = EventStatus.ACTIVE,
     guideMessage: String? = null,
     level: ConditionLevel? = ConditionLevel.CAUTION,
 ) = EventHistory(
@@ -57,7 +57,7 @@ fun dummyEventHistoryRow(
     occurredAt: LocalDateTime = LocalDateTime.now(),
     minValue: Double? = null,
     maxValue: Double? = null,
-    status: EventStatus = EventStatus.PENDING,
+    status: EventStatus = EventStatus.ACTIVE,
     eventName: String? = null,
     fieldKey: String? = "Temperature",
     guideMessage: String? = null,

@@ -42,7 +42,7 @@ class EventServiceKoTest :
                 val from = "20240101000000"
                 val to = "20240131235959"
                 val siteId = 1L
-                val result = EventStatus.PENDING
+                val result = EventStatus.ACTIVE
                 val sites =
                     listOf(
                         dummySite(id = 1L),
@@ -117,7 +117,7 @@ class EventServiceKoTest :
         Given("이벤트 상태를 변경할 때") {
             When("유효한 ID와 상태로 변경 요청") {
                 val eventId = 1L
-                val newResult = EventStatus.COMPLETED
+                val newResult = EventStatus.RESOLVED
                 val eventHistory = dummyEventHistory(id = eventId)
 
                 every {
@@ -132,7 +132,7 @@ class EventServiceKoTest :
 
             When("존재하지 않는 ID로 상태 변경 요청") {
                 val eventId = 999L
-                val newResult = EventStatus.COMPLETED
+                val newResult = EventStatus.RESOLVED
 
                 every {
                     eventHistoryRepository.findByIdOrNull(eventId)

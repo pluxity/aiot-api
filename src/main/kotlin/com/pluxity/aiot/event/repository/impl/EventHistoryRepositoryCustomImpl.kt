@@ -2,6 +2,7 @@ package com.pluxity.aiot.event.repository.impl
 
 import com.linecorp.kotlinjdsl.dsl.jpql.Jpql
 import com.linecorp.kotlinjdsl.dsl.jpql.jpql
+import com.linecorp.kotlinjdsl.querymodel.jpql.predicate.Predicate
 import com.linecorp.kotlinjdsl.render.jpql.JpqlRenderContext
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.extension.createQuery
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
@@ -28,7 +29,7 @@ class EventHistoryRepositoryCustomImpl(
         from: String?,
         to: String?,
         siteId: Long?,
-        result: EventStatus?,
+        status: EventStatus?,
         siteIds: List<Long>,
     ): List<EventHistoryRow> =
         kotlinJdslJpqlExecutor
@@ -36,10 +37,10 @@ class EventHistoryRepositoryCustomImpl(
                 selectFromEventHistoryRow()
                     .where(
                         and(
-                            from?.let { path(EventHistory::occurredAt).greaterThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
-                            to?.let { path(EventHistory::occurredAt).lessThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
-                            siteId?.let { path(Site::id).eq(it) },
-                            result?.let { path(EventHistory::status).eq(it) },
+                            filterByFrom(from),
+                            filterByTo(to),
+                            filterBySiteId(siteId),
+                            filterByStatus(status),
                             path(Site::id).`in`(siteIds),
                         ),
                     ).orderBy(path(EventHistory::id).desc())
@@ -49,7 +50,7 @@ class EventHistoryRepositoryCustomImpl(
         from: String?,
         to: String?,
         siteId: Long?,
-        result: EventStatus?,
+        status: EventStatus?,
         level: ConditionLevel?,
         sensorType: SensorType?,
         siteIds: List<Long>,
@@ -63,24 +64,14 @@ class EventHistoryRepositoryCustomImpl(
                 selectFromEventHistoryRow()
                     .where(
                         and(
-                            from?.let { path(EventHistory::occurredAt).greaterThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
-                            to?.let { path(EventHistory::occurredAt).lessThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) },
-                            siteId?.let { path(Site::id).eq(it) },
-                            result?.let { path(EventHistory::status).eq(it) },
+                            filterByFrom(from),
+                            filterByTo(to),
+                            filterBySiteId(siteId),
+                            filterByStatus(status),
                             level?.let { path(EventHistory::level).eq(it) },
                             path(Site::id).`in`(siteIds),
                             fieldKeys?.takeIf { it.isNotEmpty() }?.let { path(EventHistory::fieldKey).`in`(fieldKeys) },
-                            if (lastId != null && lastStatus != null) {
-                                or(
-                                    path(EventHistory::status).greaterThan(lastStatus),
-                                    and(
-                                        path(EventHistory::status).eq(lastStatus),
-                                        path(EventHistory::id).lessThanOrEqualTo(lastId),
-                                    ),
-                                )
-                            } else {
-                                null
-                            },
+                            cursorCondition(lastId, lastStatus),
                         ),
                     ).orderBy(
                         path(EventHistory::status).asc(),
@@ -120,4 +111,30 @@ class EventHistoryRepositoryCustomImpl(
             join(entity(Feature::class)).on(path(EventHistory::deviceId).equal(path(Feature::deviceId))),
             join(Feature::site),
         )
+
+    private fun Jpql.cursorCondition(
+        lastId: Long?,
+        lastStatus: EventStatus?,
+    ): Predicate? =
+        if (lastId != null && lastStatus != null) {
+            or(
+                path(EventHistory::status).greaterThan(lastStatus),
+                and(
+                    path(EventHistory::status).eq(lastStatus),
+                    path(EventHistory::id).lessThanOrEqualTo(lastId),
+                ),
+            )
+        } else {
+            null
+        }
+
+    private fun Jpql.filterByFrom(from: String?): Predicate? =
+        from?.let { path(EventHistory::occurredAt).greaterThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) }
+
+    private fun Jpql.filterByTo(to: String?): Predicate? =
+        to?.let { path(EventHistory::occurredAt).lessThanOrEqualTo(DateTimeUtils.parseCompactDateTime(it)) }
+
+    private fun Jpql.filterBySiteId(siteId: Long?): Predicate? = siteId?.let { path(Site::id).eq(it) }
+
+    private fun Jpql.filterByStatus(status: EventStatus?): Predicate? = status?.let { path(EventHistory::status).eq(it) }
 }

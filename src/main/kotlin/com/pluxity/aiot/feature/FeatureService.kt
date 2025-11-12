@@ -6,6 +6,7 @@ import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.feature.dto.toFeatureResponse
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.site.Site
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
@@ -22,7 +23,7 @@ class FeatureService(
     fun findAll(searchCondition: FeatureSearchCondition? = null): List<FeatureResponse> {
         val features =
             featureRepository
-                .findAll {
+                .findAllNotNull {
                     select(entity(Feature::class))
                         .from(
                             entity(Feature::class),
@@ -39,7 +40,7 @@ class FeatureService(
                             path(Feature::site).asc(),
                             path(Feature::id).asc(),
                         )
-                }.filterNotNull()
+                }
 
         return features.map { it.toFeatureResponse() }
     }

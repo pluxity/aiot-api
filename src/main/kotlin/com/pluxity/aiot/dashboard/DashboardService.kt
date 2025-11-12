@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteRepository
@@ -26,7 +27,7 @@ class DashboardService(
     fun getSensorSummary(): List<SensorSummary> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         return featureRepository
-            .findAll {
+            .findAllNotNull {
                 selectNew<SensorStatisticsRaw>(
                     path(Site::id),
                     path(Site::name),
@@ -70,8 +71,7 @@ class DashboardService(
                         path(Site::id).`in`(siteIds),
                     ),
                 ).groupBy(path(Site::id))
-            }.filterNotNull()
-            .map { it.toSummaryStatistics() }
+            }.map { it.toSummaryStatistics() }
     }
 
     fun getEventSummary(

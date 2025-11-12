@@ -1,6 +1,7 @@
 package com.pluxity.aiot.user.repository.impl
 
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
+import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.permission.Permission
 import com.pluxity.aiot.permission.PermissionGroup
 import com.pluxity.aiot.user.entity.Role
@@ -18,7 +19,7 @@ class UserCustomRepositoryImpl(
         resourceId: String,
     ): List<String> =
         kotlinJdslJpqlExecutor
-            .findAll {
+            .findAllNotNull {
                 selectDistinct(path(User::username))
                     .from(
                         entity(User::class),
@@ -36,5 +37,5 @@ class UserCustomRepositoryImpl(
                             path(Role::auth).eq(RoleType.ADMIN.name),
                         ),
                     )
-            }.filterNotNull()
+            }
 }

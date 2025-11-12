@@ -4,6 +4,7 @@ import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpql
 import com.pluxity.aiot.cctv.Cctv
 import com.pluxity.aiot.cctv.repository.CctvCustomRepository
 import com.pluxity.aiot.global.annotation.CheckPermission
+import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.permission.ResourceType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.user.entity.PermissionCheckType
@@ -17,7 +18,7 @@ class CctvCustomRepositoryImpl(
     @CheckPermission(type = PermissionType.ID, phase = PermissionCheckType.FULL_ACCESS, resourceType = ResourceType.SITE)
     override fun findAllBySiteId(siteId: Long?): List<Cctv> =
         kotlinJdslJpqlExecutor
-            .findAll {
+            .findAllNotNull {
                 select(entity(Cctv::class))
                     .from(
                         entity(Cctv::class),
@@ -27,5 +28,5 @@ class CctvCustomRepositoryImpl(
                             siteId?.let { path(Site::id).eq(it) },
                         ),
                     )
-            }.filterNotNull()
+            }
 }

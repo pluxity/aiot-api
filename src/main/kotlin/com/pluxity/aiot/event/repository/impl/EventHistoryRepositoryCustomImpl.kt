@@ -12,6 +12,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepositoryCustom
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import jakarta.persistence.EntityManager
@@ -31,7 +32,7 @@ class EventHistoryRepositoryCustomImpl(
         siteIds: List<Long>,
     ): List<EventHistoryRow> =
         kotlinJdslJpqlExecutor
-            .findAll {
+            .findAllNotNull {
                 selectFromEventHistoryRow()
                     .where(
                         and(
@@ -42,7 +43,7 @@ class EventHistoryRepositoryCustomImpl(
                             path(Site::id).`in`(siteIds),
                         ),
                     ).orderBy(path(EventHistory::id).desc())
-            }.filterNotNull()
+            }
 
     override fun findEventListWithPaging(
         from: String?,

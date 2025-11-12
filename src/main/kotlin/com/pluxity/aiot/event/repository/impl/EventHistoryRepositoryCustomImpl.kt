@@ -55,6 +55,7 @@ class EventHistoryRepositoryCustomImpl(
         siteIds: List<Long>,
         size: Int,
         lastId: Long?,
+        lastStatus: EventStatus?,
     ): List<EventHistoryRow> {
         val fieldKeys = sensorType?.deviceProfiles?.map { it.fieldKey }
         val query =
@@ -68,8 +69,8 @@ class EventHistoryRepositoryCustomImpl(
                             result?.let { path(EventHistory::status).eq(it) },
                             level?.let { path(EventHistory::level).eq(it) },
                             path(Site::id).`in`(siteIds),
-                            lastId?.let { path(EventHistory::id).lt(it) },
                             fieldKeys?.takeIf { it.isNotEmpty() }?.let { path(EventHistory::fieldKey).`in`(fieldKeys) },
+                            lastId?.let { path(EventHistory::id).lt(it) },
                         ),
                     ).orderBy(
                         path(EventHistory::status).asc(),

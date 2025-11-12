@@ -200,13 +200,13 @@ class EventServiceKoTest :
                     result shouldNotBe null
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3
-                    result.metrics["pendingCnt"] shouldNotBe null
-                    result.metrics["workingCnt"] shouldNotBe null
-                    result.metrics["completedCnt"] shouldNotBe null
+                    result.metrics["activeCnt"] shouldNotBe null
+                    result.metrics["inProgressCnt"] shouldNotBe null
+                    result.metrics["resolvedCnt"] shouldNotBe null
                     result.timestamps[0] shouldBe bucket
-                    result.metrics["pendingCnt"]?.values[0] shouldBe 1
-                    result.metrics["workingCnt"]?.values[0] shouldBe 2
-                    result.metrics["completedCnt"]?.values[0] shouldBe 3
+                    result.metrics["activeCnt"]?.values[0] shouldBe 1
+                    result.metrics["inProgressCnt"]?.values[0] shouldBe 2
+                    result.metrics["resolvedCnt"]?.values[0] shouldBe 3
                 }
             }
 
@@ -233,12 +233,12 @@ class EventServiceKoTest :
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3
                     result.timestamps[0] shouldBe bucket
-                    result.metrics["pendingCnt"] shouldNotBe null
-                    result.metrics["workingCnt"] shouldNotBe null
-                    result.metrics["completedCnt"] shouldNotBe null
-                    result.metrics["pendingCnt"]?.values[0] shouldBe 5
-                    result.metrics["workingCnt"]?.values[0] shouldBe 10
-                    result.metrics["completedCnt"]?.values[0] shouldBe 16
+                    result.metrics["activeCnt"] shouldNotBe null
+                    result.metrics["inProgressCnt"] shouldNotBe null
+                    result.metrics["resolvedCnt"] shouldNotBe null
+                    result.metrics["activeCnt"]?.values[0] shouldBe 5
+                    result.metrics["inProgressCnt"]?.values[0] shouldBe 10
+                    result.metrics["resolvedCnt"]?.values[0] shouldBe 16
                 }
             }
 
@@ -265,12 +265,12 @@ class EventServiceKoTest :
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3
                     result.timestamps[0] shouldBe bucket
-                    result.metrics["pendingCnt"] shouldNotBe null
-                    result.metrics["workingCnt"] shouldNotBe null
-                    result.metrics["completedCnt"] shouldNotBe null
-                    result.metrics["pendingCnt"]?.values[0] shouldBe 50
-                    result.metrics["workingCnt"]?.values[0] shouldBe 100
-                    result.metrics["completedCnt"]?.values[0] shouldBe 160
+                    result.metrics["activeCnt"] shouldNotBe null
+                    result.metrics["inProgressCnt"] shouldNotBe null
+                    result.metrics["resolvedCnt"] shouldNotBe null
+                    result.metrics["activeCnt"]?.values[0] shouldBe 50
+                    result.metrics["inProgressCnt"]?.values[0] shouldBe 100
+                    result.metrics["resolvedCnt"]?.values[0] shouldBe 160
                 }
             }
         }

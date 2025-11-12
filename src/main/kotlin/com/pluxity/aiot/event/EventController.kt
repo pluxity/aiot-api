@@ -56,9 +56,11 @@ class EventController(
         @Parameter(description = "페이지당 개수", example = "20")
         @RequestParam("size") size: Int = 20,
         @Parameter(description = "마지막 ID", example = "1")
-        @RequestParam("lastId") lastId: Long? = null,
+        @RequestParam("lastId") lastId: Long?,
+        @Parameter(description = "마지막 status", example = "1")
+        @RequestParam("lastStatus") lastStatus: EventStatus?,
     ): ResponseEntity<DataResponseBody<CursorPageResponse<EventResponse>>> =
-        ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status, level, sensorType, size, lastId)))
+        ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status, level, sensorType, size, lastId, lastStatus)))
 
     @Operation(summary = "이벤트 상태 수정", description = "ID로 특정 이벤트의 상태를 수정합니다.")
     @ApiResponses(

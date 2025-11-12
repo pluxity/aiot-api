@@ -24,5 +24,6 @@ interface EventHistoryRepositoryCustom {
         siteIds: List<Long>,
         size: Int,
         lastId: Long? = null,
+        lastStatus: EventStatus? = null,
     ): List<EventHistoryRow>
 }

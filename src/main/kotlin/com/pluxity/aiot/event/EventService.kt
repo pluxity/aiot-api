@@ -43,11 +43,12 @@ class EventService(
         sensorType: SensorType?,
         size: Int,
         lastId: Long? = null,
+        lastStatus: EventStatus? = null,
     ): CursorPageResponse<EventResponse> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         val eventList =
             eventHistoryRepository
-                .findEventListWithPaging(from, to, siteId, status, level, sensorType, siteIds, size, lastId)
+                .findEventListWithPaging(from, to, siteId, status, level, sensorType, siteIds, size, lastId, lastStatus)
                 .map { it.toEventResponse() }
         val hasNext = eventList.size > size
         return eventList.toCursorPageResponse(hasNext) { it.eventId }
@@ -85,9 +86,9 @@ class EventService(
                 params,
             ) { rs, _ ->
                 val bucket = rs.getObject("bucket_start", LocalDateTime::class.java)
-                val p = rs.getInt("pending_cnt")
-                val w = rs.getInt("working_cnt")
-                val c = rs.getInt("completed_cnt")
+                val p = rs.getInt("active_cnt")
+                val w = rs.getInt("in_progress_cnt")
+                val c = rs.getInt("resolved_cnt")
                 EventListDto(
                     bucket.format(DateTimeFormatter.ofPattern(interval.format)),
                     p,
@@ -100,9 +101,9 @@ class EventService(
 
     data class EventListDto(
         val bucketStart: String, // date_trunc로 만든 버킷 시작 시각
-        val pendingCnt: Int,
-        val workingCnt: Int,
-        val completedCnt: Int,
+        val activeCnt: Int,
+        val inProgressCnt: Int,
+        val resolvedCnt: Int,
     )
 
     private fun List<EventListDto>.toDeviceListDataResponse(
@@ -128,9 +129,9 @@ class EventService(
     private fun List<EventListDto>.toMetricsMap(): Map<String, ListMetricData> =
         buildListMetricMap(EventMetrics.ALL) { definition ->
             when (definition.key) {
-                "pendingCnt" -> pendingCnt.toDouble()
-                "workingCnt" -> workingCnt.toDouble()
-                "completedCnt" -> completedCnt.toDouble()
+                "activeCnt" -> activeCnt.toDouble()
+                "inProgressCnt" -> inProgressCnt.toDouble()
+                "resolvedCnt" -> resolvedCnt.toDouble()
                 else -> 0.0
             }
         }
@@ -150,9 +151,9 @@ class EventService(
         )
         SELECT
             b.bucket_start::timestamp AS bucket_start,
-            COUNT(*) FILTER (WHERE e.status = 'PENDING')   AS pending_cnt,
-            COUNT(*) FILTER (WHERE e.status = 'WORKING')   AS working_cnt,
-            COUNT(*) FILTER (WHERE e.status = 'COMPLETED') AS completed_cnt
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.ACTIVE.name}')   AS active_cnt,
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.IN_PROGRESS.name}')   AS in_progress_cnt,
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.RESOLVED.name}') AS resolved_cnt
         FROM buckets b
         LEFT JOIN event_history e
           ON e.occurred_at >= b.bucket_start

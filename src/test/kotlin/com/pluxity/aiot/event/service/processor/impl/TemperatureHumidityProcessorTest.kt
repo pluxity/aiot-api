@@ -66,7 +66,7 @@ class TemperatureHumidityProcessorTest(
                 // 실행
                 processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("EventHistory가 PENDING으로 저장된다") {
+                Then("EventHistory가 ACTIVE으로 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
 

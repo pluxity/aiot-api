@@ -39,11 +39,11 @@ data class EventTimeSeriesDataResponse(
 
 // 공통 메트릭 정의
 object EventMetrics {
-    val PENDING = MetricDefinition("pendingCnt", "건")
-    val WORKING = MetricDefinition("workingCnt", "건")
-    val COMPLETED = MetricDefinition("completedCnt", "건")
+    val ACTIVE = MetricDefinition("activeCnt", "건")
+    val IN_PROGRESS = MetricDefinition("inProgressCnt", "건")
+    val RESOLVED = MetricDefinition("resolvedCnt", "건")
 
-    val ALL = listOf(PENDING, WORKING, COMPLETED)
+    val ALL = listOf(ACTIVE, IN_PROGRESS, RESOLVED)
 }
 
 data class EventHistoryRow(

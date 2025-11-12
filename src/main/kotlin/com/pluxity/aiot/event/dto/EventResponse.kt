@@ -91,3 +91,18 @@ fun EventHistoryRow.toEventResponse() =
         sensorDescription = this.sensorDescription,
         profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(this.fieldKey!!),
     )
+
+data class EventCursorPageResponse(
+    val content: List<EventResponse>,
+    val nextCursor: Long?,
+    val nextStatus: String?,
+    val hasNext: Boolean,
+)
+
+fun List<EventResponse>.toEventCursorPageResponse(hasNext: Boolean) =
+    EventCursorPageResponse(
+        content = if (hasNext) this.dropLast(1) else this,
+        nextCursor = if (hasNext) this.lastOrNull()?.eventId else null,
+        nextStatus = if (hasNext) this.lastOrNull()?.status else null,
+        hasNext = hasNext,
+    )

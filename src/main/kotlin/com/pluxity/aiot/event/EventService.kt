@@ -6,17 +6,16 @@ import com.pluxity.aiot.data.dto.ListQueryInfo
 import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.dto.EventCursorPageResponse
 import com.pluxity.aiot.event.dto.EventMetrics
-import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
+import com.pluxity.aiot.event.dto.toEventCursorPageResponse
 import com.pluxity.aiot.event.dto.toEventResponse
 import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.response.CursorPageResponse
-import com.pluxity.aiot.global.response.toCursorPageResponse
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -44,14 +43,18 @@ class EventService(
         size: Int,
         lastId: Long? = null,
         lastStatus: EventStatus? = null,
-    ): CursorPageResponse<EventResponse> {
+    ): EventCursorPageResponse {
+        if ((lastId == null && lastStatus != null) || (lastId != null && lastStatus == null)) {
+            throw CustomException(ErrorCode.INVALID_CURSOR_PARAMETERS, lastId, lastStatus)
+        }
+
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         val eventList =
             eventHistoryRepository
                 .findEventListWithPaging(from, to, siteId, status, level, sensorType, siteIds, size, lastId, lastStatus)
                 .map { it.toEventResponse() }
         val hasNext = eventList.size > size
-        return eventList.toCursorPageResponse(hasNext) { it.eventId }
+        return eventList.toEventCursorPageResponse(hasNext)
     }
 
     @Transactional

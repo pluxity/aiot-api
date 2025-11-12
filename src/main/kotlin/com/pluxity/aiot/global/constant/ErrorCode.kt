@@ -39,6 +39,7 @@ enum class ErrorCode(
     EXCEED_CATEGORY_DEPTH(HttpStatus.BAD_REQUEST, "카테고리는 깊이를 초과했습니다"),
     INVALID_REFERENCE(HttpStatus.BAD_REQUEST, "요청 된 참조가 유효하지 않습니다."),
     INVALID_LOCATION(HttpStatus.BAD_REQUEST, "Polygon WKT만 허용됩니다."),
+    INVALID_CURSOR_PARAMETERS(HttpStatus.BAD_REQUEST, "lastId와 lastStatus가 모두 제공되거나 모두 생략되어야 합니다. lastId:%s, lastStatus:%s"),
 
     INVALID_PARENT_CATEGORY(HttpStatus.BAD_REQUEST, "카테고리는 자기 자신을 부모로 가질 수 없습니다."),
     CIRCULAR_REFERENCE_CATEGORY(HttpStatus.BAD_REQUEST, "하위 카테고리를 부모 카테고리로 지정할 수 없습니다."),

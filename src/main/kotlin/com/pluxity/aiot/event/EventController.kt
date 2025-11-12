@@ -2,10 +2,9 @@ package com.pluxity.aiot.event
 
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.condition.ConditionLevel
-import com.pluxity.aiot.event.dto.EventResponse
+import com.pluxity.aiot.event.dto.EventCursorPageResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.event.entity.EventStatus
-import com.pluxity.aiot.global.response.CursorPageResponse
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import com.pluxity.aiot.sensor.type.SensorType
@@ -59,7 +58,7 @@ class EventController(
         @RequestParam("lastId") lastId: Long?,
         @Parameter(description = "마지막 status", example = "1")
         @RequestParam("lastStatus") lastStatus: EventStatus?,
-    ): ResponseEntity<DataResponseBody<CursorPageResponse<EventResponse>>> =
+    ): ResponseEntity<DataResponseBody<EventCursorPageResponse>> =
         ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status, level, sensorType, size, lastId, lastStatus)))
 
     @Operation(summary = "이벤트 상태 수정", description = "ID로 특정 이벤트의 상태를 수정합니다.")

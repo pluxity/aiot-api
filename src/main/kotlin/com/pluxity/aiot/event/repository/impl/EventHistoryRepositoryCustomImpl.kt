@@ -70,7 +70,17 @@ class EventHistoryRepositoryCustomImpl(
                             level?.let { path(EventHistory::level).eq(it) },
                             path(Site::id).`in`(siteIds),
                             fieldKeys?.takeIf { it.isNotEmpty() }?.let { path(EventHistory::fieldKey).`in`(fieldKeys) },
-                            lastId?.let { path(EventHistory::id).lt(it) },
+                            if (lastId != null && lastStatus != null) {
+                                or(
+                                    path(EventHistory::status).greaterThan(lastStatus),
+                                    and(
+                                        path(EventHistory::status).eq(lastStatus),
+                                        path(EventHistory::id).lessThanOrEqualTo(lastId),
+                                    ),
+                                )
+                            } else {
+                                null
+                            },
                         ),
                     ).orderBy(
                         path(EventHistory::status).asc(),

@@ -9,11 +9,17 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "event_history")
+@Table(
+    name = "event_history",
+    indexes = [
+        Index(name = "event_history_idx_event_status_id_desc", columnList = "status, id"),
+    ],
+)
 class EventHistory(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

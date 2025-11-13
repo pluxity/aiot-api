@@ -19,7 +19,7 @@ jobs:
 
       # 3. Docker 이미지 tar로 저장
       - name: Save Docker image to tar
-        run: docker save aiot-api:latest -o aiot-api.tar
+        run: docker save aiot-api:latest -o ${{ github.workspace }}/aiot-api.tar
 
       # 4. 서버에 tar 업로드
       - name: Upload Docker image tar to server
@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
-          source: "aiot-api.tar"
+          source: "${{ github.workspace }}/aiot-api.tar"
           target: ${{ secrets.SERVER_PATH }}
 
       # 5. 서버에서 이미지 로드 + docker compose 재기동

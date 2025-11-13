@@ -9,19 +9,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 소스 체크아웃
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Docker 이미지 빌드 (Dockerfile이 리포지토리 루트에 있다고 가정)
       - name: Build Docker image
         run: docker build -t aiot-api:latest .
 
-      # 3. Docker 이미지 tar로 저장
       - name: Save Docker image to tar
-        run: docker save aiot-api:latest -o ${{ github.workspace }}/aiot-api.tar
+        run: |
+          pwd
+          ls -al
+          docker save aiot-api:latest -o aiot-api.tar
+          chmod 644 aiot-api.tar
+          echo "==== after docker save ===="
+          ls -al
+          ls -al aiot-api.tar
 
-      # 4. 서버에 tar 업로드
       - name: Upload Docker image tar to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -29,10 +32,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
-          source: "${{ github.workspace }}/aiot-api.tar"
+          source: "aiot-api.tar"          # 여기서는 깔끔하게 상대 경로
           target: ${{ secrets.SERVER_PATH }}
 
-      # 5. 서버에서 이미지 로드 + docker compose 재기동
       - name: Deploy on server with docker compose
         uses: appleboy/ssh-action@v1.1.0
         with:
@@ -42,4 +44,5 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             cd ${{ secrets.SERVER_PATH }}
+            chmod +x deploy.sh
             ./deploy.sh

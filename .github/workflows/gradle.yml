@@ -46,13 +46,21 @@ jobs:
       # 7. plain.jar 제외하고 실행용 JAR 선택
       - name: Select runnable JAR (exclude *-plain.jar)
         run: |
-          JAR_FILE=$(ls build/libs/*.jar | grep -v 'plain' | head -n 1)
-          if [ -z "$JAR_FILE" ]; then
-            echo "No runnable JAR found (non-plain)."
-            exit 1
+          JAR_PATH=$(echo build/libs/*.jar)
+
+          if [ "$JAR_PATH" = "build/libs/*.jar" ]; then
+          echo "No JAR found in build/libs!"
+          exit 1
           fi
-          echo "Picked JAR: $JAR_FILE"
-          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
+    
+          JAR_NAME=$(basename "$JAR_PATH")
+          echo "Using JAR: $JAR_NAME"
+          
+          # 현재 작업 디렉토리(.)로 복사
+          cp "$JAR_PATH" "$JAR_NAME"
+          
+          # 이후 스텝에서 쓸 환경변수로 저장
+          echo "JAR_FILE=$JAR_NAME" >> $GITHUB_ENV
 
       # 8. 서버로 JAR 전송 (비밀번호 인증)
       - name: Copy JAR to Server

@@ -10,7 +10,7 @@ interface EventHistoryRepositoryCustom {
         from: String?,
         to: String?,
         siteId: Long? = null,
-        result: EventStatus? = null,
+        status: EventStatus? = null,
         siteIds: List<Long>,
     ): List<EventHistoryRow>
 
@@ -18,7 +18,7 @@ interface EventHistoryRepositoryCustom {
         from: String?,
         to: String?,
         siteId: Long? = null,
-        result: EventStatus? = null,
+        status: EventStatus? = null,
         level: ConditionLevel? = null,
         sensorType: SensorType? = null,
         siteIds: List<Long>,

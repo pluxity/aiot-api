@@ -43,23 +43,26 @@ jobs:
       - name: List build/libs
         run: ls -al build/libs
 
-      # 7. 서버로 JAR 전송 (scp)
+       # 7. 서버로 JAR 전송 (비밀번호 인증)
       - name: Copy JAR to Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}                    # SSH 포트가 다르면 여기 변경 (예: 2222)
           source: "build/libs/*.jar"
           target: ${{ secrets.SERVER_PATH }}
+          # overwrite: true           # 필요하면 활성화
 
-      # 8. 서버에서 배포 스크립트 실행 (deploy.sh 같은거)
+      # 8. 서버에서 배포 스크립트 실행 (deploy.sh)
       - name: Execute deploy.sh on server
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
           script: |
             cd ${{ secrets.SERVER_PATH }}
             chmod +x jarbuild.sh

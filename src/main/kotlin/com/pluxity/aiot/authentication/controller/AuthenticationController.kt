@@ -75,7 +75,7 @@ class AuthenticationController(
             ),
         ],
     )
-    @PostMapping("/sign-in", produces = ["application/json"])
+    @PostMapping("/sign-in")
     @ResponseCreated(path = "/users/me")
     fun signIn(
         @Parameter(description = "로그인 정보", required = true) @RequestBody @Valid signInRequestDto: SignInRequest,
@@ -102,7 +102,7 @@ class AuthenticationController(
             ),
         ],
     )
-    @PostMapping("/sign-out", produces = ["application/json"])
+    @PostMapping("/sign-out")
     fun signOut(
         request: HttpServletRequest,
         response: HttpServletResponse,

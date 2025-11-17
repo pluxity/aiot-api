@@ -89,9 +89,9 @@ class EventService(
                 params,
             ) { rs, _ ->
                 val bucket = rs.getObject("bucket_start", LocalDateTime::class.java)
-                val p = rs.getInt("active_cnt")
-                val w = rs.getInt("in_progress_cnt")
-                val c = rs.getInt("resolved_cnt")
+                val p = rs.getInt(EventStatus.ACTIVE.querySelector)
+                val w = rs.getInt(EventStatus.IN_PROGRESS.querySelector)
+                val c = rs.getInt(EventStatus.RESOLVED.querySelector)
                 EventListDto(
                     bucket.format(DateTimeFormatter.ofPattern(interval.format)),
                     p,
@@ -132,9 +132,9 @@ class EventService(
     private fun List<EventListDto>.toMetricsMap(): Map<String, ListMetricData> =
         buildListMetricMap(EventMetrics.ALL) { definition ->
             when (definition.key) {
-                "activeCnt" -> activeCnt.toDouble()
-                "inProgressCnt" -> inProgressCnt.toDouble()
-                "resolvedCnt" -> resolvedCnt.toDouble()
+                EventStatus.ACTIVE.metricKey -> activeCnt.toDouble()
+                EventStatus.IN_PROGRESS.metricKey -> inProgressCnt.toDouble()
+                EventStatus.RESOLVED.metricKey -> resolvedCnt.toDouble()
                 else -> 0.0
             }
         }
@@ -154,9 +154,9 @@ class EventService(
         )
         SELECT
             b.bucket_start::timestamp AS bucket_start,
-            COUNT(*) FILTER (WHERE e.status = '${EventStatus.ACTIVE.name}')   AS active_cnt,
-            COUNT(*) FILTER (WHERE e.status = '${EventStatus.IN_PROGRESS.name}')   AS in_progress_cnt,
-            COUNT(*) FILTER (WHERE e.status = '${EventStatus.RESOLVED.name}') AS resolved_cnt
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.ACTIVE.name}')   AS ${EventStatus.ACTIVE.querySelector},
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.IN_PROGRESS.name}')   AS ${EventStatus.IN_PROGRESS.querySelector},
+            COUNT(*) FILTER (WHERE e.status = '${EventStatus.RESOLVED.name}') AS ${EventStatus.RESOLVED.querySelector}
         FROM buckets b
         LEFT JOIN event_history e
           ON e.occurred_at >= b.bucket_start

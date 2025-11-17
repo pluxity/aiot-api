@@ -39,9 +39,9 @@ data class EventTimeSeriesDataResponse(
 
 // 공통 메트릭 정의
 object EventMetrics {
-    val ACTIVE = MetricDefinition("activeCnt", "건")
-    val IN_PROGRESS = MetricDefinition("inProgressCnt", "건")
-    val RESOLVED = MetricDefinition("resolvedCnt", "건")
+    val ACTIVE = MetricDefinition(EventStatus.ACTIVE.metricKey, "건")
+    val IN_PROGRESS = MetricDefinition(EventStatus.IN_PROGRESS.metricKey, "건")
+    val RESOLVED = MetricDefinition(EventStatus.RESOLVED.metricKey, "건")
 
     val ALL = listOf(ACTIVE, IN_PROGRESS, RESOLVED)
 }

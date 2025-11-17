@@ -1,6 +1,5 @@
 package com.pluxity.aiot.dashboard
 
-import com.linecorp.kotlinjdsl.render.jpql.JpqlRenderContext
 import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.toEventResponse
 import com.pluxity.aiot.event.entity.EventStatus
@@ -11,7 +10,6 @@ import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteRepository
-import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -21,8 +19,6 @@ class DashboardService(
     private val featureRepository: FeatureRepository,
     private val siteRepository: SiteRepository,
     private val eventHistoryRepository: EventHistoryRepository,
-    private val entityManager: EntityManager,
-    private val renderContext: JpqlRenderContext,
 ) {
     fun getSensorSummary(): List<SensorSummary> {
         val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }

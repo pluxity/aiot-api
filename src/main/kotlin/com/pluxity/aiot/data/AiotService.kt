@@ -139,31 +139,28 @@ class AiotService(
             ?.batteryLevel
 
     suspend fun fetchDeviceLocationData(deviceId: String): LocationData? {
-        val res =
+        val labels =
             client
                 .get()
                 .uri("/$deviceId")
                 .retrieve()
                 .awaitBody<MobiusLocationResponse>()
-        var latitude: Double? = null
-        var longitude: Double? = null
-        for (str in res.cntResponse.lbl) {
-            when {
-                str.startsWith("latitude:", ignoreCase = true) -> {
-                    latitude = str.substringAfter("latitude:").trim().toDoubleOrNull()
-                }
+                .cntResponse
+                .lbl
 
-                str.startsWith("longitude:", ignoreCase = true) -> {
-                    longitude = str.substringAfter("longitude:").trim().toDoubleOrNull()
-                }
-            }
-            if (latitude != null && longitude != null) break
-        }
-        return if (latitude != null && longitude != null) {
-            LocationData(latitude, longitude)
-        } else {
-            null
-        }
+        val coordinates =
+            labels
+                .mapNotNull { label ->
+                    label.split(":", limit = 2).takeIf { it.size == 2 }?.run {
+                        val (k, v) = this
+                        v.trim().toDoubleOrNull()?.let { k.lowercase() to it }
+                    }
+                }.toMap()
+
+        val latitude = coordinates["latitude"]
+        val longitude = coordinates["longitude"]
+
+        return if (latitude != null && longitude != null) LocationData(latitude, longitude) else null
     }
 
     suspend fun fetchAllMobiusSensorPaths(existFeatures: List<Feature>): List<Feature> {
@@ -175,35 +172,30 @@ class AiotService(
                 .retrieve()
                 .awaitBody<MobiusUrilResponse>()
 
-        val paths =
-            res.uril
-                .asSequence()
-                .filter { path -> objectIds.any { id -> path.contains(id) } }
-                .filter { it.count { char -> char == '/' } == 3 }
-                .filterNot { it.contains("3_1.2_0") }
-                .filter { !it.contains("P-TST") || it.contains(SensorType.DISPLACEMENT_GAUGE.objectId) }
-                .toList()
-
         val existFeatureMap = existFeatures.associateBy { it.deviceId }
 
-        val ret = mutableMapOf<String, Feature>()
-
-        paths.forEach { path ->
-            val splitPaths = path.split("/")
-            val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
-            val objectId = sensorId.take(5)
-            val deviceType = SensorType.fromObjectId(objectId)
-            val parsedName = parseDeviceId(deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
-
-            ret[deviceId] = existFeatureMap[deviceId]?.apply {
-                updateInfo(parsedName, sensorId)
-            } ?: Feature(
-                deviceId = deviceId,
-                name = parsedName,
-                objectId = sensorId,
-            )
-        }
-        return ret.values.toList()
+        return res.uril
+            .asSequence()
+            .filter { path -> objectIds.any(path::contains) }
+            .filter { it.count { char -> char == '/' } == 3 }
+            .filterNot { it.contains("3_1.2_0") }
+            .filter { !it.contains("P-TST") || it.contains(SensorType.DISPLACEMENT_GAUGE.objectId) }
+            .map { path ->
+                val splitPaths = path.split("/")
+                val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
+                val objectId = sensorId.take(5)
+                val deviceType = SensorType.fromObjectId(objectId)
+                val parsedName = parseDeviceId(deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
+                existFeatureMap[deviceId]?.apply {
+                    updateInfo(parsedName, sensorId)
+                } ?: Feature(
+                    deviceId = deviceId,
+                    name = parsedName,
+                    objectId = sensorId,
+                )
+            }.associateBy { it.deviceId }
+            .values
+            .toList()
     }
 
     /**
@@ -217,45 +209,31 @@ class AiotService(
         deviceId: String,
         abbrMap: Map<String, AbbreviationData>,
     ): String {
-        // -, _, 공백을 모두 -로 치환
-        val normalizedId = deviceId.replace("[\\s_]", "-")
+        val parts =
+            deviceId
+                .replace("[\\s_]+".toRegex(), "-")
+                .split("-")
+                .filter { it.isNotBlank() }
 
-        // -로 분리
-        val parts = normalizedId.split("-")
+        val name =
+            parts
+                .firstNotNullOfOrNull { abbrMap[it.lowercase()] }
+                ?.fullName
+                ?: return deviceId
 
-        val result = StringBuilder()
-        var hasValidPart = false
-        var numericSuffix = ""
+        val numericSuffix =
+            parts
+                .lastOrNull()
+                ?.takeIf { it.all(Char::isDigit) }
+                .orEmpty()
 
-        // 마지막 부분이 숫자인지 확인하여 식별자로 저장
-        if (parts.isNotEmpty()) {
-            val lastPart = parts[parts.size - 1]
-            if (lastPart.matches("\\d+".toRegex())) {
-                numericSuffix = lastPart
+        return buildString {
+            append(name)
+            if (numericSuffix.isNotEmpty()) {
+                append("-")
+                append(numericSuffix)
             }
         }
-
-        parts
-            .asSequence()
-            .filter { it.isNotEmpty() && !it.matches("\\d+".toRegex()) }
-            .mapNotNull { abbrMap[it.lowercase()] }
-            .firstOrNull()
-            ?.let { abbr ->
-                if (result.isNotEmpty()) result.append(" ")
-                result.append(abbr.fullName)
-                hasValidPart = true
-            }
-
-        // 모든 부분이 제거되었으면 원본 deviceId 사용
-        if (!hasValidPart) {
-            return deviceId
-        }
-
-        // 숫자 접미사가 있으면 결과에 추가
-        if (!numericSuffix.isEmpty()) {
-            result.append("-").append(numericSuffix)
-        }
-        return result.toString()
     }
 
     private fun createMobiusHeaders(): Map<String, String> =

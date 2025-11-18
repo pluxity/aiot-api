@@ -32,6 +32,7 @@ class EventService(
     private val eventHistoryRepository: EventHistoryRepository,
     private val siteRepository: SiteRepository,
     private val jdbcTemplate: NamedParameterJdbcTemplate,
+    private val eventStatusChangeNotifier: EventStatusChangeNotifier,
 ) {
     fun findAll(
         from: String?,
@@ -64,6 +65,7 @@ class EventService(
     ) {
         val eventHistory = findById(id)
         eventHistory.changeStatus(result)
+        eventStatusChangeNotifier.notifyStatusChanged(eventHistory, id, result.name)
     }
 
     fun findById(id: Long): EventHistory =

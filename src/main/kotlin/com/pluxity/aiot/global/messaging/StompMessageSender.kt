@@ -1,6 +1,7 @@
 package com.pluxity.aiot.global.messaging
 
 import com.pluxity.aiot.global.messaging.component.SessionManager
+import com.pluxity.aiot.global.messaging.dto.ChangeEventStatusPayload
 import com.pluxity.aiot.global.messaging.dto.ConnectionErrorPayload
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.permission.ResourceType
@@ -20,6 +21,7 @@ class StompMessageSender(
     companion object {
         const val QUEUE_CONNECTION_ERROR: String = "/queue/connection-error"
         const val QUEUE_SENSOR_ALARM: String = "/queue/sensor-alarm"
+        const val CHANGE_EVENT_STATUS_ALARM: String = "/queue/change-event-status"
     }
 
     @AsyncPublisher(
@@ -50,6 +52,22 @@ class StompMessageSender(
         userRepository.getUserIdsWithSiteAccess(ResourceType.SITE.name, payload.siteId.toString()).forEach { userId ->
             sessionManager.findPrincipalByUserId(userId).forEach { principal ->
                 messageTemplate.convertAndSendToUser(principal.name, QUEUE_SENSOR_ALARM, payload)
+            }
+        }
+    }
+
+    @AsyncPublisher(
+        operation =
+            AsyncOperation(
+                channelName = CHANGE_EVENT_STATUS_ALARM,
+                payloadType = ChangeEventStatusPayload::class,
+            ),
+    )
+    @StompAsyncOperationBinding
+    fun changeEventStatus(payload: ChangeEventStatusPayload) {
+        userRepository.getUserIdsWithSiteAccess(ResourceType.SITE.name, payload.siteId.toString()).forEach { userId ->
+            sessionManager.findPrincipalByUserId(userId).forEach { principal ->
+                messageTemplate.convertAndSendToUser(principal.name, CHANGE_EVENT_STATUS_ALARM, payload)
             }
         }
     }

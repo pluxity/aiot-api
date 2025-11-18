@@ -1,5 +1,6 @@
 package com.pluxity.aiot.global.messaging
 
+import com.pluxity.aiot.global.messaging.dto.ChangeEventStatusPayload
 import com.pluxity.aiot.global.messaging.dto.ConnectionErrorPayload
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import org.springframework.messaging.handler.annotation.MessageMapping
@@ -22,5 +23,12 @@ class MessageHandler(
         @Payload payload: SensorAlarmPayload,
     ) {
         messageSender.sendSensorAlarm(payload)
+    }
+
+    @MessageMapping("/test/change-event-status")
+    fun testChangeEventStatus(
+        @Payload payload: ChangeEventStatusPayload,
+    ) {
+        messageSender.changeEventStatus(payload)
     }
 }

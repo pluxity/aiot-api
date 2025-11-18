@@ -29,12 +29,14 @@ class EventServiceKoTest :
         val eventHistoryRepository: EventHistoryRepository = mockk()
         val siteRepository: SiteRepository = mockk()
         val jdbcTemplate: NamedParameterJdbcTemplate = mockk()
+        val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
 
         val eventService =
             EventService(
                 eventHistoryRepository,
                 siteRepository,
                 jdbcTemplate,
+                eventStatusChangeNotifier,
             )
 
         Given("이벤트 목록을 조회할 때") {

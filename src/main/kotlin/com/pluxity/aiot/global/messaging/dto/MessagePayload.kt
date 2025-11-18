@@ -10,3 +10,9 @@ data class ConnectionErrorPayload(
 )
 
 typealias SensorAlarmPayload = EventResponse
+
+data class ChangeEventStatusPayload(
+    val siteId: Long,
+    val eventId: Long,
+    val status: String,
+)

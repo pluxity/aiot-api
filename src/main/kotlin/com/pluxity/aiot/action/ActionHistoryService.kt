@@ -1,5 +1,6 @@
 package com.pluxity.aiot.action
 
+import com.pluxity.aiot.event.EventStatusChangeNotifier
 import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
@@ -17,6 +18,7 @@ class ActionHistoryService(
     private val eventHistoryRepository: EventHistoryRepository,
     private val actionHistoryFileRepository: ActionHistoryFileRepository,
     private val fileService: FileService,
+    private val eventStatusChangeNotifier: EventStatusChangeNotifier,
 ) {
     companion object {
         private const val ACTION_HISTORIES: String = "action-histories/"
@@ -64,6 +66,7 @@ class ActionHistoryService(
             actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
         eventHistory.changeStatus(EventStatus.RESOLVED)
+        eventStatusChangeNotifier.notifyStatusChanged(eventHistory, eventId, EventStatus.RESOLVED.name)
         return savedActionHistory.id!!
     }
 

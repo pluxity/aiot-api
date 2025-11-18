@@ -2,6 +2,7 @@ package com.pluxity.aiot.action
 
 import com.pluxity.aiot.action.entity.dummyActionHistory
 import com.pluxity.aiot.action.entity.dummyEventHistory
+import com.pluxity.aiot.event.EventStatusChangeNotifier
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
@@ -22,6 +23,7 @@ class ActionHistoryServiceKoTest :
         val eventHistoryRepository: EventHistoryRepository = mockk()
         val actionHistoryFileRepository: ActionHistoryFileRepository = mockk()
         val fileService: FileService = mockk(relaxed = true)
+        val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
 
         val actionHistoryService =
             ActionHistoryService(
@@ -29,6 +31,7 @@ class ActionHistoryServiceKoTest :
                 eventHistoryRepository,
                 actionHistoryFileRepository,
                 fileService,
+                eventStatusChangeNotifier,
             )
 
         Given("조치를 등록할 때") {

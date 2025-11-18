@@ -33,18 +33,20 @@ class SiteService(
     fun save(request: SiteRequest): Long {
         val location = parsePolygon(request.location)
         val site =
-            Site(
-                name = request.name,
-                description = request.description,
-                location = location,
-                thumbnailId = request.thumbnailId,
+            siteRepository.save(
+                Site(
+                    name = request.name,
+                    description = request.description,
+                    location = location,
+                    thumbnailId = request.thumbnailId,
+                ),
             )
 
         request.thumbnailId?.let { fileId ->
-            val fileEntity = fileService.finalizeUpload(fileId, "${SITE_PATH}${site.id}/")
+            fileService.finalizeUpload(fileId, "${SITE_PATH}${site.id}/")
         }
 
-        return siteRepository.save(site).id!!
+        return site.id!!
     }
 
     fun findAll(): List<SiteResponse> {

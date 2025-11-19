@@ -143,13 +143,9 @@ object EventConditionValidators {
 
     val validateDisplacementGauge: Validator<EventCondition> = { condition ->
         if (condition.objectId == SensorType.DISPLACEMENT_GAUGE.objectId && condition.conditionType == ConditionType.RANGE) {
-            condition.leftValue?.let { errorRange ->
+            condition.leftValue?.let { _ ->
                 condition.rightValue?.let { _ ->
-                    if (errorRange > 0) {
-                        ValidationResult.Valid
-                    } else {
-                        ValidationResult.Invalid("DisplacementGauge의 errorRange(leftValue)는 0보다 커야 합니다 (현재: $errorRange)")
-                    }
+                    ValidationResult.Valid
                 } ?: ValidationResult.Invalid("DisplacementGauge는 centerValue(rightValue)가 필수입니다")
             } ?: ValidationResult.Invalid("DisplacementGauge는 errorRange(leftValue)가 필수입니다")
         } else {

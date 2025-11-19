@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.IsolationMode
@@ -52,7 +53,7 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_DEVICE_001"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
@@ -85,7 +86,7 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_DEVICE_003"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
@@ -114,12 +115,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GT_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -139,12 +141,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GT_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -165,12 +168,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -189,12 +193,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -213,12 +218,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_GTE_003"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 20.0)
@@ -238,12 +244,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 20.0)
@@ -262,12 +269,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_002"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 25.0)
@@ -286,12 +294,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_LTE_003"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = null,
                         maxValue = "25.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(temperature = 30.0)
@@ -311,7 +320,7 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_BOUNDARY_001"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
@@ -337,7 +346,7 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_BOUNDARY_002"
                 val setup =
                     helper.setupTemperatureDevice(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
@@ -365,12 +374,13 @@ class TemperatureHumidityProcessorTest(
                 val deviceId = "TH_HUMIDITY_001"
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = "70.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.HUMIDITY.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 65.0)
@@ -395,7 +405,7 @@ class TemperatureHumidityProcessorTest(
                 // 온도 조건
                 val tempSetup =
                     helper.setupTemperatureDevice(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = 25.0,
@@ -424,12 +434,13 @@ class TemperatureHumidityProcessorTest(
                 // DiscomfortIndex >= 75.0 조건
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.DISCOMFORT_INDEX.fieldKey,
                     )
 
                 // 온도 30°C, 습도 70% -> DI = 0.81*30 + 0.01*70*(0.99*30-14.3) + 46.3 ≈ 78.8
@@ -455,12 +466,13 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "75.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.DISCOMFORT_INDEX.fieldKey,
                     )
 
                 // 온도 20°C, 습도 50% -> DI = 0.81*20 + 0.01*50*(0.99*20-14.3) + 46.3 ≈ 63.8
@@ -486,7 +498,7 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithDisabledEvent(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
@@ -516,12 +528,13 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "25.0",
                         maxValue = "30.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
                     )
 
                 // notificationEnabled를 false로 변경
@@ -547,7 +560,7 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithMultipleConditions(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         conditions =
                             listOf(
@@ -588,12 +601,13 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.HUMIDITY.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 80.0)
@@ -614,12 +628,13 @@ class TemperatureHumidityProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "80.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.HUMIDITY.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(humidity = 75.0)

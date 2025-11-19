@@ -2,6 +2,7 @@ package com.pluxity.aiot.feature.dto
 
 import com.pluxity.aiot.base.dummyBaseResponse
 import com.pluxity.aiot.sensor.type.FieldType
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.sensor.type.dto.DeviceProfileResponse
 import com.pluxity.aiot.sensor.type.dto.DeviceTypeResponse
 import com.pluxity.aiot.site.dto.SiteResponse
@@ -10,7 +11,7 @@ import com.pluxity.aiot.site.dto.dummySiteResponse
 fun dummyFeatureResponse(
     id: Long = 1L,
     deviceId: String = "TH001-34954-id",
-    objectId: String = "34954",
+    objectId: String = SensorType.TEMPERATURE_HUMIDITY.objectId,
     name: String = "Test Feature",
     longitude: Double = 127.0,
     latitude: Double = 37.0,
@@ -39,7 +40,7 @@ fun dummyFeatureResponse(
 
 fun dummyDeviceTypeResponse(
     id: Long = 1L,
-    objectId: String = "34954",
+    objectId: String = SensorType.TEMPERATURE_HUMIDITY.objectId,
     description: String = "온도계",
     version: String = "1.0",
     profiles: List<DeviceProfileResponse> = listOf(dummyDeviceProfileResponse()),

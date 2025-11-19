@@ -52,7 +52,7 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                     )
                 val climateData =
                     listOf(
@@ -91,7 +91,7 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                     )
                 val displacementData =
                     listOf(
@@ -222,7 +222,7 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                     )
                 val climateData =
                     listOf(
@@ -257,7 +257,7 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                     )
                 val displacementData =
                     listOf(
@@ -290,7 +290,7 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                     )
 
                 every {

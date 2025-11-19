@@ -8,6 +8,7 @@ import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.event.service.processor.ProcessorTestHelper
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.site.SiteRepository
 
 /**
@@ -48,6 +49,7 @@ class TemperatureHumidityProcessorTestHelper(
             minValue = minValue.toString(),
             maxValue = maxValue.toString(),
             isBoolean = false,
+            fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
         )
 
     /**

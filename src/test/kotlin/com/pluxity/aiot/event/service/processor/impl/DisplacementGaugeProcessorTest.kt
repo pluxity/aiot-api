@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.IsolationMode
@@ -56,12 +57,13 @@ class DisplacementGaugeProcessorTest(
                 // 85° 이하 또는 95° 이상일 때 이벤트 발생
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0", // 오차
                         maxValue = "90.0", // 중앙값 (AngleX의 기본 중앙값)
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_X.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 85.0)
@@ -82,12 +84,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "5.0",
                         maxValue = "90.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_X.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 84.0)
@@ -109,12 +112,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_X.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 96.0)
@@ -136,12 +140,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "5.0",
                         maxValue = "90.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_X.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 90.0)
@@ -169,12 +174,13 @@ class DisplacementGaugeProcessorTest(
                 // -3° 미만 또는 3° 초과일 때 이벤트 발생
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0", // 오차
                         maxValue = "0.0", // 중앙값 (AngleY의 기본 중앙값)
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_Y.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleY = -3.5)
@@ -196,12 +202,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_Y.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleY = 0.0)
@@ -224,12 +231,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = "3.0",
                         maxValue = "0.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_Y.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleY = 3.5)
@@ -251,12 +259,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "3.0",
                         maxValue = "0.0",
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_Y.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleY = -3.0)
@@ -273,37 +282,6 @@ class DisplacementGaugeProcessorTest(
             }
         }
 
-        Given("AngleX/AngleY: 동시 처리") {
-            When("AngleX = 95.0°, AngleY = 3.5° - 둘 다 범위 밖") {
-                val deviceId = "DISP_BOTH_001"
-
-                // AngleX 조건
-                val setupX =
-                    helper.setupDeviceWithCondition(
-                        objectId = "34957",
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "5.0",
-                        maxValue = "90.0",
-                        isBoolean = false,
-                    )
-
-                val sensorData = helper.createSensorData(angleX = 95.0, angleY = 3.5)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, SensorType.fromObjectId(setupX.sensorType.objectId), setupX.siteId, sensorData)
-
-                Then("AngleX와 AngleY 모두 이벤트가 발생한다 (objectId 단위 조건 적용)") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-                    val angleXEvent = eventHistories.first { it.fieldKey == "Angle-X" }
-                    angleXEvent.value shouldBe 95.0
-                    val angleYEvent = eventHistories.first { it.fieldKey == "Angle-Y" }
-                    angleYEvent.value shouldBe 3.5
-                }
-            }
-        }
-
         // 기존 테스트: "AngleX/AngleY: 잘못된 value 형식 (NumberFormatException)"
         // 새로운 구조에서는 numericValue1, numericValue2로 직접 저장되므로 파싱 에러가 발생하지 않음
         // 따라서 이 테스트는 더 이상 의미가 없어 제거됨
@@ -314,12 +292,13 @@ class DisplacementGaugeProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "95.0",
                         maxValue = null,
                         isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ANGLE_X.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(angleX = 100.0)

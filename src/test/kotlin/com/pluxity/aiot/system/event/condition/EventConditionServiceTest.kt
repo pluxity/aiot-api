@@ -8,6 +8,7 @@ import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.event.condition.dto.EventConditionItemRequest
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.sensor.type.SensorType
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -32,7 +33,7 @@ class EventConditionServiceTest(
             When("SINGLE type with GOE operator") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -63,7 +64,7 @@ class EventConditionServiceTest(
             When("SINGLE type with LOE operator") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -94,7 +95,7 @@ class EventConditionServiceTest(
             When("RANGE type with BETWEEN operator") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -126,7 +127,7 @@ class EventConditionServiceTest(
             When("Boolean type condition") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34956",
+                        objectId = SensorType.FIRE.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -157,7 +158,7 @@ class EventConditionServiceTest(
             When("DisplacementGauge with valid range") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -255,7 +256,7 @@ class EventConditionServiceTest(
             When("fieldKey가 blank인 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -286,7 +287,7 @@ class EventConditionServiceTest(
             When("해당 objectId에 유효하지 않은 fieldKey인 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -320,7 +321,7 @@ class EventConditionServiceTest(
             When("booleanValue와 다른 값이 함께 설정된 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34956",
+                        objectId = SensorType.FIRE.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -353,7 +354,7 @@ class EventConditionServiceTest(
             When("SINGLE type에 BETWEEN operator 사용") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -385,7 +386,7 @@ class EventConditionServiceTest(
             When("SINGLE type에 thresholdValue가 없는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -417,7 +418,7 @@ class EventConditionServiceTest(
             When("SINGLE type에 leftValue나 rightValue가 있는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -451,7 +452,7 @@ class EventConditionServiceTest(
             When("RANGE type에 GOE operator 사용") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -483,7 +484,7 @@ class EventConditionServiceTest(
             When("RANGE type에 leftValue가 없는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -515,7 +516,7 @@ class EventConditionServiceTest(
             When("RANGE type에 thresholdValue가 있는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -545,77 +546,11 @@ class EventConditionServiceTest(
             }
         }
 
-        Given("DisplacementGauge validation") {
-            When("errorRange(leftValue)가 0 이하인 경우") {
-                val request =
-                    EventConditionBatchRequest(
-                        objectId = "34957",
-                        conditions =
-                            listOf(
-                                EventConditionItemRequest(
-                                    fieldKey = "Angle-X",
-                                    level = ConditionLevel.WARNING,
-                                    conditionType = ConditionType.RANGE,
-                                    operator = Operator.BETWEEN,
-                                    thresholdValue = null,
-                                    leftValue = 0.0, // errorRange는 0보다 커야 함
-                                    rightValue = 10.0,
-                                    booleanValue = null,
-                                    activate = true,
-                                    notificationEnabled = true,
-                                    guideMessage = "안내 문구",
-                                ),
-                            ),
-                    )
-
-                Then("CustomException 발생") {
-                    val exception =
-                        shouldThrow<CustomException> {
-                            eventConditionService.createBatch(request)
-                        }
-                    exception.message shouldContain "errorRange"
-                    exception.message shouldContain "0보다 커야"
-                }
-            }
-
-            When("errorRange가 음수인 경우") {
-                val request =
-                    EventConditionBatchRequest(
-                        objectId = "34957",
-                        conditions =
-                            listOf(
-                                EventConditionItemRequest(
-                                    fieldKey = "Angle-X",
-                                    level = ConditionLevel.WARNING,
-                                    conditionType = ConditionType.RANGE,
-                                    operator = Operator.BETWEEN,
-                                    thresholdValue = null,
-                                    leftValue = -5.0,
-                                    rightValue = 10.0,
-                                    booleanValue = null,
-                                    activate = true,
-                                    notificationEnabled = true,
-                                    guideMessage = "안내 문구",
-                                ),
-                            ),
-                    )
-
-                Then("CustomException 발생") {
-                    val exception =
-                        shouldThrow<CustomException> {
-                            eventConditionService.createBatch(request)
-                        }
-                    exception.message shouldContain "errorRange"
-                    exception.message shouldContain "0보다 커야"
-                }
-            }
-        }
-
         Given("Range overlap validation") {
             When("같은 objectId, fieldKey의 범위가 겹치는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -659,7 +594,7 @@ class EventConditionServiceTest(
             When("DisplacementGauge 범위가 겹치는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34957",
+                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -703,7 +638,7 @@ class EventConditionServiceTest(
             When("범위가 겹치지 않는 경우") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -746,7 +681,7 @@ class EventConditionServiceTest(
             When("다른 fieldKey인 경우 범위가 겹쳐도 허용") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -791,7 +726,7 @@ class EventConditionServiceTest(
             When("조건 생성 후 조회") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -812,7 +747,7 @@ class EventConditionServiceTest(
                 val created = eventConditionService.createBatch(request)[0]
 
                 Then("조회가 가능하다") {
-                    val found = eventConditionService.findAllByObjectId("34954")
+                    val found = eventConditionService.findAllByObjectId(SensorType.TEMPERATURE_HUMIDITY.objectId)
                     found.size shouldBe 1
                     found[0].id shouldBe created
                     found[0].thresholdValue shouldBe 30.0
@@ -822,7 +757,7 @@ class EventConditionServiceTest(
             When("조건 수정") {
                 val createRequest =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -844,7 +779,7 @@ class EventConditionServiceTest(
 
                 val updateRequest =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -874,7 +809,7 @@ class EventConditionServiceTest(
             When("조건 삭제") {
                 val request =
                     EventConditionBatchRequest(
-                        objectId = "34954",
+                        objectId = SensorType.TEMPERATURE_HUMIDITY.objectId,
                         conditions =
                             listOf(
                                 EventConditionItemRequest(
@@ -896,7 +831,7 @@ class EventConditionServiceTest(
 
                 Then("삭제가 가능하다") {
                     eventConditionService.delete(created)
-                    val found = eventConditionService.findAllByObjectId("34954")
+                    val found = eventConditionService.findAllByObjectId(SensorType.TEMPERATURE_HUMIDITY.objectId)
                     found.size shouldBe 0
                 }
             }

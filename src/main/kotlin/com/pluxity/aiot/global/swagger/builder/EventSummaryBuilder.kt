@@ -1,6 +1,7 @@
 package com.pluxity.aiot.global.swagger.builder
 
 import com.pluxity.aiot.event.entity.EventStatus
+import com.pluxity.aiot.sensor.type.SensorType
 import io.swagger.v3.oas.models.media.ArraySchema
 import io.swagger.v3.oas.models.media.IntegerSchema
 import io.swagger.v3.oas.models.media.MapSchema
@@ -40,7 +41,7 @@ class EventSummaryBuilder {
             mapOf(
                 "eventId" to 1L,
                 "deviceId" to "SNIOT-P-TST-050",
-                "objectId" to "34957",
+                "objectId" to SensorType.DISPLACEMENT_GAUGE.objectId,
                 "occurredAt" to "2025-11-04T10:00:00Z",
                 "minValue" to 0.1,
                 "maxValue" to 9.9,

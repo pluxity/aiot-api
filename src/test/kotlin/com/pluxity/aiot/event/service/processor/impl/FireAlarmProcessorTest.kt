@@ -7,6 +7,8 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.sensor.type.DeviceProfileEnum
+import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
@@ -52,12 +54,13 @@ class FireAlarmProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34956",
+                        objectId = SensorType.FIRE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
                         isBoolean = true,
+                        fieldKey = DeviceProfileEnum.FIRE_ALARM.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = true)
@@ -80,12 +83,13 @@ class FireAlarmProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34956",
+                        objectId = SensorType.FIRE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.DANGER,
                         minValue = null,
                         maxValue = null,
                         isBoolean = true,
+                        fieldKey = DeviceProfileEnum.FIRE_ALARM.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = false)
@@ -110,12 +114,13 @@ class FireAlarmProcessorTest(
 
                 val setup =
                     helper.setupDeviceWithCondition(
-                        objectId = "34956",
+                        objectId = SensorType.FIRE.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "false",
                         maxValue = null,
                         isBoolean = true,
+                        fieldKey = DeviceProfileEnum.FIRE_ALARM.fieldKey,
                     )
 
                 val sensorData = helper.createSensorData(fireAlarm = false)

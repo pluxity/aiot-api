@@ -8,6 +8,8 @@ import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.global.messaging.dto.ConnectionErrorPayload
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -32,6 +34,7 @@ class FeatureScheduler(
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxdbProperties,
     private val aiotService: AiotService,
+    private val messageSender: StompMessageSender,
 ) {
     @Profile("!local")
     @Scheduled(cron = "0 5 * * * *") // 매시간 5분에 실행
@@ -42,6 +45,17 @@ class FeatureScheduler(
         features.forEach { feature ->
             if (isDeviceDisconnected(feature, oneHourAgo)) {
                 feature.updateEventStatus(ConditionLevel.DISCONNECTED.toString())
+                val message = "최근 1시간 동안 신규 데이터가 감지되지 않았습니다. 장치 연결 상태를 확인해주세요.(${feature.deviceId}:${feature.objectId})"
+                feature.site?.let {
+                    messageSender.sendConnectionError(
+                        ConnectionErrorPayload(
+                            siteId = it.id!!,
+                            deviceId = feature.deviceId,
+                            objectId = feature.objectId,
+                            message = message,
+                        ),
+                    )
+                }
             }
         }
     }

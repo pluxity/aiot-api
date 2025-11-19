@@ -7,6 +7,11 @@ import org.springframework.transaction.annotation.Transactional
 interface EventConditionRepository : JpaRepository<EventCondition, Long> {
     fun findAllByObjectId(objectId: String): List<EventCondition>
 
+    fun findAllByObjectIdAndFieldKey(
+        objectId: String,
+        fieldKey: String,
+    ): List<EventCondition>
+
     @Modifying
     @Transactional
     fun deleteAllByObjectId(objectId: String): Int

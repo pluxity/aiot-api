@@ -119,7 +119,7 @@ interface SensorDataProcessor {
                         updatedAt = eventHistory.updatedAt.toString(),
                         updatedBy = eventHistory.updatedBy,
                         value = value,
-                        level = eventName,
+                        level = condition.level.name,
                         siteId = it.id,
                         siteName = it.name,
                         sensorDescription = sensorType.description,
@@ -153,7 +153,7 @@ interface SensorDataProcessor {
 
         // anyConditionMet 플래그를 위한 컨테이너
         val anyConditionMet = booleanArrayOf(false)
-        val conditions = eventConditionRepository.findAllByObjectId(sensorType.objectId)
+        val conditions = eventConditionRepository.findAllByObjectIdAndFieldKey(sensorType.objectId, fieldKey)
 
         // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
         val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey }

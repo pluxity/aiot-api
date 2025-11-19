@@ -120,6 +120,7 @@ abstract class ProcessorTestHelper(
         minValue: String? = null,
         maxValue: String? = null,
         isBoolean: Boolean = false,
+        fieldKey: String,
     ): TestSetup {
         val sensorType = SensorType.fromObjectId(objectId)
 
@@ -132,7 +133,7 @@ abstract class ProcessorTestHelper(
 
         val condition =
             EventCondition(
-                fieldKey = sensorType.deviceProfiles.first().fieldKey,
+                fieldKey = fieldKey,
                 objectId = objectId,
                 isActivate = true,
                 level = level,

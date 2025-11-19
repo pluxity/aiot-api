@@ -1,5 +1,6 @@
 package com.pluxity.aiot.site
 
+import com.pluxity.aiot.announcement.Announcement
 import com.pluxity.aiot.announcement.LlmMessage
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.global.entity.BaseEntity
@@ -35,6 +36,9 @@ class Site(
 
     @OneToMany(mappedBy = "site", cascade = [CascadeType.REMOVE])
     val llmMessages: MutableList<LlmMessage> = mutableListOf()
+
+    @OneToMany(mappedBy = "site", cascade = [CascadeType.REMOVE])
+    val announcements: MutableList<Announcement> = mutableListOf()
 
     fun updateName(name: String) {
         require(name.isNotBlank()) { "현장명은 빈 값일 수 없습니다" }

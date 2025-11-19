@@ -28,11 +28,11 @@ class CctvService(
 ) {
     @PostConstruct
     fun init() {
-        try {
-            synchronizeCctv()
-        } catch (e: Exception) {
-            error { "CctvService 초기화 중 미디어서버 동기화 실패 (서버 상태를 확인하세요): ${e.message}" }
-        }
+//        try {
+//            synchronizeCctv()
+//        } catch (e: Exception) {
+//            error { "CctvService 초기화 중 미디어서버 동기화 실패 (서버 상태를 확인하세요): ${e.message}" }
+//        }
     }
 
     @Transactional

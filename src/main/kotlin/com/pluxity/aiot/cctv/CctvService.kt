@@ -9,12 +9,15 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.MediaMtxProperties
 import com.pluxity.aiot.global.utils.UUIDUtils
 import com.pluxity.aiot.site.SiteRepository
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.collections.map
 import kotlin.let
+
+private val log = KotlinLogging.logger {}
 
 @Service
 class CctvService(
@@ -25,8 +28,11 @@ class CctvService(
 ) {
     @PostConstruct
     fun init() {
-        // TODO 미디어서버 변경 후 수정 필요
-//        synchronizeCctv()
+        try {
+            synchronizeCctv()
+        } catch (e: Exception) {
+            error { "CctvService 초기화 중 미디어서버 동기화 실패 (서버 상태를 확인하세요): ${e.message}" }
+        }
     }
 
     @Transactional

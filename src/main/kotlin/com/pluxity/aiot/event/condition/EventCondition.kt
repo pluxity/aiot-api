@@ -135,12 +135,14 @@ class EventCondition(
         }
 }
 
-enum class ConditionLevel {
-    NORMAL,
-    WARNING,
-    CAUTION,
-    DANGER,
-    DISCONNECTED,
+enum class ConditionLevel(
+    val priority: Int,
+) {
+    NORMAL(2),
+    WARNING(3),
+    CAUTION(4),
+    DANGER(5),
+    DISCONNECTED(1),
 }
 
 enum class ConditionType {

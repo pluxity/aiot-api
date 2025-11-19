@@ -585,12 +585,11 @@ class TemperatureHumidityProcessorTest(
 
                 processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                Then("WARNING과 DANGER 이벤트가 모두 저장된다") {
+                Then("DANGER 이벤트만 저장된다") {
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 2
-                    eventHistories.map { it.eventName }.toSet() shouldBe setOf("WARNING_Temperature", "DANGER_Temperature")
-                    eventHistories.first { it.eventName == "WARNING_Temperature" }.status shouldBe EventStatus.ACTIVE
-                    eventHistories.first { it.eventName == "DANGER_Temperature" }.status shouldBe EventStatus.ACTIVE
+                    eventHistories shouldHaveSize 1
+                    eventHistories[0].eventName shouldBe "DANGER_Temperature"
+                    eventHistories[0].status shouldBe EventStatus.ACTIVE
                 }
             }
         }

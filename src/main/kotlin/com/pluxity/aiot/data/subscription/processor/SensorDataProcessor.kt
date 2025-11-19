@@ -20,7 +20,6 @@ import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -148,61 +147,49 @@ interface SensorDataProcessor {
         // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
         val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
 
-        // 조건 충족을 위한 이벤트 컨테이너 준비
-        val eventProcessingTasks: MutableList<CompletableFuture<Void>> = mutableListOf()
-
-        // anyConditionMet 플래그를 위한 컨테이너
-        val anyConditionMet = booleanArrayOf(false)
+        // 조건 충족 여부 플래그
+        var isAnyConditionMet = false
         val conditions = eventConditionRepository.findAllByObjectIdAndFieldKey(sensorType.objectId, fieldKey)
 
         // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
-        val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey }
+        val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey } ?: return
 
-        if (deviceProfile != null) {
+        val loopTargetConditions =
             conditions
-                .filter { condition ->
-                    condition.level != ConditionLevel.NORMAL
-                }.filter { it.isActivate }
-                .forEach { condition ->
-                    if (isConditionMet(condition, value, fieldKey)) {
-                        anyConditionMet[0] = true
+                .filter { it.level != ConditionLevel.NORMAL && it.isActivate }
+                .sortedByDescending { it.level.priority }
 
-                        // value를 Double로 변환 (EventHistory 저장용)
-                        val doubleValue =
-                            when (value) {
-                                is Number -> value.toDouble()
-                                is Boolean -> if (value) 1.0 else 0.0
-                                else -> 0.0
-                            }
+        for (condition in loopTargetConditions) {
+            if (isConditionMet(condition, value, fieldKey)) {
+                isAnyConditionMet = true
 
-                        // 비동기 이벤트 처리 작업 추가
-                        val eventTask =
-                            CompletableFuture.runAsync {
-                                processEvent(
-                                    deviceId,
-                                    sensorType,
-                                    fieldKey,
-                                    doubleValue,
-                                    deviceProfile.unit,
-                                    deviceProfile.description,
-                                    condition,
-                                    feature,
-                                    parsedDate,
-                                    messageSender,
-                                    eventHistoryRepository,
-                                    featureRepository,
-                                )
-                            }
-                        eventProcessingTasks.add(eventTask)
+                // value를 Double로 변환 (EventHistory 저장용)
+                val doubleValue =
+                    when (value) {
+                        is Number -> value.toDouble()
+                        is Boolean -> if (value) 1.0 else 0.0
+                        else -> 0.0
                     }
-                }
+
+                processEvent(
+                    deviceId = deviceId,
+                    sensorType = sensorType,
+                    fieldKey = fieldKey,
+                    value = doubleValue,
+                    fieldUnit = deviceProfile.unit,
+                    fieldDescription = deviceProfile.description,
+                    condition = condition,
+                    feature = feature,
+                    parsedDate = parsedDate,
+                    messageSender = messageSender,
+                    eventHistoryRepository = eventHistoryRepository,
+                    featureRepository = featureRepository,
+                )
+                break
+            }
         }
 
-        // 모든 이벤트 처리가 완료될 때까지 대기
-        CompletableFuture.allOf(*eventProcessingTasks.toTypedArray<CompletableFuture<*>>()).join()
-
-        // 조건을 만족하는 이벤트가 없으면 NORMAL 상태로 설정
-        if (!anyConditionMet[0]) {
+        if (!isAnyConditionMet) {
             updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)
         }
     }

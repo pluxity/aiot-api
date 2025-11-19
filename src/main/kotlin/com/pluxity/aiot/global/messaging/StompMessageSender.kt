@@ -27,7 +27,7 @@ class StompMessageSender(
     @AsyncPublisher(
         operation =
             AsyncOperation(
-                channelName = QUEUE_CONNECTION_ERROR,
+                channelName = "/user${QUEUE_CONNECTION_ERROR}",
                 payloadType = ConnectionErrorPayload::class,
             ),
     )
@@ -43,7 +43,7 @@ class StompMessageSender(
     @AsyncPublisher(
         operation =
             AsyncOperation(
-                channelName = QUEUE_SENSOR_ALARM,
+                channelName = "/user${QUEUE_SENSOR_ALARM}",
                 payloadType = SensorAlarmPayload::class,
             ),
     )
@@ -59,7 +59,7 @@ class StompMessageSender(
     @AsyncPublisher(
         operation =
             AsyncOperation(
-                channelName = CHANGE_EVENT_STATUS_ALARM,
+                channelName = "/user${CHANGE_EVENT_STATUS_ALARM}",
                 payloadType = ChangeEventStatusPayload::class,
             ),
     )

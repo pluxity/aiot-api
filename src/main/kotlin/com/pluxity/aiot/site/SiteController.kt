@@ -46,7 +46,7 @@ class SiteController(
         ],
     )
     @GetMapping
-    fun getFacilities(): ResponseEntity<DataResponseBody<List<SiteResponse>>> = ResponseEntity.ok(DataResponseBody(siteService.findAll()))
+    fun getSites(): ResponseEntity<DataResponseBody<List<SiteResponse>>> = ResponseEntity.ok(DataResponseBody(siteService.findAll()))
 
     @Operation(summary = "현장 상세 조회", description = "특정 아이디 현장을 조회합니다")
     @ApiResponses(
@@ -141,7 +141,7 @@ class SiteController(
             ),
         ],
     )
-    @ResponseCreated(path = "/facilities/{id}")
+    @ResponseCreated(path = "/sites/{id}")
     @PostMapping
     fun save(
         @Parameter(description = "현장 정보", required = true) @Valid @RequestBody

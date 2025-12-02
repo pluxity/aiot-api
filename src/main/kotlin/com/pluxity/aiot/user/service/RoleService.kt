@@ -1,5 +1,7 @@
 package com.pluxity.aiot.user.service
 
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.permission.PermissionGroupService
 import com.pluxity.aiot.user.dto.RoleCreateRequest
 import com.pluxity.aiot.user.dto.RoleResponse
@@ -7,11 +9,13 @@ import com.pluxity.aiot.user.dto.RoleUpdateRequest
 import com.pluxity.aiot.user.dto.toRoleResponse
 import com.pluxity.aiot.user.entity.Role
 import com.pluxity.aiot.user.entity.RolePermission
+import com.pluxity.aiot.user.entity.RoleType
 import com.pluxity.aiot.user.repository.RolePermissionRepository
 import com.pluxity.aiot.user.repository.RoleRepository
 import com.pluxity.aiot.user.repository.UserRoleRepository
 import jakarta.persistence.EntityManager
 import jakarta.persistence.EntityNotFoundException
+import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -24,13 +28,19 @@ class RoleService(
     private val em: EntityManager,
 ) {
     @Transactional
-    fun save(request: RoleCreateRequest): Long {
+    fun save(
+        request: RoleCreateRequest,
+        authentication: Authentication,
+    ): Long {
+        if (request.auth == RoleType.ADMIN && authentication.authorities.none { it.authority == "ROLE_${RoleType.ADMIN.name}" }) {
+            throw CustomException(ErrorCode.PERMISSION_DENIED)
+        }
         val role =
             roleRepository.save(
                 Role(
                     name = request.name,
                     description = request.description,
-                    auth = request.auth,
+                    auth = request.auth.name,
                 ),
             )
 

@@ -9,7 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 
 object TestSecurityConfig {
     fun setAdminAuthentication() {
-        val adminRole = Role(id = 1L, name = RoleType.ADMIN.roleName, description = "Admin Role")
+        val adminRole = Role(id = 1L, name = RoleType.ADMIN.roleName, description = "Admin Role", auth = "ADMIN")
         val adminUser =
             User(
                 id = 1L,

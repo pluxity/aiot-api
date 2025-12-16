@@ -1,5 +1,7 @@
 package com.pluxity.aiot.global.messaging.listeners
 
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.messaging.component.SessionManager
 import org.springframework.context.event.EventListener
 import org.springframework.messaging.Message
@@ -20,7 +22,8 @@ class SocketApplicationEventListener(
             headerAccessor
                 .getMessageHeaders()
                 .get(SimpMessageHeaderAccessor.CONNECT_MESSAGE_HEADER, Message::class.java)
-        val connectHeaderAccessor = StompHeaderAccessor.wrap(connectMessageHeader!!)
+                ?: throw CustomException(ErrorCode.INVALID_FORMAT)
+        val connectHeaderAccessor = StompHeaderAccessor.wrap(connectMessageHeader)
         val attributes = connectHeaderAccessor.sessionAttributes
 
         event.user?.let {

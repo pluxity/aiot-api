@@ -19,6 +19,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -42,8 +44,8 @@ class LlmMessageService(
     webClientBuilder: WebClient.Builder,
 ) {
     private val webClient: WebClient = webClientBuilder.baseUrl(llmProperties.baseUrl).build()
+    private val semaphore: Semaphore = Semaphore(llmProperties.concurrencyLimit)
 
-    @Transactional
     suspend fun generateAndSaveMessage() {
         // 1. 모든 사이트 조회
         val sites = siteRepository.findAll()
@@ -66,10 +68,12 @@ class LlmMessageService(
             sites
                 .map { site ->
                     async {
-                        try {
-                            generateMessageForSite(site, yesterday, today, targetHour)
-                        } catch (e: Exception) {
-                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                        semaphore.withPermit {
+                            try {
+                                generateMessageForSite(site, yesterday, today, targetHour)
+                            } catch (e: Exception) {
+                                log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                            }
                         }
                     }
                 }.awaitAll()
@@ -135,7 +139,12 @@ class LlmMessageService(
     ): Double {
         // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
         val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
-        val endOfHour = date.atTime(hour + 1, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
+        val endOfHour =
+            date
+                .atTime(hour, 0)
+                .plusHours(1)
+                .atZone(ZoneId.of("Asia/Seoul"))
+                .toInstant()
 
         // 온습도계 센서 타입 조회
         val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY

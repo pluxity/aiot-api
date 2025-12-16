@@ -21,7 +21,7 @@ private val log = KotlinLogging.logger {}
 @RestControllerAdvice
 class CustomExceptionHandler {
     @ExceptionHandler(Exception::class)
-    fun handleException(e: Exception) =
+    fun handleException(e: Exception): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(
@@ -34,7 +34,7 @@ class CustomExceptionHandler {
             ).also { log.error(e) { "Unhandled Exception" } }
 
     @ExceptionHandler(CustomException::class)
-    fun handleCustomException(e: CustomException) =
+    fun handleCustomException(e: CustomException): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
             .status(e.errorCode.getHttpStatus())
             .body(
@@ -51,7 +51,7 @@ class CustomExceptionHandler {
             ).also { log.error(e) { "CustomException: ${e.message}" } }
 
     @ExceptionHandler(EntityNotFoundException::class)
-    fun handleEntityNotFoundException(e: EntityNotFoundException) =
+    fun handleEntityNotFoundException(e: EntityNotFoundException): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(
@@ -67,20 +67,21 @@ class CustomExceptionHandler {
     fun handleNoResourceFoundException(
         e: NoResourceFoundException,
         request: HttpServletRequest?,
-    ) = ResponseEntity
-        .status(HttpStatus.NOT_FOUND)
-        .body(
-            ErrorResponseBody(
-                status = HttpStatus.NOT_FOUND,
-                message = "해당 경로를 찾지 못했습니다. url 을 확인해주세요",
-                code = HttpStatus.NOT_FOUND.value().toString(),
-                error = HttpStatus.NOT_FOUND.name,
-            ),
-        ).also {
-            if (request?.requestURI?.contains("stomp/publish") == false) {
-                log.error(e) { "NoResourceFoundException" }
+    ): ResponseEntity<ErrorResponseBody> =
+        ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(
+                ErrorResponseBody(
+                    status = HttpStatus.NOT_FOUND,
+                    message = "해당 경로를 찾지 못했습니다. url 을 확인해주세요",
+                    code = HttpStatus.NOT_FOUND.value().toString(),
+                    error = HttpStatus.NOT_FOUND.name,
+                ),
+            ).also {
+                if (request?.requestURI?.contains("stomp/publish") == false) {
+                    log.error(e) { "NoResourceFoundException" }
+                }
             }
-        }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleMethodArgumentNotValid(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponseBody> {
@@ -119,7 +120,7 @@ class CustomExceptionHandler {
         ).also { log.error(e) { "HttpMessageNotReadableException: ${e.message}" } }
 
     @ExceptionHandler(MissingServletRequestParameterException::class)
-    fun handleMissingServletRequestParameterException(e: MissingServletRequestParameterException) =
+    fun handleMissingServletRequestParameterException(e: MissingServletRequestParameterException): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(
@@ -132,7 +133,7 @@ class CustomExceptionHandler {
             ).also { log.error(e) { "handleMissingServletRequestParameterException: ${e.message}" } }
 
     @ExceptionHandler(DataIntegrityViolationException::class)
-    fun handleDataIntegrityViolationException(e: DataIntegrityViolationException) =
+    fun handleDataIntegrityViolationException(e: DataIntegrityViolationException): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(

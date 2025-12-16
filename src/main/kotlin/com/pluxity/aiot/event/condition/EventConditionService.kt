@@ -137,8 +137,8 @@ class EventConditionService(
                 val condition2 = conditions[j]
 
                 if (condition1.hasRangeOverlap(condition2)) {
-                    val range1 = condition1.getActualRange()!!
-                    val range2 = condition2.getActualRange()!!
+                    val range1 = requireNotNull(condition1.getActualRange()) { "range1 is null but hasRangeOverlap was true" }
+                    val range2 = requireNotNull(condition2.getActualRange()) { "range2 is null but hasRangeOverlap was true" }
 
                     throw CustomException(
                         ErrorCode.DUPLICATE_EVENT_CONDITION,

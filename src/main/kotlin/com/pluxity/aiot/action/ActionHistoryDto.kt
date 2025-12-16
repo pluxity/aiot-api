@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotBlank
 
 data class ActionHistoryResponse(
     var id: Long? = null,
-    var deviceId: String? = null,
+    var deviceId: String,
     var eventName: String? = null,
     var eventHistoryId: Long? = null,
     var content: String,

@@ -64,10 +64,8 @@ class EventCondition(
 
         // DisplacementGauge인 경우: leftValue는 errorRange, rightValue는 centerValue
         return if (objectId == SensorType.DISPLACEMENT_GAUGE.objectId) {
-            val errorRange = left
-            val centerValue = right
-            val minRange = centerValue - errorRange
-            val maxRange = centerValue + errorRange
+            val minRange = right - left
+            val maxRange = right + left
             Pair(minRange, maxRange)
         } else {
             // 일반 센서인 경우: leftValue와 rightValue는 직접적인 범위

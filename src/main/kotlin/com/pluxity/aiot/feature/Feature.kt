@@ -35,8 +35,8 @@ class Feature(
     @Column
     var batteryLevel: Int? = null,
     @Column(length = 50)
-    var eventStatus: String? = "NORMAL",
-    var isActive: Boolean? = true,
+    var eventStatus: String = "NORMAL",
+    var isActive: Boolean = true,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id")
     var site: Site? = null,

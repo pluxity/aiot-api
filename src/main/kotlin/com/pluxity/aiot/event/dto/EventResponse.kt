@@ -10,24 +10,24 @@ import java.time.LocalDateTime
 
 data class EventResponse(
     val eventId: Long,
-    val deviceId: String?,
-    val objectId: String?,
+    val deviceId: String,
+    val objectId: String,
     val occurredAt: String,
     val minValue: Double? = null,
     val maxValue: Double? = null,
     val status: String,
-    val eventName: String?,
-    val fieldKey: String?,
+    val eventName: String,
+    val fieldKey: String,
     val guideMessage: String?,
     val longitude: Double?,
     val latitude: Double?,
     val updatedAt: String,
     val updatedBy: String?,
-    val value: Double? = null,
-    val level: String? = null,
+    val value: Double,
+    val level: String,
     val siteId: Long? = null,
     val siteName: String? = null,
-    val sensorDescription: String? = null,
+    val sensorDescription: String,
     val profileDescription: String? = null,
 )
 
@@ -48,24 +48,24 @@ object EventMetrics {
 
 data class EventHistoryRow(
     val eventId: Long,
-    val deviceId: String?,
-    val objectId: String?,
+    val deviceId: String,
+    val objectId: String,
     val occurredAt: LocalDateTime,
     val minValue: Double?,
     val maxValue: Double?,
     val status: EventStatus,
-    val eventName: String?,
-    val fieldKey: String?,
+    val eventName: String,
+    val fieldKey: String,
     val guideMessage: String?,
     val longitude: Double?,
     val latitude: Double?,
     val updatedBy: String,
     val updatedAt: LocalDateTime,
-    val value: Double?,
-    val level: ConditionLevel?,
+    val value: Double,
+    val level: ConditionLevel,
     val siteId: Long,
     val siteName: String,
-    val sensorDescription: String?,
+    val sensorDescription: String,
 )
 
 fun EventHistoryRow.toEventResponse() =
@@ -85,11 +85,11 @@ fun EventHistoryRow.toEventResponse() =
         updatedBy = this.updatedBy,
         updatedAt = this.updatedAt.toString(),
         value = this.value,
-        level = this.level?.name,
+        level = this.level.name,
         siteId = this.siteId,
         siteName = this.siteName,
         sensorDescription = this.sensorDescription,
-        profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(this.fieldKey!!),
+        profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(this.fieldKey),
     )
 
 data class EventCursorPageResponse(

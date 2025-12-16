@@ -124,8 +124,8 @@ class DisplacementGaugeProcessor(
             condition.leftValue != null &&
             condition.rightValue != null
         ) {
-            val errorRange = condition.leftValue!!
-            val centerValue = condition.rightValue!!
+            val errorRange = condition.leftValue ?: return false
+            val centerValue = condition.rightValue ?: return false
 
             // 중앙값 ± 오차 범위 계산
             val minRange = centerValue - errorRange

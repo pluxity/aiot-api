@@ -25,19 +25,19 @@ class EventHistory(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
     @Column(nullable = false)
-    var deviceId: String? = null,
+    var deviceId: String,
     @Column(nullable = false)
-    var objectId: String? = null,
+    var objectId: String,
     @Column(nullable = false)
-    var sensorDescription: String? = null,
+    var sensorDescription: String,
     @Column(nullable = false)
-    var fieldKey: String? = null,
+    var fieldKey: String,
     @Column(nullable = false)
-    var value: Double? = null,
+    var value: Double,
     @Column(nullable = false)
-    var unit: String? = null,
+    var unit: String,
     @Column(nullable = false)
-    var eventName: String? = null,
+    var eventName: String,
     @Column(nullable = false)
     var occurredAt: LocalDateTime = LocalDateTime.now(),
     var minValue: Double? = null,

@@ -19,8 +19,8 @@ object FeatureFixture {
         latitude: Double? = 37.0,
         geom: Point? = null,
         batteryLevel: Int? = 100,
-        eventStatus: String? = "NORMAL",
-        isActive: Boolean? = true,
+        eventStatus: String = "NORMAL",
+        isActive: Boolean = true,
         site: Site? = null,
     ): Feature {
         val point = geom ?: (longitude?.let { lon -> latitude?.let { lat -> gf.createPoint(Coordinate(lon, lat)) } })

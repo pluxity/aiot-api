@@ -1,6 +1,5 @@
 package com.pluxity.aiot.user.entity
 
-import com.pluxity.aiot.global.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -24,4 +23,4 @@ class UserRole(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     var role: Role,
-) : BaseEntity()
+)

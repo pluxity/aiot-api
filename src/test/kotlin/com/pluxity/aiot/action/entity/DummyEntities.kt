@@ -13,10 +13,9 @@ fun dummyActionHistory(
     eventHistory: EventHistory = dummyEventHistory(),
     content: String = "content",
 ) = ActionHistory(
-    id = id,
     eventHistory = eventHistory,
     content = content,
-).withAudit()
+).apply { this.id = id }.withAudit()
 
 fun dummyEventHistory(
     id: Long = 999L,
@@ -34,7 +33,6 @@ fun dummyEventHistory(
     guideMessage: String? = null,
     level: ConditionLevel? = ConditionLevel.CAUTION,
 ) = EventHistory(
-    id = id,
     deviceId = deviceId,
     objectId = objectId,
     sensorDescription = sensorDescription,
@@ -48,7 +46,7 @@ fun dummyEventHistory(
     status = eventStatus,
     guideMessage = guideMessage,
     level = level,
-)
+).apply { this.id = id }
 
 fun dummyEventHistoryRow(
     eventId: Long = 999L,

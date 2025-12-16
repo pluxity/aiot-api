@@ -9,15 +9,17 @@ import org.springframework.security.core.context.SecurityContextHolder
 
 object TestSecurityConfig {
     fun setAdminAuthentication() {
-        val adminRole = Role(id = 1L, name = RoleType.ADMIN.roleName, description = "Admin Role", auth = "ADMIN")
+        val adminRole =
+            Role(name = RoleType.ADMIN.roleName, description = "Admin Role", auth = "ADMIN").apply {
+                id = 1L
+            }
         val adminUser =
             User(
-                id = 1L,
                 username = "admin",
                 password = "password",
                 name = "Admin User",
                 code = "ADMIN",
-            )
+            ).apply { id = 1L }
         adminUser.addRole(adminRole)
 
         val authorities = listOf(SimpleGrantedAuthority("ROLE_${RoleType.ADMIN.roleName}"))

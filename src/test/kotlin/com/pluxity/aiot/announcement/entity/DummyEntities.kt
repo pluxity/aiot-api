@@ -9,7 +9,6 @@ fun dummyAnnouncement(
     message: String,
     siteId: Long = 1L,
 ) = Announcement(
-    id = id,
     site = dummySite(siteId),
     message = message,
-).withAudit()
+).apply { this.id = id }.withAudit()

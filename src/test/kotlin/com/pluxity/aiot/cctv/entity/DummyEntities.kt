@@ -8,4 +8,10 @@ fun dummyCctv(
     url: String = "url",
     lon: Double = 127.0,
     lat: Double = 37.0,
-): Cctv = Cctv(id, name, url, lon, lat)
+): Cctv =
+    Cctv(
+        name = name,
+        url = url,
+        longitude = lon,
+        latitude = lat,
+    ).apply { this.id = id }

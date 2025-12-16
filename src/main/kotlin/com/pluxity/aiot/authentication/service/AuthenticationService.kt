@@ -36,7 +36,6 @@ class AuthenticationService(
 
         val user =
             User(
-                id = null,
                 username = signUpRequest.username,
                 password = passwordEncoder.encode(signUpRequest.password),
                 name = signUpRequest.name,

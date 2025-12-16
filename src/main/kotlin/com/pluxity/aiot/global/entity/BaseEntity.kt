@@ -2,6 +2,9 @@ package com.pluxity.aiot.global.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.EntityListeners
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
 import jakarta.persistence.MappedSuperclass
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
@@ -13,6 +16,14 @@ import java.time.LocalDateTime
 @EntityListeners(AuditingEntityListener::class)
 @MappedSuperclass
 abstract class BaseEntity {
+    @field:Id
+    @field:GeneratedValue(strategy = GenerationType.IDENTITY)
+    @field:Column(name = "id", nullable = false)
+    open var id: Long? = null
+
+    val requiredId: Long
+        get() = checkNotNull(id) { "${javaClass.simpleName} is not persisted yet" }
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     open var createdAt: LocalDateTime = LocalDateTime.now()

@@ -25,7 +25,6 @@ object FeatureFixture {
     ): Feature {
         val point = geom ?: (longitude?.let { lon -> latitude?.let { lat -> gf.createPoint(Coordinate(lon, lat)) } })
         return Feature(
-            id = id,
             deviceId = deviceId,
             objectId = objectId,
             name = name,
@@ -36,6 +35,6 @@ object FeatureFixture {
             eventStatus = eventStatus,
             isActive = isActive,
             site = site,
-        )
+        ).apply { this.id = id }
     }
 }

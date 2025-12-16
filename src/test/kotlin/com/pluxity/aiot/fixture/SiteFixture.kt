@@ -16,11 +16,10 @@ object SiteFixture {
         location: Polygon = createDefaultPolygon(),
     ): Site =
         Site(
-            id = id,
             name = name,
             description = description,
             location = location,
-        )
+        ).apply { this.id = id }
 
     fun createDefaultPolygon(): Polygon {
         val coordinates =

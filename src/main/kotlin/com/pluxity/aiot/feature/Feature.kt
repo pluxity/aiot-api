@@ -5,9 +5,6 @@ import com.pluxity.aiot.site.Site
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import org.locationtech.jts.geom.Coordinate
@@ -18,10 +15,6 @@ import java.time.LocalDateTime
 
 @Entity
 class Feature(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
-    var id: Long? = null,
     @Column(nullable = false, unique = true)
     var deviceId: String,
     @Column(nullable = false)
@@ -43,9 +36,6 @@ class Feature(
     @Column
     var subscriptionTime: LocalDateTime? = null,
 ) : BaseEntity() {
-    val requiredId: Long
-        get() = checkNotNull(id) { "Feature is not persisted yet" }
-
     val requiredSiteId: Long
         get() = checkNotNull(site) { "Feature.site is null (not ready)" }.requiredId
 

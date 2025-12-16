@@ -16,10 +16,9 @@ fun dummySite(
     val wktReader = WKTReader(gf)
     val wkt = "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))"
     return Site(
-        id,
         name,
         description = description,
         location =
             wktReader.read(wkt) as Polygon,
-    ).withAudit()
+    ).apply { this.id = id }.withAudit()
 }

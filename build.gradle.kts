@@ -50,6 +50,7 @@ dependencies {
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.11.0")
     implementation("com.influxdb:influxdb-client-kotlin:7.3.0")
     implementation("com.influxdb:flux-dsl:7.3.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

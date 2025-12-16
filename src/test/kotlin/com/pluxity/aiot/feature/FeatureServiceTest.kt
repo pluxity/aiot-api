@@ -88,7 +88,7 @@ class FeatureServiceTest(
                     ),
                 )
 
-                val searchCondition = FeatureSearchCondition(siteId = site1.id!!)
+                val searchCondition = FeatureSearchCondition(siteId = site1.requiredId)
                 val result = featureService.findAll(searchCondition)
 
                 Then("해당 Site의 Feature만 반환된다") {
@@ -192,10 +192,10 @@ class FeatureServiceTest(
                     )
 
                 val updateRequest = FeatureUpdateRequest(active = false, height = 5.0)
-                featureService.updateFeature(feature.id!!, updateRequest)
+                featureService.updateFeature(feature.requiredId, updateRequest)
 
                 Then("isActive가 변경된다") {
-                    val updated = featureRepository.findById(feature.id!!).get()
+                    val updated = featureRepository.findById(feature.requiredId).get()
                     updated.isActive shouldBe false
                 }
             }
@@ -226,10 +226,10 @@ class FeatureServiceTest(
                         ),
                     )
 
-                featureService.updateFeatureName(feature.id!!, "Updated Name")
+                featureService.updateFeatureName(feature.requiredId, "Updated Name")
 
                 Then("이름이 변경된다") {
-                    val updated = featureRepository.findById(feature.id!!).get()
+                    val updated = featureRepository.findById(feature.requiredId).get()
                     updated.name shouldBe "Updated Name"
                 }
             }

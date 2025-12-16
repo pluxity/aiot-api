@@ -28,7 +28,7 @@ class EventStatusChangeNotifier(
 
         messageSender.changeEventStatus(
             ChangeEventStatusPayload(
-                siteId = site.id!!,
+                siteId = site.requiredId,
                 eventId = eventId,
                 status = status,
             ),

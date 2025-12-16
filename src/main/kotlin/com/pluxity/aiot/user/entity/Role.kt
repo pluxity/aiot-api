@@ -22,6 +22,9 @@ class Role(
     var description: String?,
     var auth: String = RoleType.USER.name,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "Role is not persisted yet" }
+
     @OneToMany(mappedBy = "role")
     var userRoles: MutableList<UserRole> = mutableListOf()
 

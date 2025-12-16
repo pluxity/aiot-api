@@ -84,7 +84,7 @@ class LlmMessageService(
         today: LocalDate,
         targetHour: Int,
     ) {
-        val siteId = site.id!!
+        val siteId = site.requiredId
 
         // 1. 해당 사이트의 어제와 오늘 평균 온도 조회
         val yesterdayAvgTemp = getHourlyAverageTemperature(yesterday, targetHour, siteId)

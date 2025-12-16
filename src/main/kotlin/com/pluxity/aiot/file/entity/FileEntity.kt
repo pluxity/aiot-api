@@ -27,6 +27,9 @@ class FileEntity(
     @Column(name = "content_type", nullable = false)
     var contentType: String,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "FileEntity is not persisted yet" }
+
     @Column(name = "file_status", nullable = false)
     @Enumerated(EnumType.STRING)
     var fileStatus: FileStatus = FileStatus.TEMP

@@ -43,6 +43,12 @@ class Feature(
     @Column
     var subscriptionTime: LocalDateTime? = null,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "Feature is not persisted yet" }
+
+    val requiredSiteId: Long
+        get() = checkNotNull(site) { "Feature.site is null (not ready)" }.requiredId
+
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive
     }

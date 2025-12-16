@@ -12,7 +12,10 @@ data class FileResponse(
     var contentType: String? = null,
     var fileStatus: String? = null,
     @field:JsonUnwrapped var baseResponse: BaseResponse? = null,
-)
+) {
+    val requiredId: Long
+        get() = checkNotNull(id) { "FileResponse.id is null" }
+}
 
 fun FileEntity.toFileResponse(url: String?) =
     FileResponse(

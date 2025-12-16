@@ -158,7 +158,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     /**
@@ -227,7 +227,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     /**
@@ -278,7 +278,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     data class ConditionSpec(

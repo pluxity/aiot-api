@@ -50,6 +50,9 @@ class EventHistory(
     @Enumerated(EnumType.STRING)
     var level: ConditionLevel? = null,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "EventHistory is not persisted yet" }
+
     fun changeStatus(status: EventStatus) {
         this.status = status
     }

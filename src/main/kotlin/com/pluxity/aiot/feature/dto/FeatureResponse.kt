@@ -28,7 +28,7 @@ data class FeatureResponse(
 
 fun Feature.toFeatureResponse() =
     FeatureResponse(
-        id = this.id!!,
+        id = this.requiredId,
         deviceId = this.deviceId,
         objectId = this.objectId.take(5),
         name = requireNotNull(this.name) { "Feature(${this.id}) name is null (not ready)" },

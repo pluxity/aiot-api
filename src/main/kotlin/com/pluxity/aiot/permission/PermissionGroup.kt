@@ -19,6 +19,9 @@ class PermissionGroup(
     var name: String,
     var description: String?,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "PermissionGroup is not persisted yet" }
+
     @OneToMany(mappedBy = "permissionGroup", cascade = [CascadeType.ALL])
     val rolePermissions: MutableSet<RolePermission> = HashSet()
 

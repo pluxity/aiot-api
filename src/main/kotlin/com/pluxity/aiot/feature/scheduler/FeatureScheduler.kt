@@ -49,7 +49,7 @@ class FeatureScheduler(
                 feature.site?.let {
                     messageSender.sendConnectionError(
                         ConnectionErrorPayload(
-                            siteId = it.id!!,
+                            siteId = it.requiredId,
                             deviceId = feature.deviceId,
                             objectId = feature.objectId,
                             message = message,

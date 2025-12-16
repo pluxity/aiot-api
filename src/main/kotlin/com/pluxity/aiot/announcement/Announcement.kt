@@ -21,4 +21,7 @@ class Announcement(
     val site: Site,
     @Column(length = 1000)
     var message: String,
-) : BaseEntity()
+) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "Announcement is not persisted yet" }
+}

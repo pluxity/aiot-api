@@ -35,6 +35,9 @@ class Cctv(
     @JoinColumn(name = "site_id")
     var site: Site? = null,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "Cctv is not persisted yet" }
+
     fun updateLocationInfo(
         longitude: Double,
         latitude: Double,

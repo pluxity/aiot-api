@@ -31,6 +31,9 @@ class Site(
     var thumbnailId: Long? = null,
 ) : BaseEntity(),
     Permissible {
+    val requiredId: Long
+        get() = checkNotNull(id) { "Site is not persisted yet" }
+
     @OneToMany(mappedBy = "site")
     val features: MutableList<Feature> = mutableListOf()
 

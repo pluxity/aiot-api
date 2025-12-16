@@ -54,7 +54,7 @@ class SensorDataMigrationService(
 
         allFeatures.forEach { feature ->
             try {
-                migrateDeviceData(feature.deviceId, feature.objectId, feature.site?.id!!)
+                migrateDeviceData(feature.deviceId, feature.objectId, feature.requiredSiteId)
             } catch (e: Exception) {
                 log.error(e) { "Error migrating data for device: ${feature.deviceId}, object: ${feature.objectId}" }
             }

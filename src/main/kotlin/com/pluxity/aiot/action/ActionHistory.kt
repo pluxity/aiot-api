@@ -23,6 +23,9 @@ class ActionHistory(
     val eventHistory: EventHistory,
     var content: String,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "ActionHistory is not persisted yet" }
+
     @OneToMany(mappedBy = "actionHistory")
     var historyFiles: MutableList<ActionHistoryFile> = mutableListOf()
 

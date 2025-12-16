@@ -66,7 +66,7 @@ class CctvServiceKoTest :
                     cctvRepository.findByIdOrNull(any())
                 } returns cctv
                 Then("정상 조회") {
-                    val res = cctvService.findById(cctv.id!!)
+                    val res = cctvService.findById(cctv.requiredId)
                     res.id shouldBe cctv.id
                     res.name shouldBe cctv.name
                 }
@@ -93,7 +93,7 @@ class CctvServiceKoTest :
                 } returns cctv
                 Then("정상 수정") {
                     val updateName = "updated Cctv"
-                    cctvService.update(cctv.id!!, CctvRequest(updateName, "", 0.0, 0.0, 5.0))
+                    cctvService.update(cctv.requiredId, CctvRequest(updateName, "", 0.0, 0.0, 5.0))
                     cctv.name shouldBe updateName
                 }
             }
@@ -110,7 +110,7 @@ class CctvServiceKoTest :
                     cctvRepository.deleteById(capture(slot))
                 } just runs
                 Then("정상 삭제") {
-                    cctvService.delete(cctv.id!!)
+                    cctvService.delete(cctv.requiredId)
                     verify(exactly = 1) { cctvRepository.deleteById(any()) }
                     slot.captured shouldBe cctv.id
                 }

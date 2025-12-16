@@ -27,4 +27,7 @@ class LlmMessage(
     val prompt: String,
     @Column(length = 1000, nullable = false)
     var message: String,
-) : BaseEntity()
+) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "LlmMessage is not persisted yet" }
+}

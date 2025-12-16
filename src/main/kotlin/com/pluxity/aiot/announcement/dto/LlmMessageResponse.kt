@@ -17,8 +17,8 @@ data class LlmMessageResponse(
     companion object {
         fun from(llmMessage: LlmMessage): LlmMessageResponse =
             LlmMessageResponse(
-                id = llmMessage.id!!,
-                siteId = llmMessage.site.id!!,
+                id = llmMessage.requiredId,
+                siteId = llmMessage.site.requiredId,
                 siteName = llmMessage.site.name,
                 yesterdayAvgTemp = llmMessage.yesterdayAvgTemp,
                 todayAvgTemp = llmMessage.todayAvgTemp,

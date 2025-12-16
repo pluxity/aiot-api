@@ -103,7 +103,7 @@ interface SensorDataProcessor {
             feature.site?.let {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
-                        eventId = eventHistory.id!!,
+                        eventId = eventHistory.requiredId,
                         deviceId = deviceId,
                         objectId = sensorType.objectId,
                         occurredAt = parsedDate.toString(),
@@ -222,7 +222,9 @@ interface SensorDataProcessor {
         featureRepository: FeatureRepository,
     ) {
         feature?.let {
-            val dbFeature = featureRepository.findByIdOrNull(feature.id!!) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, feature.id)
+            val dbFeature =
+                featureRepository.findByIdOrNull(feature.requiredId)
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, feature.id)
             dbFeature.updateEventStatus(eventStatus)
             featureRepository.save(dbFeature)
         }

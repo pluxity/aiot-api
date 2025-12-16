@@ -11,7 +11,7 @@ fun <T> FileService.getFileMapById(
     return if (fileIds.isEmpty()) {
         emptyMap()
     } else {
-        getFiles(fileIds).associateBy { it.id!! }
+        getFiles(fileIds).associateBy { it.requiredId }
     }
 }
 
@@ -23,6 +23,6 @@ fun <T> FileService.getFileMapByIds(
     return if (fileIds.isEmpty()) {
         emptyMap()
     } else {
-        getFiles(fileIds).associateBy { it.id!! }
+        getFiles(fileIds).associateBy { it.requiredId }
     }
 }

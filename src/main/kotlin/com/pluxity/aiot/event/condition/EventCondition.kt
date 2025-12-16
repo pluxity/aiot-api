@@ -40,6 +40,9 @@ class EventCondition(
     var booleanValue: Boolean? = null,
     var guideMessage: String? = null,
 ) {
+    val requiredId: Long
+        get() = checkNotNull(id) { "EventCondition is not persisted yet" }
+
     init {
         validate()
     }

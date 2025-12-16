@@ -59,7 +59,7 @@ class CctvService(
                     mtxName = mtxName,
                     site = site,
                 ),
-            ).id!!
+            ).requiredId
     }
 
     @Transactional(readOnly = true)

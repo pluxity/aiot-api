@@ -43,10 +43,10 @@ class SiteService(
             )
 
         request.thumbnailId?.let { fileId ->
-            fileService.finalizeUpload(fileId, "${SITE_PATH}${site.id}/")
+            fileService.finalizeUpload(fileId, "${SITE_PATH}${site.requiredId}/")
         }
 
-        return site.id!!
+        return site.requiredId
     }
 
     fun findAll(): List<SiteResponse> {
@@ -74,7 +74,7 @@ class SiteService(
 
         if (request.thumbnailId != site.thumbnailId) {
             request.thumbnailId?.let { thumbnailId ->
-                fileService.finalizeUpload(thumbnailId, "${SITE_PATH}${site.id}/")
+                fileService.finalizeUpload(thumbnailId, "${SITE_PATH}${site.requiredId}/")
                 site.updateThumbnailId(request.thumbnailId)
             } ?: site.updateThumbnailId(null)
         }

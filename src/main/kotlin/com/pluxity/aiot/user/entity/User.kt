@@ -28,6 +28,9 @@ class User(
     var phoneNumber: String? = null,
     var department: String? = null,
 ) : BaseEntity() {
+    val requiredId: Long
+        get() = checkNotNull(id) { "User is not persisted yet" }
+
     var lastPasswordChangeDate: LocalDateTime = LocalDateTime.now()
 
     @OneToMany(mappedBy = "user", cascade = [CascadeType.PERSIST, CascadeType.MERGE])

@@ -66,7 +66,7 @@ class EventConditionService(
 
         log.info { "EventCondition 일괄 생성 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
 
-        return savedConditions.map { it.id!! }
+        return savedConditions.map { it.requiredId }
     }
 
     @Transactional

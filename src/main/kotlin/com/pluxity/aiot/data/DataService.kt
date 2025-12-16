@@ -144,7 +144,7 @@ class DataService(
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
         val data = getClimateData(query)
-        val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
+        val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
         val metrics = data.buildListMetricMap(SensorMetrics.CLIMATE, climateValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
@@ -156,7 +156,7 @@ class DataService(
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
         val data = getDisplacementGauge(query)
-        val bucketList = data.map { convertUtcToKstString(interval, it.time!!) }
+        val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
         val metrics = data.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE, displacementGaugeValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }

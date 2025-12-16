@@ -11,13 +11,19 @@ data class ClimateSensorData(
     @Column(name = "DiscomfortIndex") val discomfortIndex: Double? = null,
     @Column(name = "Temperature") val temperature: Double? = null,
     @Column(name = "Humidity") val humidity: Double? = null,
-)
+) {
+    val requiredTime: Instant
+        get() = checkNotNull(time) { "_time is missing in InfluxDB query result" }
+}
 
 data class DisplacementGaugeSensorData(
     @Column(name = "_time") val time: Instant? = null,
     @Column(name = "AngleX") val angleX: Double? = null,
     @Column(name = "AngleY") val angleY: Double? = null,
-)
+) {
+    val requiredTime: Instant
+        get() = checkNotNull(time) { "_time is missing in InfluxDB query result" }
+}
 
 // 메트릭 정의를 위한 데이터 클래스
 data class MetricDefinition(
@@ -72,10 +78,10 @@ private fun createDeviceDataResponse(
     )
 }
 
-fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, time!!, toMetricMap())
+fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, requiredTime, toMetricMap())
 
 fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DataResponse =
-    createDeviceDataResponse(deviceId, time!!, toMetricMap())
+    createDeviceDataResponse(deviceId, requiredTime, toMetricMap())
 
 private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> = buildMetricMap(this, SensorMetrics.CLIMATE, climateValueExtractor)
 

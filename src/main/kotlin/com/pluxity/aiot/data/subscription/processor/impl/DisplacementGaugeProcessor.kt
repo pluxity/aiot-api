@@ -4,6 +4,7 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.DisplacementGauge
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
+import com.pluxity.aiot.data.subscription.processor.IncomingValue
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
 import com.pluxity.aiot.event.condition.ConditionType
 import com.pluxity.aiot.event.condition.EventCondition
@@ -45,7 +46,7 @@ class DisplacementGaugeProcessor(
                 deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = ANGLE_X,
-                value = it,
+                value = IncomingValue.Numeric(it),
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
@@ -59,7 +60,7 @@ class DisplacementGaugeProcessor(
                 deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = ANGLE_Y,
-                value = it,
+                value = IncomingValue.Numeric(it),
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
@@ -113,12 +114,12 @@ class DisplacementGaugeProcessor(
      */
     override fun isConditionMet(
         condition: EventCondition,
-        value: Any,
+        value: IncomingValue,
         fieldKey: String,
     ): Boolean {
         // 각도계 센서(AngleX, AngleY)이고 BETWEEN 연산자인 경우 특수 처리
         if ((fieldKey == ANGLE_X || fieldKey == ANGLE_Y) &&
-            value is Double &&
+            value is IncomingValue.Numeric &&
             condition.conditionType == ConditionType.RANGE &&
             condition.operator == Operator.BETWEEN &&
             condition.leftValue != null &&
@@ -126,13 +127,14 @@ class DisplacementGaugeProcessor(
         ) {
             val errorRange = condition.leftValue ?: return false
             val centerValue = condition.rightValue ?: return false
+            val numericValue = value.value
 
             // 중앙값 ± 오차 범위 계산
             val minRange = centerValue - errorRange
             val maxRange = centerValue + errorRange
 
             // 실제 값이 (중앙값-오차) ~ (중앙값+오차) 범위 밖에 있는지 확인
-            return value <= minRange || value >= maxRange
+            return numericValue <= minRange || numericValue >= maxRange
         }
 
         // 일반적인 처리는 부모 인터페이스의 기본 구현 사용

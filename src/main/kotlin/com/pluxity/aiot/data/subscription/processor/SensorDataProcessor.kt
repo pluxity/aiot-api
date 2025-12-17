@@ -135,7 +135,7 @@ interface SensorDataProcessor {
         deviceId: String,
         sensorType: SensorType,
         fieldKey: String,
-        value: Any,
+        value: IncomingValue,
         timestamp: String,
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
@@ -163,13 +163,7 @@ interface SensorDataProcessor {
             if (isConditionMet(condition, value, fieldKey)) {
                 isAnyConditionMet = true
 
-                // value를 Double로 변환 (EventHistory 저장용)
-                val doubleValue =
-                    when (value) {
-                        is Number -> value.toDouble()
-                        is Boolean -> if (value) 1.0 else 0.0
-                        else -> 0.0
-                    }
+                val doubleValue = value.toEventHistoryValue()
 
                 processEvent(
                     deviceId = deviceId,
@@ -232,20 +226,16 @@ interface SensorDataProcessor {
 
     fun isConditionMet(
         condition: EventCondition,
-        incomingValue: Any,
+        incomingValue: IncomingValue,
     ): Boolean {
         // Boolean 값 체크
         if (condition.booleanValue != null) {
-            val value = incomingValue as? Boolean ?: return false
+            val value = (incomingValue as? IncomingValue.Bool)?.value ?: return false
             return value == condition.booleanValue
         }
 
         // Numeric 값 체크
-        val value =
-            when (incomingValue) {
-                is Number -> incomingValue.toDouble()
-                else -> return false
-            }
+        val value = (incomingValue as? IncomingValue.Numeric)?.value ?: return false
 
         return when (condition.conditionType) {
             ConditionType.SINGLE -> {
@@ -285,7 +275,7 @@ interface SensorDataProcessor {
      */
     fun isConditionMet(
         condition: EventCondition,
-        value: Any,
+        value: IncomingValue,
         fieldKey: String,
     ): Boolean = isConditionMet(condition, value)
 }

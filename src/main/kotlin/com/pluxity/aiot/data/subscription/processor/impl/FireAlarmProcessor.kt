@@ -4,6 +4,7 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.FireAlarm
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
+import com.pluxity.aiot.data.subscription.processor.IncomingValue
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.repository.EventHistoryRepository
@@ -41,7 +42,7 @@ class FireAlarmProcessor(
                 deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = FIRE_ALARM,
-                value = it, // Boolean 값 그대로 전달
+                value = IncomingValue.Bool(it),
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,

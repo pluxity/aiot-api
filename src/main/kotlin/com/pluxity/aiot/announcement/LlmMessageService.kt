@@ -16,11 +16,13 @@ import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -128,56 +130,59 @@ class LlmMessageService(
                 message = generatedMessage,
             )
 
-        llmMessageRepository.save(llmMessage)
+        withContext(Dispatchers.IO) {
+            llmMessageRepository.save(llmMessage)
+        }
         log.info { "[${site.name}] LLM 메시지 저장 완료: ID=${llmMessage.id}" }
     }
 
-    private fun getHourlyAverageTemperature(
+    private suspend fun getHourlyAverageTemperature(
         date: LocalDate,
         hour: Int,
         siteId: Long,
-    ): Double {
-        // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
-        val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
-        val endOfHour =
-            date
-                .atTime(hour, 0)
-                .plusHours(1)
-                .atZone(ZoneId.of("Asia/Seoul"))
-                .toInstant()
+    ): Double =
+        withContext(Dispatchers.IO) {
+            // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
+            val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
+            val endOfHour =
+                date
+                    .atTime(hour, 0)
+                    .plusHours(1)
+                    .atZone(ZoneId.of("Asia/Seoul"))
+                    .toInstant()
 
-        // 온습도계 센서 타입 조회
-        val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
-        val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
+            // 온습도계 센서 타입 조회
+            val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
+            val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
 
-        // InfluxDB 쿼리 생성 (facilityId로 필터링)
-        val query =
-            Flux
-                .from(influxdbProperties.bucket)
-                .range(startOfHour, endOfHour)
-                .filter(
-                    Restrictions.and(
-                        Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
-                        Restrictions.field().equal(temperatureField),
-                        Restrictions.tag("facilityId").equal(siteId.toString()),
-                    ),
-                ).mean("_value")
-                .toString()
+            // InfluxDB 쿼리 생성 (facilityId로 필터링)
+            val query =
+                Flux
+                    .from(influxdbProperties.bucket)
+                    .range(startOfHour, endOfHour)
+                    .filter(
+                        Restrictions.and(
+                            Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
+                            Restrictions.field().equal(temperatureField),
+                            Restrictions.tag("facilityId").equal(siteId.toString()),
+                        ),
+                    ).mean("_value")
+                    .toString()
 
-        log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
+            log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
 
-        // 쿼리 실행
-        val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
+            // 쿼리 실행
+            val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
 
-        // 평균 온도 추출
-        val avgTemp =
-            results
-                .firstOrNull()
-                ?.value
-                ?: 0.0
+            // 평균 온도 추출
+            val avgTemp =
+                results
+                    .firstOrNull()
+                    ?.value
+                    ?: 0.0
 
-        return String.format("%.1f", avgTemp).toDouble()
-    }
+            String.format("%.1f", avgTemp).toDouble()
+        }
 
     @Transactional(readOnly = true)
     fun findAll(

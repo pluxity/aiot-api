@@ -104,8 +104,8 @@ class LlmMessageService(
         // 2. LLM API 호출을 위한 프롬프트 생성
         val llmRequest =
             LlmRequest(
-                yesterday_temp = yesterdayAvgTemp,
-                today_temp = todayAvgTemp,
+                yesterdayTemp = yesterdayAvgTemp,
+                todayTemp = todayAvgTemp,
             )
 
         // 3. 외부 LLM API 호출
@@ -117,7 +117,7 @@ class LlmMessageService(
                 .retrieve()
                 .awaitBody<LlmResponse>()
 
-        val generatedMessage = llmResponse.generated_text
+        val generatedMessage = llmResponse.generatedText
         log.info { "[${site.name}] 생성된 LLM 메시지: $generatedMessage" }
 
         // 4. DB에 저장

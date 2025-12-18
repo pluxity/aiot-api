@@ -6,7 +6,7 @@ import com.pluxity.aiot.global.response.BaseResponse
 import com.pluxity.aiot.global.response.toBaseResponse
 
 data class FileResponse(
-    var id: Long,
+    var id: Long? = null,
     var url: String? = null,
     var originalFileName: String? = null,
     var contentType: String? = null,

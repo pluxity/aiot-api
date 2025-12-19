@@ -1,5 +1,6 @@
 package com.pluxity.aiot.fixture
 
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.site.Site
 import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.GeometryFactory
@@ -19,7 +20,7 @@ object SiteFixture {
             name = name,
             description = description,
             location = location,
-        ).apply { this.id = id }
+        ).withId(id)
 
     fun createDefaultPolygon(): Polygon {
         val coordinates =

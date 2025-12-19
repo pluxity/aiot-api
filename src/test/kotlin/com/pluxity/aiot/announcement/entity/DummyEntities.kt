@@ -2,6 +2,7 @@ package com.pluxity.aiot.announcement.entity
 
 import com.pluxity.aiot.announcement.Announcement
 import com.pluxity.aiot.base.entity.withAudit
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.site.entity.dummySite
 
 fun dummyAnnouncement(
@@ -11,4 +12,4 @@ fun dummyAnnouncement(
 ) = Announcement(
     site = dummySite(siteId),
     message = message,
-).apply { this.id = id }.withAudit()
+).withAudit().withId(id)

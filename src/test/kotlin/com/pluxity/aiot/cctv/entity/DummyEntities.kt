@@ -1,5 +1,6 @@
 package com.pluxity.aiot.cctv.entity
 
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.cctv.Cctv
 
 fun dummyCctv(
@@ -14,4 +15,4 @@ fun dummyCctv(
         url = url,
         longitude = lon,
         latitude = lat,
-    ).apply { this.id = id }
+    ).withId(id)

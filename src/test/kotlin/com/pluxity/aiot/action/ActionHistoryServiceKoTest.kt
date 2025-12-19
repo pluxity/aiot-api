@@ -14,6 +14,8 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
+import io.mockk.verify
 import org.springframework.data.repository.findByIdOrNull
 
 class ActionHistoryServiceKoTest :
@@ -50,6 +52,44 @@ class ActionHistoryServiceKoTest :
                 Then("성공") {
                     val saveId = actionHistoryService.save(1L, request)
                     saveId shouldBe id
+                }
+            }
+
+            When("파일과 함께 조치 등록 요청") {
+                val id = 10L
+                val fileIds = listOf(1L, 2L)
+                val request = ActionHistoryRequest("조치", fileIds)
+                val eventHistory = dummyEventHistory()
+                val savedActionHistory = dummyActionHistory(id = id, eventHistory = eventHistory)
+
+                every {
+                    eventHistoryRepository.findByIdOrNull(any())
+                } returns eventHistory
+
+                every {
+                    actionHistoryRepository.save(any())
+                } returns savedActionHistory
+
+                val filesSlot = slot<List<ActionHistoryFile>>()
+                every {
+                    actionHistoryFileRepository.saveAll(capture(filesSlot))
+                } returns emptyList()
+
+                Then("파일 업로드 finalize 및 연관 엔티티들을 저장") {
+                    val saveId = actionHistoryService.save(1L, request)
+                    saveId shouldBe id
+
+                    fileIds.forEach { fileId ->
+                        verify(exactly = 1) {
+                            fileService.finalizeUpload(fileId, "action-histories/$id/")
+                        }
+                    }
+                    verify(exactly = 1) {
+                        actionHistoryFileRepository.saveAll(any<List<ActionHistoryFile>>())
+                    }
+
+                    filesSlot.captured.map { it.fileId } shouldBe fileIds
+                    filesSlot.captured.map { it.actionHistory } shouldBe listOf(savedActionHistory, savedActionHistory)
                 }
             }
 

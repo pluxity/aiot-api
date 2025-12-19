@@ -20,6 +20,7 @@ abstract class BaseEntity {
     @field:GeneratedValue(strategy = GenerationType.IDENTITY)
     @field:Column(name = "id", nullable = false)
     open var id: Long? = null
+        protected set
 
     val requiredId: Long
         get() = checkNotNull(id) { "${javaClass.simpleName} is not persisted yet" }

@@ -1,6 +1,7 @@
 package com.pluxity.aiot.site.entity
 
 import com.pluxity.aiot.base.entity.withAudit
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.site.Site
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Polygon
@@ -20,5 +21,5 @@ fun dummySite(
         description = description,
         location =
             wktReader.read(wkt) as Polygon,
-    ).apply { this.id = id }.withAudit()
+    ).withAudit().withId(id)
 }

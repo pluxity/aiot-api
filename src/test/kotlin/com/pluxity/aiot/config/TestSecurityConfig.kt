@@ -1,5 +1,6 @@
 package com.pluxity.aiot.config
 
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.user.entity.Role
 import com.pluxity.aiot.user.entity.RoleType
 import com.pluxity.aiot.user.entity.User
@@ -10,16 +11,14 @@ import org.springframework.security.core.context.SecurityContextHolder
 object TestSecurityConfig {
     fun setAdminAuthentication() {
         val adminRole =
-            Role(name = RoleType.ADMIN.roleName, description = "Admin Role", auth = "ADMIN").apply {
-                id = 1L
-            }
+            Role(name = RoleType.ADMIN.roleName, description = "Admin Role", auth = "ADMIN").withId()
         val adminUser =
             User(
                 username = "admin",
                 password = "password",
                 name = "Admin User",
                 code = "ADMIN",
-            ).apply { id = 1L }
+            ).withId()
         adminUser.addRole(adminRole)
 
         val authorities = listOf(SimpleGrantedAuthority("ROLE_${RoleType.ADMIN.roleName}"))

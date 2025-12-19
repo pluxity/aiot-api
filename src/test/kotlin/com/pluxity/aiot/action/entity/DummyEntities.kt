@@ -2,6 +2,7 @@ package com.pluxity.aiot.action.entity
 
 import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.base.entity.withAudit
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.dto.EventHistoryRow
 import com.pluxity.aiot.event.entity.EventHistory
@@ -15,7 +16,7 @@ fun dummyActionHistory(
 ) = ActionHistory(
     eventHistory = eventHistory,
     content = content,
-).apply { this.id = id }.withAudit()
+).withAudit().withId(id)
 
 fun dummyEventHistory(
     id: Long = 999L,
@@ -46,7 +47,7 @@ fun dummyEventHistory(
     status = eventStatus,
     guideMessage = guideMessage,
     level = level,
-).apply { this.id = id }
+).withId(id)
 
 fun dummyEventHistoryRow(
     eventId: Long = 999L,

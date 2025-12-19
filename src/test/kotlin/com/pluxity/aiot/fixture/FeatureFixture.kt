@@ -1,5 +1,6 @@
 package com.pluxity.aiot.fixture
 
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.site.Site
 import org.locationtech.jts.geom.Coordinate
@@ -35,6 +36,6 @@ object FeatureFixture {
             eventStatus = eventStatus,
             isActive = isActive,
             site = site,
-        ).apply { this.id = id }
+        ).withId(id)
     }
 }

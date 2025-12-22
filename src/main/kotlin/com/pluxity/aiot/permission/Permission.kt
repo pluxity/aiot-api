@@ -14,9 +14,10 @@ class Permission(
     var resourceName: String,
     @Column(nullable = false)
     var resourceId: String,
-    @ManyToOne(fetch = FetchType.LAZY)
-    var permissionGroup: PermissionGroup? = null,
 ) : BaseEntity() {
+    @ManyToOne(fetch = FetchType.LAZY)
+    var permissionGroup: PermissionGroup? = null
+
     fun matches(
         resourceName: String?,
         resourceId: String?,

@@ -40,7 +40,6 @@ class PermissionGroupService(
                     Permission(
                         resourceName = resourceName,
                         resourceId = id,
-                        permissionGroup = null,
                     )
                 permissionGroup.addPermission(permission)
             }

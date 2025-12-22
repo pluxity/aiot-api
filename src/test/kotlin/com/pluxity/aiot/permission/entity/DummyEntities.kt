@@ -28,5 +28,4 @@ fun dummyPermission(
     Permission(
         resourceName = resourceName,
         resourceId = resourceId,
-        permissionGroup = permissionGroup,
-    ).withId(id).withAudit()
+    ).apply { this.permissionGroup = permissionGroup }.withId(id).withAudit()

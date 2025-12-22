@@ -29,13 +29,14 @@ object FeatureFixture {
             deviceId = deviceId,
             objectId = objectId,
             name = name,
-            longitude = longitude,
-            latitude = latitude,
-            geom = point,
-            batteryLevel = batteryLevel,
-            eventStatus = eventStatus,
-            isActive = isActive,
-            site = site,
-        ).withId(id)
+        ).apply {
+            this.longitude = longitude
+            this.latitude = latitude
+            this.geom = point
+            this.batteryLevel = batteryLevel
+            this.eventStatus = eventStatus
+            this.isActive = isActive
+            this.site = site
+        }.withId(id)
     }
 }

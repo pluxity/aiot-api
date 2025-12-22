@@ -20,22 +20,27 @@ class Feature(
     @Column(nullable = false)
     var objectId: String,
     var name: String? = null,
-    var longitude: Double? = null,
-    var latitude: Double? = null,
-    var height: Double? = null,
+) : BaseEntity() {
+    var longitude: Double? = null
+    var latitude: Double? = null
+    var height: Double? = null
+
     @Column(columnDefinition = "geometry(Point, 4326)")
-    var geom: Point? = null,
+    var geom: Point? = null
+
     @Column
-    var batteryLevel: Int? = null,
+    var batteryLevel: Int? = null
+
     @Column(length = 50)
-    var eventStatus: String = "NORMAL",
-    var isActive: Boolean = true,
+    var eventStatus: String = "NORMAL"
+    var isActive: Boolean = true
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id")
-    var site: Site? = null,
+    var site: Site? = null
+
     @Column
-    var subscriptionTime: LocalDateTime? = null,
-) : BaseEntity() {
+    var subscriptionTime: LocalDateTime? = null
     val requiredSiteId: Long
         get() = checkNotNull(site) { "Feature.site is null (not ready)" }.requiredId
 

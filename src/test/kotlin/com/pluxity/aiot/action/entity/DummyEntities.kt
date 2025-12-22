@@ -44,10 +44,9 @@ fun dummyEventHistory(
     occurredAt = occurredAt,
     minValue = minValue,
     maxValue = maxValue,
-    status = eventStatus,
     guideMessage = guideMessage,
     level = level,
-).withId(id)
+).apply { status = eventStatus }.withId(id)
 
 fun dummyEventHistoryRow(
     eventId: Long = 999L,

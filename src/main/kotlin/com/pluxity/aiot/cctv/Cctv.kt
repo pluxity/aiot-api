@@ -20,14 +20,15 @@ class Cctv(
     var longitude: Double? = null,
     var latitude: Double? = null,
     var height: Double? = null,
-    @Column(columnDefinition = "geometry(Point, 4326)")
-    var geom: Point? = null,
     @Column
     var mtxName: String? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id")
     var site: Site? = null,
 ) : BaseEntity() {
+    @Column(columnDefinition = "geometry(Point, 4326)")
+    var geom: Point? = null
+
     fun updateLocationInfo(
         longitude: Double,
         latitude: Double,

@@ -36,14 +36,15 @@ class EventHistory(
     var occurredAt: LocalDateTime = LocalDateTime.now(),
     var minValue: Double? = null,
     var maxValue: Double? = null,
-    @Enumerated(EnumType.STRING)
-    var status: EventStatus = EventStatus.ACTIVE,
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
     @Enumerated(EnumType.STRING)
     var level: ConditionLevel? = null,
 ) : BaseEntity() {
+    @Enumerated(EnumType.STRING)
+    var status: EventStatus = EventStatus.ACTIVE
+
     fun changeStatus(status: EventStatus) {
         this.status = status
     }

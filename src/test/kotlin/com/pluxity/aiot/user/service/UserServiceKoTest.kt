@@ -48,8 +48,8 @@ class UserServiceKoTest :
             When("유효한 아이디로 조회 요청") {
                 val user = dummyUser()
                 every { userRepository.findWithGraphById(any()) } returns user
+                val res = userService.findById(user.requiredId)
                 Then("정상 조회") {
-                    val res = userService.findById(user.requiredId)
                     res.id shouldBe user.id
                     res.name shouldBe user.name
                 }
@@ -58,10 +58,12 @@ class UserServiceKoTest :
             When("없는 아이디로 조회 요청") {
                 val id = 999L
                 every { userRepository.findWithGraphById(any()) } returns null
-                Then("NOT_FOUND_DEVICE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.findById(id)
-                    }.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
+                    }
+                Then("NOT_FOUND_DEVICE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
                 }
             }
         }
@@ -72,8 +74,10 @@ class UserServiceKoTest :
                     userRepository.findAllBy(any())
                 } returns mutableListOf(dummyUser())
 
+                val result = userService.findAll()
+
                 Then("성공") {
-                    userService.findAll().size shouldBe 1
+                    result.size shouldBe 1
                 }
             }
         }
@@ -83,8 +87,8 @@ class UserServiceKoTest :
             When("유효한 username으로 조회 요청") {
                 val user = dummyUser()
                 every { userRepository.findByUsername(any()) } returns user
+                val res = userService.findByUsername(user.username)
                 Then("정상 조회") {
-                    val res = userService.findByUsername(user.username)
                     res.id shouldBe user.id
                     res.username shouldBe user.username
                 }
@@ -92,11 +96,13 @@ class UserServiceKoTest :
 
             When("없는 username으로 조회 요청") {
                 every { userRepository.findByUsername(any()) } returns null
-                Then("NOT_FOUND_DEVICE 예외 발생") {
-                    val userName = "targetUser"
+                val userName = "targetUser"
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.findByUsername(userName)
-                    }.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(userName)
+                    }
+                Then("NOT_FOUND_DEVICE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(userName)
                 }
             }
         }
@@ -116,8 +122,9 @@ class UserServiceKoTest :
 
                 every { passwordEncoder.encode(any()) } returns ""
 
+                val res = userService.save(createRequest)
+
                 Then("성공") {
-                    val res = userService.save(createRequest)
                     res.id shouldBe user.id
                 }
             }
@@ -146,8 +153,9 @@ class UserServiceKoTest :
                     roleRepository.findByIdOrNull(any())
                 } returns role
 
+                val res = userService.save(createRequest)
+
                 Then("성공") {
-                    val res = userService.save(createRequest)
                     res.id shouldBe user.id
                     res.roles.size shouldBe 1
                     res.roles.first().name shouldBe role.name
@@ -163,8 +171,9 @@ class UserServiceKoTest :
                     userRepository.findWithGraphById(any())
                 } returns user
 
+                val res = userService.update(user.requiredId, updateRequest)
+
                 Then("성공") {
-                    val res = userService.update(user.requiredId, updateRequest)
                     res.name shouldBe updateRequest.name
                 }
             }
@@ -178,8 +187,9 @@ class UserServiceKoTest :
                 every { roleRepository.findAllById(any()) } returns listOf(role)
                 every { userRoleRepository.deleteAll(any()) } just runs
 
+                val res = userService.update(user.requiredId, updateRequest)
+
                 Then("성공") {
-                    val res = userService.update(user.requiredId, updateRequest)
                     res.name shouldBe updateRequest.name
                 }
             }
@@ -193,8 +203,9 @@ class UserServiceKoTest :
                 every { userRoleRepository.deleteAllByUser(any()) } just runs
                 every { userRepository.delete(any()) } just runs
 
+                userService.delete(user.requiredId)
+
                 Then("성공") {
-                    userService.delete(user.requiredId)
                     verify(exactly = 1) { userRoleRepository.deleteAllByUser(any()) }
                     verify(exactly = 1) { userRepository.delete(any()) }
                 }
@@ -203,10 +214,12 @@ class UserServiceKoTest :
             When("없는 아이디로 조회 요청") {
                 val id = 999L
                 every { userRepository.findWithGraphById(any()) } returns null
-                Then("NOT_FOUND_DEVICE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.findById(id)
-                    }.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
+                    }
+                Then("NOT_FOUND_DEVICE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
                 }
             }
         }
@@ -221,8 +234,9 @@ class UserServiceKoTest :
                 every { roleRepository.findAllById(any()) } returns listOf(role)
                 every { userRoleRepository.deleteAll(any()) } just runs
 
+                userService.updateUserRoles(user.requiredId, request)
+
                 Then("성공") {
-                    userService.updateUserRoles(user.requiredId, request)
                     user.getRoles().size shouldBe 1
                     user.getRoles().first().name shouldBe role.name
                 }
@@ -238,8 +252,9 @@ class UserServiceKoTest :
                 every { userRepository.findWithGraphById(any()) } returns user
                 every { roleRepository.findByIdOrNull(any()) } returns role
 
+                userService.removeRoleFromUser(user.requiredId, role.requiredId)
+
                 Then("성공") {
-                    userService.removeRoleFromUser(user.requiredId, role.requiredId)
                     user.getRoles().size shouldBe 0
                 }
             }
@@ -254,8 +269,9 @@ class UserServiceKoTest :
                 every { passwordEncoder.matches(any(), any()) } returns true
                 every { passwordEncoder.encode(any()) } returns request.newPassword
 
+                userService.updateUserPassword(user.requiredId, request)
+
                 Then("성공") {
-                    userService.updateUserPassword(user.requiredId, request)
                     user.password shouldBe request.newPassword
                 }
             }
@@ -267,10 +283,13 @@ class UserServiceKoTest :
                 every { userRepository.findWithGraphById(any()) } returns user
                 every { passwordEncoder.matches(any(), any()) } returns false
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.updateUserPassword(user.requiredId, request)
-                    }.message shouldBe ErrorCode.INVALID_ID_OR_PASSWORD.getMessage().format(user.requiredId)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.INVALID_ID_OR_PASSWORD.getMessage().format(user.requiredId)
                 }
             }
         }
@@ -283,8 +302,9 @@ class UserServiceKoTest :
                 every { userRepository.findAllBy(any()) } returns listOf(user)
                 every { refreshTokenRepository.findByIdOrNull(any()) } returns token
 
+                val res = userService.isLoggedIn()
+
                 Then("성공") {
-                    val res = userService.isLoggedIn()
                     res.size shouldBe 1
                     res.first().isLoggedIn shouldBe true
                 }
@@ -299,8 +319,9 @@ class UserServiceKoTest :
                 every { userRepository.findWithGraphById(any()) } returns user
                 every { passwordEncoder.encode(any()) } returns initPassword
 
+                userService.initPassword(user.requiredId)
+
                 Then("성공") {
-                    userService.initPassword(user.requiredId)
                     user.password shouldBe initPassword
                 }
             }
@@ -308,10 +329,12 @@ class UserServiceKoTest :
             When("없는 아이디로 조회 요청") {
                 val id = 999L
                 every { userRepository.findWithGraphById(any()) } returns null
-                Then("NOT_FOUND_DEVICE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.initPassword(id)
-                    }.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
+                    }
+                Then("NOT_FOUND_DEVICE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_USER.getMessage().format(id)
                 }
             }
         }
@@ -326,8 +349,9 @@ class UserServiceKoTest :
                 every { passwordEncoder.matches(any(), any()) } returns true
                 every { passwordEncoder.encode(any()) } returns request.newPassword
 
+                userService.updateUserPassword(user.requiredId, request)
+
                 Then("성공") {
-                    userService.updateUserPassword(user.requiredId, request)
                     user.password shouldBe request.newPassword
                 }
             }
@@ -340,10 +364,13 @@ class UserServiceKoTest :
                 every { userRepository.findWithGraphById(any()) } returns user
                 every { passwordEncoder.matches(any(), any()) } returns false
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         userService.updateUserPassword(user.requiredId, request)
-                    }.message shouldBe ErrorCode.INVALID_ID_OR_PASSWORD.getMessage().format(user.requiredId)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.INVALID_ID_OR_PASSWORD.getMessage().format(user.requiredId)
                 }
             }
         }

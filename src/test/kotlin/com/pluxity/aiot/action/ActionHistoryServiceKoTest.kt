@@ -49,8 +49,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.save(any())
                 } returns dummyActionHistory(id = id, eventHistory = eventHistory)
 
+                val saveId = actionHistoryService.save(1L, request)
+
                 Then("성공") {
-                    val saveId = actionHistoryService.save(1L, request)
                     saveId shouldBe id
                 }
             }
@@ -75,8 +76,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryFileRepository.saveAll(capture(filesSlot))
                 } returns emptyList()
 
+                val saveId = actionHistoryService.save(1L, request)
+
                 Then("파일 업로드 finalize 및 연관 엔티티들을 저장") {
-                    val saveId = actionHistoryService.save(1L, request)
                     saveId shouldBe id
 
                     fileIds.forEach { fileId ->
@@ -101,10 +103,13 @@ class ActionHistoryServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(any())
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.save(eventId, request)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
         }
@@ -127,8 +132,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.findByEventHistory(eventHistory)
                 } returns actionHistories
 
+                val result = actionHistoryService.findAll(eventId)
+
                 Then("조치 목록 반환") {
-                    val result = actionHistoryService.findAll(eventId)
                     result.size shouldBe 2
                 }
             }
@@ -145,8 +151,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.findByEventHistory(eventHistory)
                 } returns emptyList()
 
+                val result = actionHistoryService.findAll(eventId)
+
                 Then("빈 목록 반환") {
-                    val result = actionHistoryService.findAll(eventId)
                     result shouldBe emptyList()
                 }
             }
@@ -158,10 +165,13 @@ class ActionHistoryServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.findAll(eventId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
         }
@@ -182,8 +192,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
                 } returns actionHistory
 
+                actionHistoryService.update(eventId, actionId, request)
+
                 Then("성공") {
-                    actionHistoryService.update(eventId, actionId, request)
                     actionHistory.content shouldBe "수정된 조치"
                 }
             }
@@ -211,8 +222,9 @@ class ActionHistoryServiceKoTest :
                     actionHistoryFileRepository.saveAll(any<List<ActionHistoryFile>>())
                 } returns emptyList()
 
+                actionHistoryService.update(eventId, actionId, request)
+
                 Then("성공") {
-                    actionHistoryService.update(eventId, actionId, request)
                     actionHistory.content shouldBe "수정된 조치"
                 }
             }
@@ -226,10 +238,13 @@ class ActionHistoryServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.update(eventId, actionId, request)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
 
@@ -247,10 +262,13 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
                 } returns null
 
-                Then("NOT_FOUND_ACTION_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.update(eventId, actionId, request)
-                    }.message shouldBe ErrorCode.NOT_FOUND_ACTION_HISTORY.getMessage().format(actionId)
+                    }
+
+                Then("NOT_FOUND_ACTION_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ACTION_HISTORY.getMessage().format(actionId)
                 }
             }
         }
@@ -278,8 +296,11 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.delete(any())
                 } returns Unit
 
+                actionHistoryService.delete(eventId, actionId)
+
                 Then("성공") {
-                    actionHistoryService.delete(eventId, actionId)
+                    verify(exactly = 1) { actionHistoryFileRepository.deleteAll(any()) }
+                    verify(exactly = 1) { actionHistoryRepository.delete(any()) }
                 }
             }
 
@@ -291,10 +312,13 @@ class ActionHistoryServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.delete(eventId, actionId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
 
@@ -311,10 +335,13 @@ class ActionHistoryServiceKoTest :
                     actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
                 } returns null
 
-                Then("NOT_FOUND_ACTION_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         actionHistoryService.delete(eventId, actionId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_ACTION_HISTORY.getMessage().format(actionId)
+                    }
+
+                Then("NOT_FOUND_ACTION_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ACTION_HISTORY.getMessage().format(actionId)
                 }
             }
         }

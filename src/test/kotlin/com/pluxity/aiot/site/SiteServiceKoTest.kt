@@ -7,7 +7,6 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.site.dto.SiteRequest
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -22,8 +21,6 @@ import org.springframework.data.repository.findByIdOrNull
 
 class SiteServiceKoTest :
     BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
-
         val siteRepository: SiteRepository = mockk()
         val fileService: FileService = mockk()
         val siteService =

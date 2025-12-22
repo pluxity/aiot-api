@@ -40,8 +40,8 @@ class CctvServiceKoTest :
                 every {
                     cctvRepository.save(any())
                 } returns dummyCctv(id = id)
+                val saveId = cctvService.create(createRequest)
                 Then("성공") {
-                    val saveId = cctvService.create(createRequest)
                     saveId shouldBe id
                 }
             }
@@ -53,8 +53,10 @@ class CctvServiceKoTest :
                     cctvRepository.findAllBySiteId(any())
                 } returns mutableListOf(dummyCctv())
 
+                val result = cctvService.findAll()
+
                 Then("정상 조회") {
-                    cctvService.findAll().size shouldBe 1
+                    result.size shouldBe 1
                 }
             }
         }
@@ -65,8 +67,8 @@ class CctvServiceKoTest :
                 every {
                     cctvRepository.findByIdOrNull(any())
                 } returns cctv
+                val res = cctvService.findById(cctv.requiredId)
                 Then("정상 조회") {
-                    val res = cctvService.findById(cctv.requiredId)
                     res.id shouldBe cctv.id
                     res.name shouldBe cctv.name
                 }
@@ -76,11 +78,13 @@ class CctvServiceKoTest :
                 every {
                     cctvRepository.findByIdOrNull(any())
                 } returns null
-                Then("NOT_FOUND_CCTV 예외 발생") {
-                    val searchId = 1L
+                val searchId = 1L
+                val exception =
                     shouldThrowExactly<CustomException> {
                         cctvService.findById(searchId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_CCTV.getMessage().format(searchId)
+                    }
+                Then("NOT_FOUND_CCTV 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_CCTV.getMessage().format(searchId)
                 }
             }
         }
@@ -91,9 +95,9 @@ class CctvServiceKoTest :
                 every {
                     cctvRepository.findByIdOrNull(any())
                 } returns cctv
+                val updateName = "updated Cctv"
+                cctvService.update(cctv.requiredId, CctvRequest(updateName, "", 0.0, 0.0, 5.0))
                 Then("정상 수정") {
-                    val updateName = "updated Cctv"
-                    cctvService.update(cctv.requiredId, CctvRequest(updateName, "", 0.0, 0.0, 5.0))
                     cctv.name shouldBe updateName
                 }
             }
@@ -109,8 +113,8 @@ class CctvServiceKoTest :
                 every {
                     cctvRepository.deleteById(capture(slot))
                 } just runs
+                cctvService.delete(cctv.requiredId)
                 Then("정상 삭제") {
-                    cctvService.delete(cctv.requiredId)
                     verify(exactly = 1) { cctvRepository.deleteById(any()) }
                     slot.captured shouldBe cctv.id
                 }

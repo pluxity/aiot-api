@@ -10,7 +10,6 @@ import com.pluxity.aiot.permission.entity.dummyPermission
 import com.pluxity.aiot.permission.entity.dummyPermissionGroup
 import com.pluxity.aiot.user.repository.RolePermissionRepository
 import io.kotest.assertions.throwables.shouldThrowExactly
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
@@ -24,8 +23,6 @@ import org.springframework.data.repository.findByIdOrNull
 
 class PermissionGroupServiceKoTest :
     BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
-
         val permissionGroupRepository: PermissionGroupRepository = mockk()
         val permissionRepository: PermissionRepository = mockk()
         val rolePermissionRepository: RolePermissionRepository = mockk()
@@ -47,10 +44,13 @@ class PermissionGroupServiceKoTest :
 
                 every { permissionGroupRepository.existsByName(name) } returns true
 
-                Then("DUPLICATE_PERMISSION_GROUP_NAME 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.create(request)
-                    }.message shouldBe ErrorCode.DUPLICATE_PERMISSION_GROUP_NAME.getMessage().format(name)
+                    }
+
+                Then("DUPLICATE_PERMISSION_GROUP_NAME 예외 발생") {
+                    exception.message shouldBe ErrorCode.DUPLICATE_PERMISSION_GROUP_NAME.getMessage().format(name)
                 }
             }
 
@@ -62,10 +62,13 @@ class PermissionGroupServiceKoTest :
 
                 every { permissionGroupRepository.existsByName(any()) } returns false
 
-                Then("INVALID_RESOURCE_TYPE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.create(request)
-                    }.message shouldBe ErrorCode.INVALID_RESOURCE_TYPE.getMessage().format("Resource type: INVALID")
+                    }
+
+                Then("INVALID_RESOURCE_TYPE 예외 발생") {
+                    exception.message shouldBe ErrorCode.INVALID_RESOURCE_TYPE.getMessage().format("Resource type: INVALID")
                 }
             }
 
@@ -77,10 +80,13 @@ class PermissionGroupServiceKoTest :
 
                 every { permissionGroupRepository.existsByName(any()) } returns false
 
-                Then("DUPLICATE_RESOURCE_ID 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.create(request)
-                    }.message shouldBe ErrorCode.DUPLICATE_RESOURCE_ID.getMessage()
+                    }
+
+                Then("DUPLICATE_RESOURCE_ID 예외 발생") {
+                    exception.message shouldBe ErrorCode.DUPLICATE_RESOURCE_ID.getMessage()
                 }
             }
 
@@ -101,8 +107,9 @@ class PermissionGroupServiceKoTest :
                         description = request.description,
                     )
 
+                val result = permissionGroupService.create(request)
+
                 Then("PermissionGroup을 저장하고 id를 반환") {
-                    val result = permissionGroupService.create(request)
                     result shouldBe savedId
 
                     savedGroupSlot.captured.name shouldBe request.name
@@ -139,8 +146,9 @@ class PermissionGroupServiceKoTest :
 
                 every { permissionGroupRepository.findByIdOrNull(1L) } returns group
 
+                val result = permissionGroupService.findById(1L)
+
                 Then("PermissionGroupResponse 반환") {
-                    val result = permissionGroupService.findById(1L)
                     result.id shouldBe 1L
                     result.name shouldBe "group"
                     result.description shouldBe "desc"
@@ -152,10 +160,13 @@ class PermissionGroupServiceKoTest :
             When("없는 id로 단건 조회") {
                 every { permissionGroupRepository.findByIdOrNull(999L) } returns null
 
-                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.findById(999L)
-                    }.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
+                    }
+
+                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
                 }
             }
 
@@ -165,8 +176,9 @@ class PermissionGroupServiceKoTest :
 
                 every { permissionGroupRepository.findAll() } returns listOf(group1, group2)
 
+                val result = permissionGroupService.findAll()
+
                 Then("목록 반환") {
-                    val result = permissionGroupService.findAll()
                     result.map { it.id } shouldContainExactlyInAnyOrder listOf(1L, 2L)
                 }
             }
@@ -177,10 +189,13 @@ class PermissionGroupServiceKoTest :
                 val request = dummyPermissionGroupUpdateRequest()
                 every { permissionGroupRepository.findByIdOrNull(999L) } returns null
 
-                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.update(999L, request)
-                    }.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
+                    }
+
+                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
                 }
             }
 
@@ -191,10 +206,13 @@ class PermissionGroupServiceKoTest :
                 every { permissionGroupRepository.findByIdOrNull(1L) } returns group
                 every { permissionGroupRepository.existsByNameAndIdNot("dup", 1L) } returns true
 
-                Then("DUPLICATE_PERMISSION_GROUP_NAME 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.update(1L, request)
-                    }.message shouldBe ErrorCode.DUPLICATE_PERMISSION_GROUP_NAME.getMessage().format("dup")
+                    }
+
+                Then("DUPLICATE_PERMISSION_GROUP_NAME 예외 발생") {
+                    exception.message shouldBe ErrorCode.DUPLICATE_PERMISSION_GROUP_NAME.getMessage().format("dup")
                 }
             }
 
@@ -222,9 +240,9 @@ class PermissionGroupServiceKoTest :
                 val deletedPermissionSlot = slot<Permission>()
                 every { permissionRepository.delete(capture(deletedPermissionSlot)) } just runs
 
-                Then("이름/설명/권한이 반영되고 제거된 권한은 삭제 처리") {
-                    permissionGroupService.update(1L, request)
+                permissionGroupService.update(1L, request)
 
+                Then("이름/설명/권한이 반영되고 제거된 권한은 삭제 처리") {
                     group.name shouldBe "new"
                     group.description shouldBe "newDesc"
                     group.permissions.map { it.resourceId } shouldContainExactlyInAnyOrder listOf("2", "3")
@@ -250,9 +268,9 @@ class PermissionGroupServiceKoTest :
                 every { permissionRepository.deleteAll(any<Iterable<Permission>>()) } just runs
                 every { permissionGroupRepository.delete(group) } just runs
 
-                Then("연관 데이터 삭제 후 PermissionGroup 삭제") {
-                    permissionGroupService.delete(1L)
+                permissionGroupService.delete(1L)
 
+                Then("연관 데이터 삭제 후 PermissionGroup 삭제") {
                     verify(exactly = 1) { rolePermissionRepository.deleteAllByPermissionGroup(group) }
                     verify(exactly = 1) { permissionRepository.deleteAll(group.permissions) }
                     verify(exactly = 1) { permissionGroupRepository.delete(group) }
@@ -262,10 +280,13 @@ class PermissionGroupServiceKoTest :
             When("없는 id로 삭제 요청") {
                 every { permissionGroupRepository.findByIdOrNull(999L) } returns null
 
-                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         permissionGroupService.delete(999L)
-                    }.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
+                    }
+
+                Then("NOT_FOUND_PERMISSION_GROUP 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_PERMISSION_GROUP.getMessage().format(999L)
                 }
             }
         }

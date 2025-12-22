@@ -1,5 +1,6 @@
 package com.pluxity.aiot.user.service
 
+import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.permission.PermissionGroup
 import com.pluxity.aiot.permission.PermissionGroupService
@@ -11,7 +12,6 @@ import com.pluxity.aiot.user.repository.RoleRepository
 import com.pluxity.aiot.user.repository.UserRoleRepository
 import com.pluxity.aiot.user.service.entity.dummyRole
 import io.kotest.assertions.throwables.shouldThrowExactly
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -24,8 +24,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 
 class RoleServiceKoTest :
     BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
-
         val roleRepository: RoleRepository = mockk()
         val rolePermissionRepository: RolePermissionRepository = mockk()
         val userRoleRepository: UserRoleRepository = mockk()
@@ -66,8 +64,9 @@ class RoleServiceKoTest :
                 every { permissionGroupService.findPermissionGroupById(2L) } returns permissionGroup2
                 every { rolePermissionRepository.saveAll(any<List<RolePermission>>()) } returns listOf()
 
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+
                 Then("성공") {
-                    val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
                     result shouldBe 1L
                 }
             }
@@ -88,8 +87,9 @@ class RoleServiceKoTest :
 
                 every { roleRepository.save(any()) } returns savedRole
 
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+
                 Then("성공") {
-                    val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
                     result shouldBe 2L
                 }
             }
@@ -102,8 +102,9 @@ class RoleServiceKoTest :
 
                 every { roleRepository.findByAuthIsNotOrderByCreatedAtDesc(any()) } returns listOf(role1, role2)
 
+                val result = roleService.findAll()
+
                 Then("정상 조회") {
-                    val result = roleService.findAll()
                     result.size shouldBe 2
                     result[0].name shouldBe "Role1"
                     result[1].name shouldBe "Role2"
@@ -113,8 +114,9 @@ class RoleServiceKoTest :
             When("데이터가 없을 때") {
                 every { roleRepository.findByAuthIsNotOrderByCreatedAtDesc(any()) } returns emptyList()
 
+                val result = roleService.findAll()
+
                 Then("빈 목록 반환") {
-                    val result = roleService.findAll()
                     result.size shouldBe 0
                 }
             }
@@ -126,8 +128,9 @@ class RoleServiceKoTest :
 
                 every { roleRepository.findWithInfoById(1L) } returns role
 
+                val result = roleService.findById(1L)
+
                 Then("정상 조회") {
-                    val result = roleService.findById(1L)
                     result.id shouldBe 1L
                     result.name shouldBe "Test Role"
                     result.description shouldBe "Test Description"
@@ -137,10 +140,13 @@ class RoleServiceKoTest :
             When("없는 아이디로 조회 요청") {
                 every { roleRepository.findWithInfoById(999L) } returns null
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         roleService.findById(999L)
-                    }.message shouldBe "ID가 999인 Role을 찾을 수 없습니다."
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
                 }
             }
         }
@@ -157,9 +163,9 @@ class RoleServiceKoTest :
 
                 every { roleRepository.findWithInfoById(1L) } returns role
 
-                Then("성공적으로 업데이트") {
-                    roleService.update(1L, updateRequest)
+                roleService.update(1L, updateRequest)
 
+                Then("성공적으로 업데이트") {
                     role.name shouldBe "New Name"
                     role.description shouldBe "New Description"
                 }
@@ -182,8 +188,9 @@ class RoleServiceKoTest :
                 every { permissionGroupService.findPermissionGroupById(2L) } returns permissionGroup2
                 every { rolePermissionRepository.saveAll(any<List<RolePermission>>()) } returns listOf()
 
+                roleService.update(1L, updateRequest)
+
                 Then("성공적으로 업데이트") {
-                    roleService.update(1L, updateRequest)
                     role.name shouldBe updateRequest.name
                     role.description shouldBe updateRequest.description
                 }
@@ -199,10 +206,13 @@ class RoleServiceKoTest :
 
                 every { roleRepository.findWithInfoById(999L) } returns null
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         roleService.update(999L, updateRequest)
-                    }.message shouldBe "ID가 999인 Role을 찾을 수 없습니다."
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
                 }
             }
         }
@@ -218,8 +228,9 @@ class RoleServiceKoTest :
                 every { em.clear() } just runs
                 every { roleRepository.deleteById(1L) } just runs
 
+                roleService.delete(1L)
+
                 Then("성공적으로 삭제") {
-                    roleService.delete(1L)
                     verify(exactly = 1) { rolePermissionRepository.deleteAllByRole(role) }
                     verify(exactly = 1) { userRoleRepository.deleteAllByRole(role) }
                     verify(exactly = 1) { roleRepository.deleteById(1L) }
@@ -229,10 +240,13 @@ class RoleServiceKoTest :
             When("없는 아이디로 삭제 요청") {
                 every { roleRepository.findWithInfoById(999L) } returns null
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         roleService.delete(999L)
-                    }.message shouldBe "ID가 999인 Role을 찾을 수 없습니다."
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
                 }
             }
         }
@@ -243,8 +257,9 @@ class RoleServiceKoTest :
 
                 every { roleRepository.findWithInfoById(1L) } returns role
 
+                val result = roleService.findRoleById(1L)
+
                 Then("Role 객체 반환") {
-                    val result = roleService.findRoleById(1L)
                     result shouldBe role
                 }
             }
@@ -252,10 +267,13 @@ class RoleServiceKoTest :
             When("없는 ID로 호출") {
                 every { roleRepository.findWithInfoById(999L) } returns null
 
-                Then("CustomException 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         roleService.findRoleById(999L)
-                    }.message shouldBe "ID가 999인 Role을 찾을 수 없습니다."
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
                 }
             }
         }

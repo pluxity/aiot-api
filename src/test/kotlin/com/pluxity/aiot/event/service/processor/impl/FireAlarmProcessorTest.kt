@@ -10,7 +10,6 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
@@ -30,7 +29,6 @@ class FireAlarmProcessorTest(
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
 
         // Mocks

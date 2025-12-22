@@ -9,7 +9,6 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
@@ -26,7 +25,6 @@ class FeatureServiceTest(
     private val featureRepository: FeatureRepository,
     private val siteRepository: SiteRepository,
 ) : BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
 
         Given("Feature 조회 기능") {

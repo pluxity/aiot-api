@@ -73,17 +73,18 @@ class EventServiceKoTest :
                     )
                 } returns eventHistories
 
+                val results =
+                    eventService.findAll(
+                        from,
+                        to,
+                        siteId,
+                        result,
+                        ConditionLevel.CAUTION,
+                        SensorType.DISPLACEMENT_GAUGE,
+                        size = 20,
+                    )
+
                 Then("이벤트 목록 반환") {
-                    val results =
-                        eventService.findAll(
-                            from,
-                            to,
-                            siteId,
-                            result,
-                            ConditionLevel.CAUTION,
-                            SensorType.DISPLACEMENT_GAUGE,
-                            size = 20,
-                        )
                     results.content.size shouldBe 2
                 }
             }
@@ -109,8 +110,9 @@ class EventServiceKoTest :
                     )
                 } returns eventHistories
 
+                val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.DISPLACEMENT_GAUGE, 20)
+
                 Then("전체 이벤트 목록 반환") {
-                    val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.DISPLACEMENT_GAUGE, 20)
                     results.content.size shouldBe 1
                 }
             }
@@ -126,8 +128,9 @@ class EventServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns eventHistory
 
+                eventService.updateStatus(eventId, newResult)
+
                 Then("상태 변경 성공") {
-                    eventService.updateStatus(eventId, newResult)
                     eventHistory.status shouldBe newResult
                 }
             }
@@ -140,10 +143,13 @@ class EventServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         eventService.updateStatus(eventId, newResult)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
         }
@@ -157,8 +163,9 @@ class EventServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns eventHistory
 
+                val result = eventService.findById(eventId)
+
                 Then("이벤트 반환") {
-                    val result = eventService.findById(eventId)
                     result shouldBe eventHistory
                     result.id shouldBe eventId
                 }
@@ -171,10 +178,13 @@ class EventServiceKoTest :
                     eventHistoryRepository.findByIdOrNull(eventId)
                 } returns null
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         eventService.findById(eventId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                    }
+
+                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
                 }
             }
         }
@@ -197,8 +207,9 @@ class EventServiceKoTest :
                         EventListDto(bucket, 1, 2, 3),
                     )
 
+                val result = eventService.getPeriodData(interval, from, to)
+
                 Then("데이터 반환") {
-                    val result = eventService.getPeriodData(interval, from, to)
                     result shouldNotBe null
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3
@@ -229,8 +240,9 @@ class EventServiceKoTest :
                         EventListDto(bucket, 5, 10, 16),
                     )
 
+                val result = eventService.getPeriodData(interval, from, to)
+
                 Then("일별 시계열 데이터 반환") {
-                    val result = eventService.getPeriodData(interval, from, to)
                     result shouldNotBe null
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3
@@ -261,8 +273,9 @@ class EventServiceKoTest :
                         EventListDto(bucket, 50, 100, 160),
                     )
 
+                val result = eventService.getPeriodData(interval, from, to)
+
                 Then("월별 시계열 데이터 반환") {
-                    val result = eventService.getPeriodData(interval, from, to)
                     result shouldNotBe null
                     result.timestamps.size shouldBe 1
                     result.metrics.size shouldBe 3

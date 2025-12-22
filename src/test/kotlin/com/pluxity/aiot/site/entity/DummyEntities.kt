@@ -11,7 +11,7 @@ import org.locationtech.jts.io.WKTReader
 fun dummySite(
     id: Long = 1L,
     name: String = "siteName",
-    description: String = "description",
+    description: String? = "description",
 ): Site {
     val gf = GeometryFactory(PrecisionModel(), 4326)
     val wktReader = WKTReader(gf)

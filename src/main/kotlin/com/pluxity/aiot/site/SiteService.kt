@@ -105,7 +105,7 @@ class SiteService(
         val missingSiteIds = ids.filter { it !in foundSiteIds }
 
         if (missingSiteIds.isNotEmpty()) {
-            throw CustomException(NOT_FOUND_SITE, missingSiteIds.first())
+            throw CustomException(NOT_FOUND_SITE, missingSiteIds)
         }
 
         return sites

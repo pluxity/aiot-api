@@ -83,7 +83,7 @@ class DashboardService(
         return events
     }
 
-    private data class SensorStatisticsRaw(
+    internal data class SensorStatisticsRaw(
         val siteId: Long,
         val siteName: String,
         val totalCount: Long,

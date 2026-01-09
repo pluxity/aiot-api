@@ -10,6 +10,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.MediaMtxProperties
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 
 @Service
@@ -29,7 +30,7 @@ class MediaMtxService(
                 .get()
                 .uri("/v3/config/paths/list")
                 .retrieve()
-                .bodyToMono(MediaMtxPathListResponse::class.java)
+                .bodyToMono<MediaMtxPathListResponse>()
                 .block()
         return response?.let { response.items } ?: emptyList()
     }
@@ -46,7 +47,7 @@ class MediaMtxService(
             .retrieve()
             .onStatus({ !it.is2xxSuccessful }) { resp ->
                 resp
-                    .bodyToMono(MediaMtxErrorResponse::class.java)
+                    .bodyToMono<MediaMtxErrorResponse>()
                     .defaultIfEmpty(MediaMtxErrorResponse("empty body"))
                     .flatMap { body ->
                         Mono.error(CustomException(errorCode = ErrorCode.MEDIAMTX_ADD_ERROR, body.error))
@@ -61,12 +62,16 @@ class MediaMtxService(
             .uri("/v3/config/paths/delete/$path")
             .retrieve()
             .onStatus({ !it.is2xxSuccessful }) { resp ->
-                resp
-                    .bodyToMono(MediaMtxErrorResponse::class.java)
-                    .defaultIfEmpty(MediaMtxErrorResponse("empty body"))
-                    .flatMap { body ->
-                        Mono.error(CustomException(errorCode = ErrorCode.MEDIAMTX_DELETE_ERROR, body.error))
-                    }
+                if (resp.statusCode().value() == 404) {
+                    Mono.empty()
+                } else {
+                    resp
+                        .bodyToMono<MediaMtxErrorResponse>()
+                        .defaultIfEmpty(MediaMtxErrorResponse("empty body"))
+                        .flatMap { body ->
+                            Mono.error(CustomException(errorCode = ErrorCode.MEDIAMTX_DELETE_ERROR, body.error))
+                        }
+                }
             }.toBodilessEntity()
             .block()
     }

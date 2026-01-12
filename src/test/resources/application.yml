@@ -73,7 +73,7 @@ springwolf: # socket documentation ui
   enabled: true
   docket:
     default-content-type: application/json
-    base-package: com.pluxity.aiot.global
+    base-package: com.pluxity
     servers:
       stomp:
         protocol: stomp

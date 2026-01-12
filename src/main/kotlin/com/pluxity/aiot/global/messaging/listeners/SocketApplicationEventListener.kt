@@ -20,7 +20,7 @@ class SocketApplicationEventListener(
         val headerAccessor = StompHeaderAccessor.wrap(event.message)
         val connectMessageHeader =
             headerAccessor
-                .getMessageHeaders()
+                .messageHeaders
                 .get(SimpMessageHeaderAccessor.CONNECT_MESSAGE_HEADER, Message::class.java)
                 ?: throw CustomException(ErrorCode.INVALID_FORMAT)
         val connectHeaderAccessor = StompHeaderAccessor.wrap(connectMessageHeader)

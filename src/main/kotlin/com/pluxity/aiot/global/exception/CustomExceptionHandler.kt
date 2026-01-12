@@ -20,6 +20,10 @@ private val log = KotlinLogging.logger {}
 
 @RestControllerAdvice
 class CustomExceptionHandler {
+    companion object {
+        private val IGNORE_PATHS = listOf("stomp/publish", "favicon.ico")
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ErrorResponseBody> =
         ResponseEntity
@@ -78,7 +82,7 @@ class CustomExceptionHandler {
                     error = HttpStatus.NOT_FOUND.name,
                 ),
             ).also {
-                if (request?.requestURI?.contains("stomp/publish") == false) {
+                if (IGNORE_PATHS.none { request?.requestURI?.contains(it) == true }) {
                     log.error(e) { "NoResourceFoundException" }
                 }
             }

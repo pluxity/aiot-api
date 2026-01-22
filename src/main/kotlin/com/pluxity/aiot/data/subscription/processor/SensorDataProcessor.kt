@@ -103,7 +103,7 @@ interface SensorDataProcessor {
             feature.site?.let {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
-                        eventId = eventHistory.id!!,
+                        eventId = eventHistory.requiredId,
                         deviceId = deviceId,
                         objectId = sensorType.objectId,
                         occurredAt = parsedDate.toString(),
@@ -113,8 +113,8 @@ interface SensorDataProcessor {
                         eventName = eventName,
                         fieldKey = fieldKey,
                         guideMessage = condition.guideMessage,
-                        longitude = feature.longitude!!,
-                        latitude = feature.latitude!!,
+                        longitude = requireNotNull(feature.longitude) { "Feature(${feature.id}) longitude is null (not ready)" },
+                        latitude = requireNotNull(feature.latitude) { "Feature(${feature.id}) latitude is null (not ready)" },
                         updatedAt = eventHistory.updatedAt.toString(),
                         updatedBy = eventHistory.updatedBy,
                         value = value,
@@ -135,7 +135,7 @@ interface SensorDataProcessor {
         deviceId: String,
         sensorType: SensorType,
         fieldKey: String,
-        value: Any,
+        value: IncomingValue,
         timestamp: String,
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
@@ -163,13 +163,7 @@ interface SensorDataProcessor {
             if (isConditionMet(condition, value, fieldKey)) {
                 isAnyConditionMet = true
 
-                // value를 Double로 변환 (EventHistory 저장용)
-                val doubleValue =
-                    when (value) {
-                        is Number -> value.toDouble()
-                        is Boolean -> if (value) 1.0 else 0.0
-                        else -> 0.0
-                    }
+                val doubleValue = value.toEventHistoryValue()
 
                 processEvent(
                     deviceId = deviceId,
@@ -222,7 +216,9 @@ interface SensorDataProcessor {
         featureRepository: FeatureRepository,
     ) {
         feature?.let {
-            val dbFeature = featureRepository.findByIdOrNull(feature.id!!) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, feature.id)
+            val dbFeature =
+                featureRepository.findByIdOrNull(feature.requiredId)
+                    ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, feature.id)
             dbFeature.updateEventStatus(eventStatus)
             featureRepository.save(dbFeature)
         }
@@ -230,20 +226,16 @@ interface SensorDataProcessor {
 
     fun isConditionMet(
         condition: EventCondition,
-        incomingValue: Any,
+        incomingValue: IncomingValue,
     ): Boolean {
         // Boolean 값 체크
         if (condition.booleanValue != null) {
-            val value = incomingValue as? Boolean ?: return false
+            val value = (incomingValue as? IncomingValue.Bool)?.value ?: return false
             return value == condition.booleanValue
         }
 
         // Numeric 값 체크
-        val value =
-            when (incomingValue) {
-                is Number -> incomingValue.toDouble()
-                else -> return false
-            }
+        val value = (incomingValue as? IncomingValue.Numeric)?.value ?: return false
 
         return when (condition.conditionType) {
             ConditionType.SINGLE -> {
@@ -283,7 +275,7 @@ interface SensorDataProcessor {
      */
     fun isConditionMet(
         condition: EventCondition,
-        value: Any,
+        value: IncomingValue,
         fieldKey: String,
     ): Boolean = isConditionMet(condition, value)
 }

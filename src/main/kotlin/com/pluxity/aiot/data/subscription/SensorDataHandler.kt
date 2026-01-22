@@ -46,6 +46,6 @@ class SensorDataHandler(
                 return
             }
 
-        processor.process(deviceId, sensorType, feature.site?.id!!, sgn.nev.rep.cin.con)
+        processor.process(deviceId, sensorType, feature.requiredSiteId, sgn.nev.rep.cin.con)
     }
 }

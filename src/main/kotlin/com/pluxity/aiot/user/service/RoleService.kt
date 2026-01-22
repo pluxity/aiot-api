@@ -14,7 +14,6 @@ import com.pluxity.aiot.user.repository.RolePermissionRepository
 import com.pluxity.aiot.user.repository.RoleRepository
 import com.pluxity.aiot.user.repository.UserRoleRepository
 import jakarta.persistence.EntityManager
-import jakarta.persistence.EntityNotFoundException
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -62,7 +61,7 @@ class RoleService(
             }
         }
 
-        return role.id!!
+        return role.requiredId
     }
 
     @Transactional(readOnly = true)
@@ -132,10 +131,10 @@ class RoleService(
         userRoleRepository.deleteAllByRole(role)
         em.flush()
         em.clear()
-        roleRepository.deleteById(role.id!!)
+        roleRepository.deleteById(role.requiredId)
     }
 
     fun findRoleById(id: Long): Role =
         roleRepository.findWithInfoById(id)
-            ?: throw EntityNotFoundException("Role not found with id: $id")
+            ?: throw CustomException(ErrorCode.NOT_FOUND_ROLE, id)
 }

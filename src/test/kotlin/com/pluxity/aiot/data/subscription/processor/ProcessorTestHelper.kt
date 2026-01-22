@@ -1,4 +1,4 @@
-package com.pluxity.aiot.event.service.processor
+package com.pluxity.aiot.data.subscription.processor
 
 import com.influxdb.client.WriteApi
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
@@ -158,7 +158,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     /**
@@ -227,7 +227,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     /**
@@ -278,7 +278,7 @@ abstract class ProcessorTestHelper(
             ),
         )
 
-        return TestSetup(sensorType, site.id!!)
+        return TestSetup(sensorType, site.requiredId)
     }
 
     data class ConditionSpec(

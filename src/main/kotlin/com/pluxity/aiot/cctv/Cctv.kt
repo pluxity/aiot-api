@@ -5,9 +5,6 @@ import com.pluxity.aiot.site.Site
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import org.locationtech.jts.geom.Coordinate
@@ -17,24 +14,21 @@ import org.locationtech.jts.geom.PrecisionModel
 
 @Entity
 class Cctv(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
-    var id: Long? = null,
     var name: String = "",
     @Column(length = 1000)
     var url: String?,
     var longitude: Double? = null,
     var latitude: Double? = null,
     var height: Double? = null,
-    @Column(columnDefinition = "geometry(Point, 4326)")
-    var geom: Point? = null,
     @Column
     var mtxName: String? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id")
     var site: Site? = null,
 ) : BaseEntity() {
+    @Column(columnDefinition = "geometry(Point, 4326)")
+    var geom: Point? = null
+
     fun updateLocationInfo(
         longitude: Double,
         latitude: Double,

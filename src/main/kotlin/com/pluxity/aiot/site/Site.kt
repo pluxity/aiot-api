@@ -9,9 +9,6 @@ import com.pluxity.aiot.user.entity.Permissible
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.locationtech.jts.geom.Polygon
@@ -19,9 +16,6 @@ import org.locationtech.jts.geom.Polygon
 @Entity
 @Table(name = "site")
 class Site(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null,
     @Column(name = "name", nullable = false, length = 50)
     var name: String,
     @Column(name = "description")

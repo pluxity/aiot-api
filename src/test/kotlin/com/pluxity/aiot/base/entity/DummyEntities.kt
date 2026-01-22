@@ -9,9 +9,15 @@ fun <T : BaseEntity> T.withAudit(
     updatedAt: LocalDateTime = createdAt,
     createdBy: String = "tester",
     updatedBy: String = "tester",
-) = apply {
-    ReflectionTestUtils.setField(this, "createdAt", createdAt)
-    ReflectionTestUtils.setField(this, "updatedAt", updatedAt)
-    ReflectionTestUtils.setField(this, "createdBy", createdBy)
-    ReflectionTestUtils.setField(this, "updatedBy", updatedBy)
-}
+): T =
+    apply {
+        ReflectionTestUtils.setField(this, "createdAt", createdAt)
+        ReflectionTestUtils.setField(this, "updatedAt", updatedAt)
+        ReflectionTestUtils.setField(this, "createdBy", createdBy)
+        ReflectionTestUtils.setField(this, "updatedBy", updatedBy)
+    }
+
+fun <T : BaseEntity> T.withId(id: Long? = 1L): T =
+    apply {
+        ReflectionTestUtils.setField(this, "id", id)
+    }

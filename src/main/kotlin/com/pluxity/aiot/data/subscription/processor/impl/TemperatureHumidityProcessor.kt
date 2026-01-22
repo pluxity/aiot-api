@@ -4,6 +4,7 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.TemperatureHumidity
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
+import com.pluxity.aiot.data.subscription.processor.IncomingValue
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.repository.EventHistoryRepository
@@ -43,7 +44,7 @@ class TemperatureHumidityProcessor(
                 deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = TEMPERATURE,
-                value = data.temperature,
+                value = IncomingValue.Numeric(it),
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
@@ -58,7 +59,7 @@ class TemperatureHumidityProcessor(
                 deviceId = deviceId,
                 sensorType = sensorType,
                 fieldKey = HUMIDITY,
-                value = data.humidity,
+                value = IncomingValue.Numeric(it),
                 timestamp = data.timestamp,
                 messageSender = messageSender,
                 eventHistoryRepository = eventHistoryRepository,
@@ -75,7 +76,7 @@ class TemperatureHumidityProcessor(
                 deviceId,
                 sensorType,
                 DISCOMFORT_INDEX,
-                calculateDiscomfortIndex(data.temperature, data.humidity),
+                IncomingValue.Numeric(calculateDiscomfortIndex(data.temperature, data.humidity)),
                 data.timestamp,
                 messageSender,
                 eventHistoryRepository,

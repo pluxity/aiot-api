@@ -40,13 +40,12 @@ class PermissionGroupService(
                     Permission(
                         resourceName = resourceName,
                         resourceId = id,
-                        permissionGroup = null,
                     )
                 permissionGroup.addPermission(permission)
             }
         }
 
-        return permissionGroupRepository.save(permissionGroup).id!!
+        return permissionGroupRepository.save(permissionGroup).requiredId
     }
 
     @Transactional(readOnly = true)

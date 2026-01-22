@@ -59,7 +59,7 @@ class CctvService(
                     mtxName = mtxName,
                     site = site,
                 ),
-            ).id!!
+            ).requiredId
     }
 
     @Transactional(readOnly = true)
@@ -119,7 +119,7 @@ class CctvService(
         }
 
         dbList.minus(mtxList.toSet()).forEach {
-            mediaMtxService.addPath(it, cctvList.first { cctv -> cctv.mtxName == it }.url!!)
+            mediaMtxService.addPath(it, cctvList.first { cctv -> cctv.mtxName == it }.url ?: return@forEach)
         }
     }
 }

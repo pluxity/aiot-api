@@ -4,18 +4,12 @@ import com.pluxity.aiot.global.entity.BaseEntity
 import com.pluxity.aiot.user.entity.RolePermission
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 
 @Entity
 @Table(name = "permission_group")
 class PermissionGroup(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null,
     var name: String,
     var description: String?,
 ) : BaseEntity() {

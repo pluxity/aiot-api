@@ -1,6 +1,7 @@
-package com.pluxity.aiot.event.service.processor.impl
+package com.pluxity.aiot.data.subscription.processor.impl
 
 import com.influxdb.client.WriteApi
+import com.pluxity.aiot.data.subscription.processor.ProcessorTestHelper
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.entity.EventStatus
@@ -10,7 +11,6 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
@@ -30,7 +30,6 @@ class TemperatureHumidityProcessorTest(
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
-        isolationMode = IsolationMode.InstancePerLeaf
         extension(SpringExtension)
 
         // Mocks
@@ -564,13 +563,13 @@ class TemperatureHumidityProcessorTest(
                         deviceId = deviceId,
                         conditions =
                             listOf(
-                                com.pluxity.aiot.event.service.processor.ProcessorTestHelper.ConditionSpec(
+                                ProcessorTestHelper.ConditionSpec(
                                     eventLevel = ConditionLevel.WARNING,
                                     minValue = "25.0",
                                     maxValue = "30.0",
                                     isBoolean = false,
                                 ),
-                                com.pluxity.aiot.event.service.processor.ProcessorTestHelper.ConditionSpec(
+                                ProcessorTestHelper.ConditionSpec(
                                     eventLevel = ConditionLevel.DANGER,
                                     minValue = "28.0",
                                     maxValue = "40.0",

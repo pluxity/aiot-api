@@ -36,14 +36,13 @@ class AuthenticationService(
 
         val user =
             User(
-                id = null,
                 username = signUpRequest.username,
                 password = passwordEncoder.encode(signUpRequest.password),
                 name = signUpRequest.name,
                 code = signUpRequest.code,
             )
 
-        return userRepository.save(user).id!!
+        return userRepository.save(user).requiredId
     }
 
     @Transactional
@@ -76,13 +75,15 @@ class AuthenticationService(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ) {
-        val refreshToken = jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)
+        val refreshToken =
+            jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)
+                ?: throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
 
         if (!jwtProvider.isRefreshTokenValid(refreshToken)) {
             throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
         }
 
-        val username = jwtProvider.extractUsername(refreshToken!!, true)
+        val username = jwtProvider.extractUsername(refreshToken, true)
         val user = findUserByUsername(username)
         publishToken(user, request, response)
     }
@@ -106,7 +107,7 @@ class AuthenticationService(
     private fun findUserByUsername(username: String): User =
         userRepository
             .findByUsername(username)
-            ?: throw CustomException(ErrorCode.NOT_FOUND_USER)
+            ?: throw CustomException(ErrorCode.NOT_FOUND_USER, username)
 
     private fun clearAllCookies(
         request: HttpServletRequest,

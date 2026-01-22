@@ -41,9 +41,9 @@ data class AnnouncementResponse(
 
 fun Announcement.toAnnouncementResponse() =
     AnnouncementResponse(
-        id = this.id!!,
+        id = this.requiredId,
         message = this.message,
-        userId = this.createdBy!!,
+        userId = requireNotNull(this.createdBy) { "createBy is null (not ready)" },
         site = this.site.toSiteResponse(),
         createdAt = this.createdAt.toString(),
     )

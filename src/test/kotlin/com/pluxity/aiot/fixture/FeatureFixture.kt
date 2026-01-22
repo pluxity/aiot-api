@@ -1,5 +1,6 @@
 package com.pluxity.aiot.fixture
 
+import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.site.Site
 import org.locationtech.jts.geom.Coordinate
@@ -19,23 +20,23 @@ object FeatureFixture {
         latitude: Double? = 37.0,
         geom: Point? = null,
         batteryLevel: Int? = 100,
-        eventStatus: String? = "NORMAL",
-        isActive: Boolean? = true,
+        eventStatus: String = "NORMAL",
+        isActive: Boolean = true,
         site: Site? = null,
     ): Feature {
         val point = geom ?: (longitude?.let { lon -> latitude?.let { lat -> gf.createPoint(Coordinate(lon, lat)) } })
         return Feature(
-            id = id,
             deviceId = deviceId,
             objectId = objectId,
             name = name,
-            longitude = longitude,
-            latitude = latitude,
-            geom = point,
-            batteryLevel = batteryLevel,
-            eventStatus = eventStatus,
-            isActive = isActive,
-            site = site,
-        )
+        ).apply {
+            this.longitude = longitude
+            this.latitude = latitude
+            this.geom = point
+            this.batteryLevel = batteryLevel
+            this.eventStatus = eventStatus
+            this.isActive = isActive
+            this.site = site
+        }.withId(id)
     }
 }

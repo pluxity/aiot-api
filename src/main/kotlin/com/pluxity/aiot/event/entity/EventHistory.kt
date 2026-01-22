@@ -6,9 +6,6 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
@@ -21,35 +18,33 @@ import java.time.LocalDateTime
     ],
 )
 class EventHistory(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
     @Column(nullable = false)
-    var deviceId: String? = null,
+    var deviceId: String,
     @Column(nullable = false)
-    var objectId: String? = null,
+    var objectId: String,
     @Column(nullable = false)
-    var sensorDescription: String? = null,
+    var sensorDescription: String,
     @Column(nullable = false)
-    var fieldKey: String? = null,
+    var fieldKey: String,
     @Column(nullable = false)
-    var value: Double? = null,
+    var value: Double,
     @Column(nullable = false)
-    var unit: String? = null,
+    var unit: String,
     @Column(nullable = false)
-    var eventName: String? = null,
+    var eventName: String,
     @Column(nullable = false)
     var occurredAt: LocalDateTime = LocalDateTime.now(),
     var minValue: Double? = null,
     var maxValue: Double? = null,
-    @Enumerated(EnumType.STRING)
-    var status: EventStatus = EventStatus.ACTIVE,
     var guideMessage: String? = null,
     var longitude: Double? = null,
     var latitude: Double? = null,
     @Enumerated(EnumType.STRING)
     var level: ConditionLevel? = null,
 ) : BaseEntity() {
+    @Enumerated(EnumType.STRING)
+    var status: EventStatus = EventStatus.ACTIVE
+
     fun changeStatus(status: EventStatus) {
         this.status = status
     }

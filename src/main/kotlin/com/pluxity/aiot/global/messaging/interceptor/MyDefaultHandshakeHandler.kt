@@ -26,7 +26,7 @@ class MyDefaultHandshakeHandler(
         val token = servletRequest.cookies?.find { it.name == jwtProperties.accessToken.name }?.value
         token?.let {
             attributes["username"] = jwtProvider.extractUsername(it)
-        } ?: throw CustomException(ErrorCode.NOT_FOUND_USER)
+        } ?: throw CustomException(ErrorCode.NOT_FOUND_USER, attributes["username"])
         return StompPrincipal()
     }
 }

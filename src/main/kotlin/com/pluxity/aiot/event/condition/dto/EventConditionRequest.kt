@@ -2,6 +2,7 @@ package com.pluxity.aiot.event.condition.dto
 
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.Operator
 
 data class EventConditionBatchRequest(
@@ -22,3 +23,19 @@ data class EventConditionItemRequest(
     val notificationEnabled: Boolean, // 알림 활성화 여부
     val guideMessage: String?, // 알림 메시지
 )
+
+fun EventConditionItemRequest.toEventCondition(objectId: String) =
+    EventCondition(
+        objectId = objectId,
+        fieldKey = fieldKey,
+        isActivate = activate,
+        level = level,
+        conditionType = conditionType,
+        operator = operator,
+        thresholdValue = thresholdValue,
+        leftValue = leftValue,
+        rightValue = rightValue,
+        booleanValue = booleanValue,
+        notificationEnabled = notificationEnabled,
+        guideMessage = guideMessage,
+    )

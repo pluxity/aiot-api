@@ -28,15 +28,15 @@ data class FeatureResponse(
 
 fun Feature.toFeatureResponse() =
     FeatureResponse(
-        id = this.id!!,
+        id = this.requiredId,
         deviceId = this.deviceId,
         objectId = this.objectId.take(5),
-        name = this.name!!,
-        longitude = this.longitude!!,
-        latitude = this.latitude!!,
+        name = requireNotNull(this.name) { "Feature(${this.id}) name is null (not ready)" },
+        longitude = requireNotNull(this.longitude) { "Feature(${this.id}) longitude is null (not ready)" },
+        latitude = requireNotNull(this.latitude) { "Feature(${this.id}) latitude is null (not ready)" },
         batteryLevel = this.batteryLevel,
-        eventStatus = this.eventStatus!!,
-        isActive = this.isActive!!,
+        eventStatus = this.eventStatus,
+        isActive = this.isActive,
         height = this.height,
         siteResponse = this.site?.toSiteResponse(),
         deviceTypeResponse = SensorType.fromObjectId(this.objectId.take(5)).toDeviceTypeResponse(),

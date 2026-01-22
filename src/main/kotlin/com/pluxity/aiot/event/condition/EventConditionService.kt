@@ -2,6 +2,7 @@ package com.pluxity.aiot.event.condition
 
 import com.pluxity.aiot.event.condition.dto.EventConditionBatchRequest
 import com.pluxity.aiot.event.condition.dto.EventConditionResponse
+import com.pluxity.aiot.event.condition.dto.toEventCondition
 import com.pluxity.aiot.event.condition.dto.toEventConditionResponse
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -37,75 +38,27 @@ class EventConditionService(
     fun createBatch(request: EventConditionBatchRequest): List<Long> {
         log.info { "EventCondition 일괄 생성 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
-        // 조건 생성
-        val newConditions =
-            request.conditions.map { itemRequest ->
-                EventCondition(
-                    objectId = request.objectId,
-                    fieldKey = itemRequest.fieldKey,
-                    isActivate = itemRequest.activate,
-                    level = itemRequest.level,
-                    conditionType = itemRequest.conditionType,
-                    operator = itemRequest.operator,
-                    thresholdValue = itemRequest.thresholdValue,
-                    leftValue = itemRequest.leftValue,
-                    rightValue = itemRequest.rightValue,
-                    booleanValue = itemRequest.booleanValue,
-                    notificationEnabled = itemRequest.notificationEnabled,
-                    guideMessage = itemRequest.guideMessage,
-                )
-            }
-
-        validateRangeOverlap(newConditions)
-
-        // 저장
-        val savedConditions =
-            newConditions.map { condition ->
-                eventConditionRepository.save(condition)
-            }
+        val savedConditions = createAndSaveConditions(request)
 
         log.info { "EventCondition 일괄 생성 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
-
-        return savedConditions.map { it.id!! }
+        return savedConditions.map { it.requiredId }
     }
 
     @Transactional
     fun updateBatch(request: EventConditionBatchRequest): List<EventConditionResponse> {
         log.info { "EventCondition 일괄 수정 시작 - objectId: ${request.objectId}, count: ${request.conditions.size}" }
 
-        // 기존 조건들 삭제
         eventConditionRepository.deleteAllByObjectId(request.objectId)
-
-        // 새로운 조건들 생성
-        val newConditions =
-            request.conditions.map { itemRequest ->
-                EventCondition(
-                    objectId = request.objectId,
-                    fieldKey = itemRequest.fieldKey,
-                    isActivate = itemRequest.activate,
-                    level = itemRequest.level,
-                    conditionType = itemRequest.conditionType,
-                    operator = itemRequest.operator,
-                    thresholdValue = itemRequest.thresholdValue,
-                    leftValue = itemRequest.leftValue,
-                    rightValue = itemRequest.rightValue,
-                    booleanValue = itemRequest.booleanValue,
-                    notificationEnabled = itemRequest.notificationEnabled,
-                    guideMessage = itemRequest.guideMessage,
-                )
-            }
-
-        validateRangeOverlap(newConditions)
-
-        // 저장
-        val savedConditions =
-            newConditions.map { condition ->
-                eventConditionRepository.save(condition)
-            }
+        val savedConditions = createAndSaveConditions(request)
 
         log.info { "EventCondition 일괄 수정 완료 - objectId: ${request.objectId}, count: ${savedConditions.size}" }
-
         return savedConditions.map { it.toEventConditionResponse() }
+    }
+
+    private fun createAndSaveConditions(request: EventConditionBatchRequest): List<EventCondition> {
+        val conditions = request.conditions.map { it.toEventCondition(request.objectId) }
+        validateRangeOverlap(conditions)
+        return eventConditionRepository.saveAll(conditions)
     }
 
     @Transactional
@@ -137,8 +90,8 @@ class EventConditionService(
                 val condition2 = conditions[j]
 
                 if (condition1.hasRangeOverlap(condition2)) {
-                    val range1 = condition1.getActualRange()!!
-                    val range2 = condition2.getActualRange()!!
+                    val range1 = requireNotNull(condition1.getActualRange()) { "range1 is null but hasRangeOverlap was true" }
+                    val range2 = requireNotNull(condition2.getActualRange()) { "range2 is null but hasRangeOverlap was true" }
 
                     throw CustomException(
                         ErrorCode.DUPLICATE_EVENT_CONDITION,

@@ -72,8 +72,9 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", ClimateSensorData::class.java)
                 } returns climateData
 
+                val result = dataService.getFeatureTimeSeries(deviceId, interval, from, to)
+
                 Then("온습도 시계열 데이터 반환") {
-                    val result = dataService.getFeatureTimeSeries(deviceId, interval, from, to)
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
                     result.timestamps.isNotEmpty() shouldBe true
@@ -110,8 +111,9 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", DisplacementGaugeSensorData::class.java)
                 } returns displacementData
 
+                val result = dataService.getFeatureTimeSeries(deviceId, interval, from, to)
+
                 Then("변위계 시계열 데이터 반환") {
-                    val result = dataService.getFeatureTimeSeries(deviceId, interval, from, to)
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
                     result.timestamps.isNotEmpty() shouldBe true
@@ -135,10 +137,13 @@ class DataServiceKoTest :
                     featureService.findByDeviceIdResponse(deviceId)
                 } returns feature
 
-                Then("IllegalArgumentException 예외 발생") {
+                val exception =
                     shouldThrowExactly<IllegalArgumentException> {
                         dataService.getFeatureLatestData(deviceId)
-                    }.message shouldBe "Unknown objectId: ${feature.objectId}"
+                    }
+
+                Then("IllegalArgumentException 예외 발생") {
+                    exception.message shouldBe "Unknown objectId: ${feature.objectId}"
                 }
             }
 
@@ -152,10 +157,13 @@ class DataServiceKoTest :
                     featureService.findByDeviceIdResponse(deviceId)
                 } throws CustomException(ErrorCode.NOT_FOUND_FEATURE)
 
-                Then("NOT_FOUND_FEATURE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         dataService.getFeatureTimeSeries(deviceId, interval, from, to)
-                    }.message shouldBe ErrorCode.NOT_FOUND_FEATURE.getMessage()
+                    }
+
+                Then("NOT_FOUND_FEATURE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_FEATURE.getMessage()
                 }
             }
         }
@@ -186,8 +194,9 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", ClimateSensorData::class.java)
                 } returns climateData
 
+                val result = dataService.getSiteTimeSeries(siteId, interval, from, to, sensorType)
+
                 Then("사이트 시계열 데이터 반환") {
-                    val result = dataService.getSiteTimeSeries(siteId, interval, from, to, sensorType)
                     result shouldNotBe null
                     result.meta.targetId shouldBe siteId.toString()
                     result.timestamps.isNotEmpty() shouldBe true
@@ -208,10 +217,13 @@ class DataServiceKoTest :
                     siteService.findByIdResponse(siteId)
                 } throws CustomException(ErrorCode.NOT_FOUND_SITE)
 
-                Then("NOT_FOUND_SITE 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         dataService.getSiteTimeSeries(siteId, interval, from, to, sensorType)
-                    }.message shouldBe ErrorCode.NOT_FOUND_SITE.getMessage()
+                    }
+
+                Then("NOT_FOUND_SITE 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_SITE.getMessage()
                 }
             }
         }
@@ -242,8 +254,9 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", ClimateSensorData::class.java)
                 } returns climateData
 
+                val result = dataService.getFeatureLatestData(deviceId)
+
                 Then("최신 온습도 데이터 반환") {
-                    val result = dataService.getFeatureLatestData(deviceId)
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
                     result.metrics["Temperature"]?.value shouldBe 23.5
@@ -276,8 +289,9 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", DisplacementGaugeSensorData::class.java)
                 } returns displacementData
 
+                val result = dataService.getFeatureLatestData(deviceId)
+
                 Then("최신 변위계 데이터 반환") {
-                    val result = dataService.getFeatureLatestData(deviceId)
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
                     result.metrics["Angle-X"]?.value shouldBe 15.2
@@ -301,10 +315,13 @@ class DataServiceKoTest :
                     queryApi.query(any<String>(), "test-org", ClimateSensorData::class.java)
                 } returns emptyList()
 
-                Then("NOT_FOUND_DATA 예외 발생") {
+                val exception =
                     shouldThrowExactly<CustomException> {
                         dataService.getFeatureLatestData(deviceId)
-                    }.message shouldBe ErrorCode.NOT_FOUND_DATA.getMessage()
+                    }
+
+                Then("NOT_FOUND_DATA 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_DATA.getMessage()
                 }
             }
 
@@ -320,10 +337,13 @@ class DataServiceKoTest :
                     featureService.findByDeviceIdResponse(deviceId)
                 } returns feature
 
-                Then("IllegalArgumentException 예외 발생") {
+                val exception =
                     shouldThrowExactly<IllegalArgumentException> {
                         dataService.getFeatureLatestData(deviceId)
-                    }.message shouldBe "Unknown objectId: ${feature.objectId}"
+                    }
+
+                Then("IllegalArgumentException 예외 발생") {
+                    exception.message shouldBe "Unknown objectId: ${feature.objectId}"
                 }
             }
         }

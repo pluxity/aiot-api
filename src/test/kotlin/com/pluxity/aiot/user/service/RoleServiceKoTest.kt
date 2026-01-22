@@ -1,0 +1,280 @@
+package com.pluxity.aiot.user.service
+
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.permission.PermissionGroup
+import com.pluxity.aiot.permission.PermissionGroupService
+import com.pluxity.aiot.user.dto.RoleCreateRequest
+import com.pluxity.aiot.user.dto.RoleUpdateRequest
+import com.pluxity.aiot.user.entity.RolePermission
+import com.pluxity.aiot.user.repository.RolePermissionRepository
+import com.pluxity.aiot.user.repository.RoleRepository
+import com.pluxity.aiot.user.repository.UserRoleRepository
+import com.pluxity.aiot.user.service.entity.dummyRole
+import io.kotest.assertions.throwables.shouldThrowExactly
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
+import jakarta.persistence.EntityManager
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+
+class RoleServiceKoTest :
+    BehaviorSpec({
+        val roleRepository: RoleRepository = mockk()
+        val rolePermissionRepository: RolePermissionRepository = mockk()
+        val userRoleRepository: UserRoleRepository = mockk()
+        val permissionGroupService: PermissionGroupService = mockk()
+        val em: EntityManager = mockk()
+
+        val roleService =
+            RoleService(
+                roleRepository,
+                rolePermissionRepository,
+                userRoleRepository,
+                permissionGroupService,
+                em,
+            )
+
+        Given("Role 생성을 진행할 때") {
+            When("유효한 요청으로 Role 생성 요청") {
+                val createRequest =
+                    RoleCreateRequest(
+                        name = "Test Role",
+                        description = "Test Description",
+                        permissionGroupIds = listOf(1L, 2L),
+                    )
+                val savedRole = dummyRole(name = createRequest.name, description = createRequest.description)
+                val permissionGroup1 =
+                    PermissionGroup(
+                        name = "Group 1",
+                        description = "Group 1 Description",
+                    )
+                val permissionGroup2 =
+                    PermissionGroup(
+                        name = "Group 2",
+                        description = "Group 2 Description",
+                    )
+
+                every { roleRepository.save(any()) } returns savedRole
+                every { permissionGroupService.findPermissionGroupById(1L) } returns permissionGroup1
+                every { permissionGroupService.findPermissionGroupById(2L) } returns permissionGroup2
+                every { rolePermissionRepository.saveAll(any<List<RolePermission>>()) } returns listOf()
+
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+
+                Then("성공") {
+                    result shouldBe 1L
+                }
+            }
+
+            When("Permission Group ID가 빈 배열인 요청으로 Role 생성") {
+                val createRequest =
+                    RoleCreateRequest(
+                        name = "Simple Role",
+                        description = "Simple Description",
+                        permissionGroupIds = emptyList(),
+                    )
+                val savedRole =
+                    dummyRole(
+                        id = 2L,
+                        name = "Simple Role",
+                        description = "Simple Description",
+                    )
+
+                every { roleRepository.save(any()) } returns savedRole
+
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+
+                Then("성공") {
+                    result shouldBe 2L
+                }
+            }
+        }
+
+        Given("Role 목록 조회를 진행할 때") {
+            When("정상 요청이 오면") {
+                val role1 = dummyRole(name = "Role1", description = "Desc1")
+                val role2 = dummyRole(id = 2L, name = "Role2", description = "Desc2")
+
+                every { roleRepository.findByAuthIsNotOrderByCreatedAtDesc(any()) } returns listOf(role1, role2)
+
+                val result = roleService.findAll()
+
+                Then("정상 조회") {
+                    result.size shouldBe 2
+                    result[0].name shouldBe "Role1"
+                    result[1].name shouldBe "Role2"
+                }
+            }
+
+            When("데이터가 없을 때") {
+                every { roleRepository.findByAuthIsNotOrderByCreatedAtDesc(any()) } returns emptyList()
+
+                val result = roleService.findAll()
+
+                Then("빈 목록 반환") {
+                    result.size shouldBe 0
+                }
+            }
+        }
+
+        Given("Role 상세 조회를 진행할 때") {
+            When("유효한 아이디로 조회 요청") {
+                val role = dummyRole(id = 1L, name = "Test Role", description = "Test Description")
+
+                every { roleRepository.findWithInfoById(1L) } returns role
+
+                val result = roleService.findById(1L)
+
+                Then("정상 조회") {
+                    result.id shouldBe 1L
+                    result.name shouldBe "Test Role"
+                    result.description shouldBe "Test Description"
+                }
+            }
+
+            When("없는 아이디로 조회 요청") {
+                every { roleRepository.findWithInfoById(999L) } returns null
+
+                val exception =
+                    shouldThrowExactly<CustomException> {
+                        roleService.findById(999L)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
+                }
+            }
+        }
+
+        Given("Role 업데이트를 진행할 때") {
+            When("이름과 설명만 변경하는 요청") {
+                val role = dummyRole(id = 1L, name = "Old Name", description = "Old Description")
+                val updateRequest =
+                    RoleUpdateRequest(
+                        name = "New Name",
+                        description = "New Description",
+                        permissionGroupIds = null,
+                    )
+
+                every { roleRepository.findWithInfoById(1L) } returns role
+
+                roleService.update(1L, updateRequest)
+
+                Then("성공적으로 업데이트") {
+                    role.name shouldBe "New Name"
+                    role.description shouldBe "New Description"
+                }
+            }
+
+            When("Permission Group을 추가하는 요청") {
+                val role = dummyRole(id = 1L, name = "Test Role", description = "Test Description")
+                val updateRequest =
+                    RoleUpdateRequest(
+                        name = "updateRole",
+                        description = "update description",
+                        permissionGroupIds = listOf(1L, 2L),
+                    )
+                val permissionGroup1 = PermissionGroup(name = "Group 1", description = "Group 1 Description")
+                val permissionGroup2 = PermissionGroup(name = "Group 2", description = "Group 2 Description")
+
+                every { roleRepository.findWithInfoById(1L) } returns role
+                every { rolePermissionRepository.deleteAllInBatch(any()) } just runs
+                every { permissionGroupService.findPermissionGroupById(1L) } returns permissionGroup1
+                every { permissionGroupService.findPermissionGroupById(2L) } returns permissionGroup2
+                every { rolePermissionRepository.saveAll(any<List<RolePermission>>()) } returns listOf()
+
+                roleService.update(1L, updateRequest)
+
+                Then("성공적으로 업데이트") {
+                    role.name shouldBe updateRequest.name
+                    role.description shouldBe updateRequest.description
+                }
+            }
+
+            When("없는 Role ID로 업데이트 요청") {
+                val updateRequest =
+                    RoleUpdateRequest(
+                        name = "New Name",
+                        description = "New Description",
+                        permissionGroupIds = null,
+                    )
+
+                every { roleRepository.findWithInfoById(999L) } returns null
+
+                val exception =
+                    shouldThrowExactly<CustomException> {
+                        roleService.update(999L, updateRequest)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
+                }
+            }
+        }
+
+        Given("Role 삭제를 진행할 때") {
+            When("유효한 아이디로 삭제 요청") {
+                val role = dummyRole(id = 1L, name = "Test Role", description = "Test Description")
+
+                every { roleRepository.findWithInfoById(1L) } returns role
+                every { rolePermissionRepository.deleteAllByRole(role) } just runs
+                every { userRoleRepository.deleteAllByRole(role) } just runs
+                every { em.flush() } just runs
+                every { em.clear() } just runs
+                every { roleRepository.deleteById(1L) } just runs
+
+                roleService.delete(1L)
+
+                Then("성공적으로 삭제") {
+                    verify(exactly = 1) { rolePermissionRepository.deleteAllByRole(role) }
+                    verify(exactly = 1) { userRoleRepository.deleteAllByRole(role) }
+                    verify(exactly = 1) { roleRepository.deleteById(1L) }
+                }
+            }
+
+            When("없는 아이디로 삭제 요청") {
+                every { roleRepository.findWithInfoById(999L) } returns null
+
+                val exception =
+                    shouldThrowExactly<CustomException> {
+                        roleService.delete(999L)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
+                }
+            }
+        }
+
+        Given("findRoleById 내부 메서드 호출 시") {
+            When("유효한 ID로 호출") {
+                val role = dummyRole(id = 1L, name = "Test Role", description = "Test Description")
+
+                every { roleRepository.findWithInfoById(1L) } returns role
+
+                val result = roleService.findRoleById(1L)
+
+                Then("Role 객체 반환") {
+                    result shouldBe role
+                }
+            }
+
+            When("없는 ID로 호출") {
+                every { roleRepository.findWithInfoById(999L) } returns null
+
+                val exception =
+                    shouldThrowExactly<CustomException> {
+                        roleService.findRoleById(999L)
+                    }
+
+                Then("CustomException 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_ROLE.getMessage().format(999L)
+                }
+            }
+        }
+    })

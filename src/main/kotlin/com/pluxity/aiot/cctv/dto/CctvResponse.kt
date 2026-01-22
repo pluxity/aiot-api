@@ -17,7 +17,7 @@ data class CctvResponse(
 
 fun Cctv.toCctvResponse(viewUrl: String) =
     CctvResponse(
-        id = this.id!!,
+        id = this.requiredId,
         name = this.name,
         url = this.url,
         viewUrl = this.mtxName?.let { "$viewUrl/${this.mtxName}" },

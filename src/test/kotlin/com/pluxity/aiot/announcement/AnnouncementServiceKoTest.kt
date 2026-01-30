@@ -8,6 +8,7 @@ import com.pluxity.aiot.announcement.dto.SearchRequest
 import com.pluxity.aiot.announcement.entity.dummyAnnouncement
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.utils.findPageNotNull
 import com.pluxity.aiot.site.SiteService
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrowExactly
@@ -113,10 +114,10 @@ class AnnouncementServiceKoTest :
                         dummyAnnouncement(id = 1L, message = "공지사항1"),
                         dummyAnnouncement(id = 2L, message = "공지사항2"),
                     )
-                val mockPage: Page<Announcement?> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 2)
+                val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 2)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -141,10 +142,10 @@ class AnnouncementServiceKoTest :
                     listOf(
                         dummyAnnouncement(id = 1L, message = "공지사항1"),
                     )
-                val mockPage: Page<Announcement?> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
+                val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -161,10 +162,10 @@ class AnnouncementServiceKoTest :
                     listOf(
                         dummyAnnouncement(1L, "현장1 공지사항", siteId = 1L),
                     )
-                val mockPage: Page<Announcement?> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
+                val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -178,10 +179,10 @@ class AnnouncementServiceKoTest :
             When("사용자 ID로 공지사항을 필터링하면") {
                 val searchRequest = SearchRequest(page = 1, size = 10, userId = "admin")
                 val mockAnnouncements = listOf(dummyAnnouncement(1L, "관리자 공지사항"))
-                val mockPage: Page<Announcement?> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
+                val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -199,10 +200,10 @@ class AnnouncementServiceKoTest :
                         dummyAnnouncement(1L, "공지사항1"),
                         dummyAnnouncement(2L, "공지사항2"),
                     )
-                val mockPage: Page<Announcement?> = PageImpl(mockAnnouncements, PageRequest.of(1, 5), 7)
+                val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(1, 5), 7)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -216,10 +217,10 @@ class AnnouncementServiceKoTest :
 
             When("빈 결과 조회 요청") {
                 val searchRequest = SearchRequest(page = 1, size = 10)
-                val mockPage: Page<Announcement?> = PageImpl(emptyList(), PageRequest.of(0, 10), 0)
+                val mockPage: Page<Announcement> = PageImpl(emptyList(), PageRequest.of(0, 10), 0)
 
                 every {
-                    announcementRepository.findPage(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)

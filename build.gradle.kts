@@ -2,10 +2,10 @@ plugins {
     val kotlinVersion = "2.2.10"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
-    id("org.springframework.boot") version "3.5.5"
+    id("org.springframework.boot") version "3.5.9"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("plugin.jpa") version kotlinVersion
-    id("com.diffplug.spotless") version "7.2.1"
+    id("com.diffplug.spotless") version "8.1.0"
 }
 
 group = "com.pluxity.aiot"
@@ -42,7 +42,7 @@ dependencies {
     implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.5.5")
     implementation("com.linecorp.kotlin-jdsl:jpql-render:3.5.5")
     implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-support:3.5.5")
-    implementation ("org.hibernate:hibernate-spatial:6.6.26.Final")
+    implementation("org.hibernate:hibernate-spatial:6.6.26.Final")
     implementation("org.locationtech.jts:jts-core:1.20.0")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
@@ -64,8 +64,8 @@ dependencies {
     testImplementation("com.h2database:h2")
     // websocket
     implementation("org.springframework.boot:spring-boot-starter-websocket")
-    implementation ("io.github.springwolf:springwolf-core:1.18.0")
-    implementation ("io.github.springwolf:springwolf-stomp:1.18.0")
+    implementation("io.github.springwolf:springwolf-core:1.18.0")
+    implementation("io.github.springwolf:springwolf-stomp:1.18.0")
     runtimeOnly("io.github.springwolf:springwolf-ui:1.18.0")
 }
 

@@ -7,6 +7,7 @@ import com.pluxity.aiot.announcement.dto.toAnnouncementResponse
 import com.pluxity.aiot.global.response.PageResponse
 import com.pluxity.aiot.global.response.toPageResponse
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.global.utils.findPageNotNull
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteService
 import org.springframework.data.domain.PageRequest
@@ -43,7 +44,7 @@ class AnnouncementService(
             )
 
         val page =
-            announcementRepository.findPage(pageable) {
+            announcementRepository.findPageNotNull(pageable) {
                 select(entity(Announcement::class))
                     .from(
                         entity(Announcement::class),

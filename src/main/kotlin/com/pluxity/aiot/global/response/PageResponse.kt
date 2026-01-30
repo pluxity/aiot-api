@@ -11,9 +11,9 @@ data class PageResponse<T>(
     val first: Boolean,
 )
 
-fun <T, R> Page<T?>.toPageResponse(transform: (T) -> R): PageResponse<R> =
+fun <T, R> Page<T>.toPageResponse(transform: (T) -> R): PageResponse<R> =
     PageResponse(
-        content = this.content.mapNotNull { it?.let(transform) },
+        content = this.content.map(transform),
         pageNumber = this.number + 1,
         pageSize = this.size,
         totalElements = this.totalElements,

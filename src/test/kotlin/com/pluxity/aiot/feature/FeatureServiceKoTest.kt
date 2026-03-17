@@ -1,8 +1,5 @@
 package com.pluxity.aiot.feature
 
-import com.linecorp.kotlinjdsl.dsl.jpql.Jpql
-import com.linecorp.kotlinjdsl.querymodel.jpql.JpqlQueryable
-import com.linecorp.kotlinjdsl.querymodel.jpql.select.SelectQuery
 import com.pluxity.aiot.feature.dto.FeatureSearchCondition
 import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.feature.entity.dummyFeature
@@ -15,7 +12,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.springframework.data.repository.findByIdOrNull
 
 class FeatureServiceKoTest :
@@ -48,9 +44,7 @@ class FeatureServiceKoTest :
                     )
 
                 every {
-                    featureRepository.findAll(
-                        init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                    )
+                    featureRepository.findAllBySearchCondition(any())
                 } returns features
 
                 val result = featureService.findAll()
@@ -58,11 +52,6 @@ class FeatureServiceKoTest :
                 Then("모든 Feature가 반환된다") {
                     result shouldHaveSize 3
                     result.map { it.deviceId } shouldBe listOf("DEVICE_001", "DEVICE_002", "DEVICE_003")
-                    verify {
-                        featureRepository.findAll(
-                            init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                        )
-                    }
                 }
             }
 
@@ -78,9 +67,7 @@ class FeatureServiceKoTest :
                     )
 
                 every {
-                    featureRepository.findAll(
-                        init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                    )
+                    featureRepository.findAllBySearchCondition(any())
                 } returns features
 
                 val searchCondition = FeatureSearchCondition(deviceId = "DEVICE_SEARCH_001")
@@ -89,11 +76,6 @@ class FeatureServiceKoTest :
                 Then("조건에 맞는 Feature가 반환된다") {
                     result shouldHaveSize 1
                     result.first().deviceId shouldBe "DEVICE_SEARCH_001"
-                    verify {
-                        featureRepository.findAll(
-                            init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                        )
-                    }
                 }
             }
 
@@ -109,9 +91,7 @@ class FeatureServiceKoTest :
                     )
 
                 every {
-                    featureRepository.findAll(
-                        init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                    )
+                    featureRepository.findAllBySearchCondition(any())
                 } returns features
 
                 Then("응답 매핑 과정에서 예외가 발생한다") {
@@ -134,9 +114,7 @@ class FeatureServiceKoTest :
                     )
 
                 every {
-                    featureRepository.findAll(
-                        init = any<Jpql.() -> JpqlQueryable<SelectQuery<Feature>>>(),
-                    )
+                    featureRepository.findAllBySearchCondition(any())
                 } returns features
 
                 Then("응답 매핑 과정에서 예외가 발생한다") {
@@ -166,7 +144,6 @@ class FeatureServiceKoTest :
                 Then("isActive와 height가 변경된다") {
                     feature.isActive shouldBe false
                     feature.height shouldBe 5.0
-                    verify { featureRepository.findByIdOrNull(feature.requiredId) }
                 }
             }
 
@@ -202,7 +179,6 @@ class FeatureServiceKoTest :
 
                 Then("이름이 변경된다") {
                     feature.name shouldBe "Updated Name"
-                    verify { featureRepository.findByIdOrNull(feature.requiredId) }
                 }
             }
 

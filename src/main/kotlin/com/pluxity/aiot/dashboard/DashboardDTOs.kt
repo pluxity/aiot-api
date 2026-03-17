@@ -18,3 +18,32 @@ data class SensorTypeStatus(
     val fire: Long,
     val displacement: Long,
 )
+
+data class SensorStatisticsRaw(
+    val siteId: Long,
+    val siteName: String,
+    val totalCount: Long,
+    val disconnectedCount: Long,
+    val connectedCount: Long,
+    val temperatureHumidityCount: Long,
+    val fireCount: Long,
+    val displacementCount: Long,
+)
+
+fun SensorStatisticsRaw.toSensorSummary() =
+    SensorSummary(
+        siteId = siteId,
+        siteName = siteName,
+        totalSensors = totalCount,
+        connectionStatus =
+            ConnectionStatus(
+                connected = connectedCount,
+                disconnected = disconnectedCount,
+            ),
+        sensorTypeStatus =
+            SensorTypeStatus(
+                temperatureHumidity = temperatureHumidityCount,
+                fire = fireCount,
+                displacement = displacementCount,
+            ),
+    )

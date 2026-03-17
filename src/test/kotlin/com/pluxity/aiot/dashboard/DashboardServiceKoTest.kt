@@ -1,10 +1,6 @@
 package com.pluxity.aiot.dashboard
 
-import com.linecorp.kotlinjdsl.dsl.jpql.Jpql
-import com.linecorp.kotlinjdsl.querymodel.jpql.JpqlQueryable
-import com.linecorp.kotlinjdsl.querymodel.jpql.select.SelectQuery
 import com.pluxity.aiot.action.entity.dummyEventHistoryRow
-import com.pluxity.aiot.dashboard.DashboardService.SensorStatisticsRaw
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
@@ -59,9 +55,7 @@ class DashboardServiceKoTest :
                     )
 
                 every {
-                    featureRepository.findAll(
-                        init = any<Jpql.() -> JpqlQueryable<SelectQuery<SensorStatisticsRaw>>>(),
-                    )
+                    featureRepository.findSensorStatisticsBySiteIds(listOf(1L, 2L))
                 } returns listOf(raw1, raw2)
 
                 val result = dashboardService.getSensorSummary()
@@ -80,9 +74,7 @@ class DashboardServiceKoTest :
                     result[1].siteName shouldBe "Site B"
                     verify { siteRepository.findAllByOrderByCreatedAtDesc() }
                     verify {
-                        featureRepository.findAll(
-                            init = any<Jpql.() -> JpqlQueryable<SelectQuery<SensorStatisticsRaw>>>(),
-                        )
+                        featureRepository.findSensorStatisticsBySiteIds(listOf(1L, 2L))
                     }
                 }
             }

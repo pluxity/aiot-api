@@ -6,8 +6,6 @@ import com.pluxity.aiot.feature.dto.FeatureUpdateRequest
 import com.pluxity.aiot.feature.dto.toFeatureResponse
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.utils.findAllNotNull
-import com.pluxity.aiot.site.Site
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -21,27 +19,7 @@ class FeatureService(
 ) {
     @Transactional(readOnly = true)
     fun findAll(searchCondition: FeatureSearchCondition? = null): List<FeatureResponse> {
-        val features =
-            featureRepository
-                .findAllNotNull {
-                    select(entity(Feature::class))
-                        .from(
-                            entity(Feature::class),
-                            leftFetchJoin(Feature::site),
-                        ).where(
-                            and(
-                                searchCondition?.siteId?.let { path(Site::id).equal(it) },
-                                searchCondition?.deviceId?.takeIf { it.isNotBlank() }?.let { path(Feature::deviceId).equal(it) },
-                                searchCondition?.name?.takeIf { it.isNotBlank() }?.let { path(Feature::name).equal(it) },
-                                searchCondition?.objectId?.let { path(Feature::objectId).like("$it%") },
-                                searchCondition?.isActive?.let { path(Feature::isActive).equal(it) },
-                            ),
-                        ).orderBy(
-                            path(Feature::site).asc(),
-                            path(Feature::id).asc(),
-                        )
-                }
-
+        val features = featureRepository.findAllBySearchCondition(searchCondition)
         return features.map { it.toFeatureResponse() }
     }
 

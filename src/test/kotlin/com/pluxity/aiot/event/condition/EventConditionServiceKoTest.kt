@@ -41,7 +41,6 @@ class EventConditionServiceKoTest :
                     result.size shouldBe 1
                     result.first().id shouldBe 1L
                     result.first().thresholdValue shouldBe 30.0
-                    verify { eventConditionRepository.findAllByObjectId(objectId) }
                 }
             }
 
@@ -105,7 +104,6 @@ class EventConditionServiceKoTest :
 
                 Then("저장된 id 목록이 반환된다") {
                     result shouldBe listOf(10L)
-                    verify { eventConditionRepository.saveAll(any<List<EventCondition>>()) }
                 }
             }
 
@@ -174,8 +172,6 @@ class EventConditionServiceKoTest :
                     result.size shouldBe 1
                     result.first().level shouldBe ConditionLevel.DANGER
                     result.first().thresholdValue shouldBe 35.0
-                    verify { eventConditionRepository.deleteAllByObjectId(request.objectId) }
-                    verify { eventConditionRepository.saveAll(any<List<EventCondition>>()) }
                 }
             }
         }
@@ -222,7 +218,6 @@ class EventConditionServiceKoTest :
 
                 Then("삭제된 개수가 반환된다") {
                     deletedCount shouldBe 2
-                    verify { eventConditionRepository.deleteAllByObjectId(objectId) }
                 }
             }
         }

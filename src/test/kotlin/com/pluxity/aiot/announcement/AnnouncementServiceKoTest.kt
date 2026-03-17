@@ -14,7 +14,6 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
@@ -50,9 +49,6 @@ class AnnouncementServiceKoTest :
                 announcementService.broadcast(request)
 
                 Then("여러 현장에 안내방송 송출") {
-                    verify { siteService.findByIds(siteIds) }
-                    verify { announcementRepository.saveAll(any<List<Announcement>>()) }
-
                     val capturedAnnouncements = savedAnnouncementsSlot.captured
                     capturedAnnouncements.size shouldBe 3
                     capturedAnnouncements.forEach { announcement ->

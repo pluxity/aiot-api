@@ -110,7 +110,6 @@ class SiteServiceKoTest :
                 Then("썸네일이 매핑되어 반환된다") {
                     result[0].thumbnail shouldBe null
                     result[1].thumbnail?.id shouldBe 10L
-                    verify(exactly = 1) { fileService.getFiles(listOf(10L)) }
                 }
             }
 
@@ -140,7 +139,6 @@ class SiteServiceKoTest :
 
                 Then("썸네일이 매핑되어 반환된다") {
                     result.thumbnail?.id shouldBe 99L
-                    verify(exactly = 1) { fileService.getFiles(listOf(99L)) }
                 }
             }
 

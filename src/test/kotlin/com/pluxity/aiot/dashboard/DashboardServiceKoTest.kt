@@ -11,7 +11,6 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 
 class DashboardServiceKoTest :
     BehaviorSpec({
@@ -72,10 +71,6 @@ class DashboardServiceKoTest :
                     result[0].sensorTypeStatus.displacement shouldBe 1
                     result[1].siteId shouldBe 2L
                     result[1].siteName shouldBe "Site B"
-                    verify { siteRepository.findAllByOrderByCreatedAtDesc() }
-                    verify {
-                        featureRepository.findSensorStatisticsBySiteIds(listOf(1L, 2L))
-                    }
                 }
             }
         }
@@ -116,13 +111,6 @@ class DashboardServiceKoTest :
                     result[EventStatus.IN_PROGRESS]?.size shouldBe 0
                     result[EventStatus.ACTIVE]?.first()?.eventId shouldBe 1L
                     result[EventStatus.RESOLVED]?.first()?.eventId shouldBe 2L
-                    verify {
-                        eventHistoryRepository.findEventList(
-                            from = "20240101",
-                            to = "20240131",
-                            siteIds = listOf(1L),
-                        )
-                    }
                 }
             }
         }

@@ -1,5 +1,5 @@
 # Stage 1: Build the project
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 
 RUN apk add --no-cache dos2unix
 
@@ -19,7 +19,7 @@ RUN ./gradlew spotlessApply
 RUN ./gradlew clean build -x test --no-daemon
 
 # Stage 2: Runtime image
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:25-jdk-alpine
 
 # Set the working directory inside the container
 WORKDIR /app

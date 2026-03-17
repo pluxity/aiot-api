@@ -1,14 +1,10 @@
 package com.pluxity.aiot.announcement
 
-import com.linecorp.kotlinjdsl.dsl.jpql.Jpql
-import com.linecorp.kotlinjdsl.querymodel.jpql.JpqlQueryable
-import com.linecorp.kotlinjdsl.querymodel.jpql.select.SelectQuery
 import com.pluxity.aiot.announcement.dto.BroadcastRequest
 import com.pluxity.aiot.announcement.dto.SearchRequest
 import com.pluxity.aiot.announcement.entity.dummyAnnouncement
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.utils.findPageNotNull
 import com.pluxity.aiot.site.SiteService
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrowExactly
@@ -117,7 +113,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 2)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -145,7 +141,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -165,7 +161,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -182,7 +178,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(0, 10), 1)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -203,7 +199,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(mockAnnouncements, PageRequest.of(1, 5), 7)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)
@@ -220,7 +216,7 @@ class AnnouncementServiceKoTest :
                 val mockPage: Page<Announcement> = PageImpl(emptyList(), PageRequest.of(0, 10), 0)
 
                 every {
-                    announcementRepository.findPageNotNull(any<Pageable>(), any<Jpql.() -> JpqlQueryable<SelectQuery<Announcement>>>())
+                    announcementRepository.findAllBySearchRequest(any<Pageable>(), any<SearchRequest>())
                 } returns mockPage
 
                 val result = announcementService.findAll(searchRequest)

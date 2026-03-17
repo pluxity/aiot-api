@@ -64,7 +64,7 @@ class RoleServiceKoTest :
                 every { permissionGroupService.findPermissionGroupById(2L) } returns permissionGroup2
                 every { rolePermissionRepository.saveAll(any<List<RolePermission>>()) } returns listOf()
 
-                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, emptyList()))
 
                 Then("성공") {
                     result shouldBe 1L
@@ -87,7 +87,7 @@ class RoleServiceKoTest :
 
                 every { roleRepository.save(any()) } returns savedRole
 
-                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, null))
+                val result = roleService.save(createRequest, UsernamePasswordAuthenticationToken("testUser", null, emptyList()))
 
                 Then("성공") {
                     result shouldBe 2L

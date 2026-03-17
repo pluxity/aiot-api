@@ -46,7 +46,7 @@ class UserService(
         val user =
             User(
                 username = request.username,
-                password = passwordEncoder.encode(request.password),
+                password = requireNotNull(passwordEncoder.encode(request.password)),
                 name = request.name,
                 code = request.code,
                 phoneNumber = request.phoneNumber,
@@ -140,7 +140,7 @@ class UserService(
             throw CustomException(ErrorCode.INVALID_ID_OR_PASSWORD, "현재 비밀번호가 일치하지 않습니다.")
         }
 
-        user.changePassword(passwordEncoder.encode(request.newPassword))
+        user.changePassword(requireNotNull(passwordEncoder.encode(request.newPassword)))
     }
 
     @Transactional
@@ -183,7 +183,7 @@ class UserService(
     @Transactional
     fun initPassword(id: Long) {
         val user = findUserById(id)
-        user.initPassword(passwordEncoder.encode(userProperties.initPassword))
+        user.initPassword(requireNotNull(passwordEncoder.encode(userProperties.initPassword)))
     }
 
     @Transactional

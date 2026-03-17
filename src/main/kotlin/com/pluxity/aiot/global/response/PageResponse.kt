@@ -11,7 +11,7 @@ data class PageResponse<T>(
     val first: Boolean,
 )
 
-fun <T, R> Page<T>.toPageResponse(transform: (T) -> R): PageResponse<R> =
+fun <T : Any, R> Page<T>.toPageResponse(transform: (T) -> R): PageResponse<R> =
     PageResponse(
         content = this.content.map(transform),
         pageNumber = this.number + 1,

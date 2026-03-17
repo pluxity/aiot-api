@@ -29,7 +29,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     tags-sorter: alpha
-  show-actuator: true
+  show-actuator: false
   packages-to-scan: com.pluxity
   default-consumes-media-type: application/json
   default-produces-media-type: application/json

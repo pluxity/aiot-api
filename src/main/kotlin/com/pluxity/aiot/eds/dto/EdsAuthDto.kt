@@ -14,6 +14,8 @@ data class EdsResponse<T>(
     val message: String,
     @field:JsonProperty("time_stamp")
     val timeStamp: String? = null,
+    @field:JsonProperty("total_count")
+    val totalCount: Int? = null,
     val result: T? = null,
 )
 

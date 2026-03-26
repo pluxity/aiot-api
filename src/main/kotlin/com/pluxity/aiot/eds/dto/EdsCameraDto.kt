@@ -30,13 +30,3 @@ data class EdsCameraInfo(
     @field:JsonProperty("camera_install_purpose")
     val cameraInstallPurpose: String? = null,
 )
-
-data class EdsCameraListResponse(
-    val code: Int,
-    val message: String,
-    @field:JsonProperty("time_stamp")
-    val timeStamp: String? = null,
-    @field:JsonProperty("total_count")
-    val totalCount: Int? = null,
-    val result: List<EdsCameraInfo>? = null,
-)

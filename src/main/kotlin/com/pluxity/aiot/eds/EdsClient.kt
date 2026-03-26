@@ -1,7 +1,6 @@
 package com.pluxity.aiot.eds
 
 import com.pluxity.aiot.eds.dto.EdsCameraInfo
-import com.pluxity.aiot.eds.dto.EdsCameraListResponse
 import com.pluxity.aiot.eds.dto.EdsLoginRequest
 import com.pluxity.aiot.eds.dto.EdsLoginResult
 import com.pluxity.aiot.eds.dto.EdsResponse
@@ -79,7 +78,7 @@ class EdsClient(
             .uri("/api/eds/v1/external/camera/list")
             .header("api-key", apiKey)
             .exchangeToMono { resp ->
-                resp.bodyToMono<EdsCameraListResponse>()
+                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<List<EdsCameraInfo>>>() {})
             }
             .block()
             ?: throw CustomException(ErrorCode.EDS_API_ERROR, "카메라 목록 응답 없음")

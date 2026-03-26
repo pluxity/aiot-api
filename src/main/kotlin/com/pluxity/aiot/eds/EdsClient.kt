@@ -3,7 +3,10 @@ package com.pluxity.aiot.eds
 import com.pluxity.aiot.eds.dto.EdsCameraInfo
 import com.pluxity.aiot.eds.dto.EdsLoginRequest
 import com.pluxity.aiot.eds.dto.EdsLoginResult
+import com.pluxity.aiot.eds.dto.EdsRealtimeStreamRequest
+import com.pluxity.aiot.eds.dto.EdsRecordStreamRequest
 import com.pluxity.aiot.eds.dto.EdsResponse
+import com.pluxity.aiot.eds.dto.EdsStreamResult
 import com.pluxity.aiot.global.config.WebClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -13,7 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.bodyToMono
 
 private val log = KotlinLogging.logger {}
 
@@ -90,5 +92,43 @@ class EdsClient(
         val cameras = response.result ?: emptyList()
         log.info { "EDS 카메라 목록 조회 완료: ${cameras.size}대 (전체: ${response.totalCount})" }
         return cameras
+    }
+
+    fun getRealtimeStreamUrl(request: EdsRealtimeStreamRequest): EdsStreamResult {
+        val response = client
+            .post()
+            .uri("/api/eds/v1/external/camera/stream/realtime")
+            .header("api-key", apiKey)
+            .bodyValue(request)
+            .exchangeToMono { resp ->
+                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
+            }
+            .block()
+            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 응답 없음")
+
+        if (response.code != 200 || response.result == null) {
+            throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 요청 실패: ${response.message}")
+        }
+
+        return response.result
+    }
+
+    fun getRecordStreamUrl(request: EdsRecordStreamRequest): EdsStreamResult {
+        val response = client
+            .post()
+            .uri("/api/eds/v1/external/camera/stream/record")
+            .header("api-key", apiKey)
+            .bodyValue(request)
+            .exchangeToMono { resp ->
+                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
+            }
+            .block()
+            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 응답 없음")
+
+        if (response.code != 200 || response.result == null) {
+            throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 요청 실패: ${response.message}")
+        }
+
+        return response.result
     }
 }

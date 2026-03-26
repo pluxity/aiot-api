@@ -4,4 +4,5 @@ import com.pluxity.aiot.cctv.Cctv
 
 interface CctvCustomRepository {
     fun findAllBySiteId(siteId: Long?): List<Cctv>
+    fun findAllWithSite(): List<Cctv>
 }

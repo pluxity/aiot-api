@@ -3,17 +3,22 @@ package com.pluxity.aiot.eds
 import com.pluxity.aiot.cctv.Cctv
 import com.pluxity.aiot.cctv.repository.CctvRepository
 import com.pluxity.aiot.eds.dto.EdsCameraInfo
+import com.pluxity.aiot.eds.dto.EdsRealtimeStreamRequest
+import com.pluxity.aiot.eds.dto.EdsRecordStreamRequest
+import com.pluxity.aiot.eds.dto.EdsStreamResult
 import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import com.pluxity.aiot.global.utils.DateTimeUtils
 import org.springframework.transaction.annotation.Transactional
+import java.time.format.DateTimeFormatter
 
 private val log = KotlinLogging.logger {}
 
 @Service
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
-class EdsCameraSyncService(
+class EdsService(
     private val edsClient: EdsClient,
     private val cctvRepository: CctvRepository,
     private val siteRepository: SiteRepository,
@@ -22,7 +27,7 @@ class EdsCameraSyncService(
     fun sync() {
         val edsCameras = edsClient.getCameraList()
         val edsCameraIds = edsCameras.map { it.cameraId }.toSet()
-        val existingCctvs = cctvRepository.findAll()
+        val existingCctvs = cctvRepository.findAllWithSite()
         val existingMap = existingCctvs.associateBy { it.edsCameraId }
 
         var created = 0
@@ -49,6 +54,21 @@ class EdsCameraSyncService(
         log.info { "EDS 카메라 동기화 완료: 신규=$created, 업데이트=$updated, 미연동처리=$deactivated" }
     }
 
+    fun getRealtimeStreamUrl(cameraId: String): EdsStreamResult =
+        edsClient.getRealtimeStreamUrl(EdsRealtimeStreamRequest(cameraId = cameraId))
+
+    fun getRecordStreamUrl(cameraId: String, recordStartTime: String, recordEndTime: String): EdsStreamResult =
+        edsClient.getRecordStreamUrl(
+            EdsRecordStreamRequest(
+                cameraId = cameraId,
+                recordStartTime = toEdsTimeFormat(recordStartTime),
+                recordEndTime = toEdsTimeFormat(recordEndTime),
+            ),
+        )
+
+    private fun toEdsTimeFormat(time: String): String =
+        DateTimeUtils.parseCompactDateTime(time).format(EDS_FORMAT)
+
     private fun createCctv(edsCamera: EdsCameraInfo) {
         val site = findSite(edsCamera.longitude, edsCamera.latitude)
         val cctv = Cctv(
@@ -69,4 +89,8 @@ class EdsCameraSyncService(
         } else {
             null
         }
+
+    companion object {
+        private val EDS_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss.SSS")
+    }
 }

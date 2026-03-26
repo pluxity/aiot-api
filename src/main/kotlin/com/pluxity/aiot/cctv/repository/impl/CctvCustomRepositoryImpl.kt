@@ -29,4 +29,14 @@ class CctvCustomRepositoryImpl(
                         ),
                     )
             }
+
+    override fun findAllWithSite(): List<Cctv> =
+        kotlinJdslJpqlExecutor
+            .findAllNotNull {
+                select(entity(Cctv::class))
+                    .from(
+                        entity(Cctv::class),
+                        leftFetchJoin(Cctv::site),
+                    )
+            }
 }

@@ -12,7 +12,7 @@ private val log = KotlinLogging.logger {}
 class EdsLifecycle(
     private val edsClient: EdsClient,
     private val edsKeepAliveScheduler: EdsKeepAliveScheduler,
-    private val edsCameraSyncService: EdsCameraSyncService,
+    private val edsService: EdsService,
 ) : SmartLifecycle {
     private var running = false
 
@@ -21,7 +21,7 @@ class EdsLifecycle(
             log.info { "EDS 연동 시작..." }
             edsClient.login()
             edsKeepAliveScheduler.start()
-            edsCameraSyncService.sync()
+            edsService.sync()
             running = true
             log.info { "EDS 연동 초기화 완료" }
         } catch (e: Exception) {

@@ -6,5 +6,4 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface CctvRepository :
     JpaRepository<Cctv, Long>,
     CctvCustomRepository {
-    fun height(height: Double): MutableList<Cctv>
 }

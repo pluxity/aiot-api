@@ -31,9 +31,12 @@ influx:
   org: pluxity
   bucket: aiot-bucket
 
-mediamtx:
-  api-url: ${MEDIAMTX_API_URL:http://192.168.10.181:8107}
-  view-url: ${MEDIAMTX_VIEW_URL:http://192.168.10.181:8106}
+eds:
+  enabled: ${EDS_ENABLED:false}
+  base-url: ${EDS_BASE_URL:}
+  system-key: ${EDS_SYSTEM_KEY:}
+  system-token: "${EDS_SYSTEM_TOKEN:}"
+  keep-alive-timeout: ${EDS_KEEP_ALIVE_TIMEOUT:900}
 
 file:
   storage-strategy: ${FILE_STORAGE_STRATEGY:s3}

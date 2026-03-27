@@ -62,26 +62,30 @@ class Cctv(
         this.site = null
     }
 
-    fun updateFromEds(edsCamera: EdsCameraInfo, site: Site?): Boolean {
+    fun updateFromEds(
+        edsCamera: EdsCameraInfo,
+        site: Site?,
+    ): Boolean {
         val newType = EdsCameraType.fromCode(edsCamera.cameraType)
         val newStatus = EdsCameraStatus.fromCode(edsCamera.cameraStatus)
         val newResW = edsCamera.streamResolution?.getOrNull(0)
         val newResH = edsCamera.streamResolution?.getOrNull(1)
 
-        val changed = name != edsCamera.cameraName ||
-            cameraIp != edsCamera.cameraIp ||
-            cameraPort != edsCamera.cameraPort ||
-            ptzControl != edsCamera.ptzControl ||
-            cameraType != newType ||
-            cameraStatus != newStatus ||
-            cameraAddress != edsCamera.cameraAddress ||
-            streamResolutionWidth != newResW ||
-            streamResolutionHeight != newResH ||
-            cameraRecordType != edsCamera.cameraRecordType ||
-            cameraAnalysisConfigured != edsCamera.cameraAnalysisConfigured ||
-            longitude != edsCamera.longitude ||
-            latitude != edsCamera.latitude ||
-            this.site?.id != site?.id
+        val changed =
+            name != edsCamera.cameraName ||
+                cameraIp != edsCamera.cameraIp ||
+                cameraPort != edsCamera.cameraPort ||
+                ptzControl != edsCamera.ptzControl ||
+                cameraType != newType ||
+                cameraStatus != newStatus ||
+                cameraAddress != edsCamera.cameraAddress ||
+                streamResolutionWidth != newResW ||
+                streamResolutionHeight != newResH ||
+                cameraRecordType != edsCamera.cameraRecordType ||
+                cameraAnalysisConfigured != edsCamera.cameraAnalysisConfigured ||
+                longitude != edsCamera.longitude ||
+                latitude != edsCamera.latitude ||
+                this.site?.id != site?.id
 
         if (!changed) return false
 

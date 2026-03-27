@@ -6,11 +6,11 @@ import com.pluxity.aiot.eds.dto.EdsCameraInfo
 import com.pluxity.aiot.eds.dto.EdsRealtimeStreamRequest
 import com.pluxity.aiot.eds.dto.EdsRecordStreamRequest
 import com.pluxity.aiot.eds.dto.EdsStreamResult
+import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import com.pluxity.aiot.global.utils.DateTimeUtils
 import org.springframework.transaction.annotation.Transactional
 import java.time.format.DateTimeFormatter
 
@@ -57,7 +57,11 @@ class EdsService(
     fun getRealtimeStreamUrl(cameraId: String): EdsStreamResult =
         edsClient.getRealtimeStreamUrl(EdsRealtimeStreamRequest(cameraId = cameraId))
 
-    fun getRecordStreamUrl(cameraId: String, recordStartTime: String, recordEndTime: String): EdsStreamResult =
+    fun getRecordStreamUrl(
+        cameraId: String,
+        recordStartTime: String,
+        recordEndTime: String,
+    ): EdsStreamResult =
         edsClient.getRecordStreamUrl(
             EdsRecordStreamRequest(
                 cameraId = cameraId,
@@ -66,29 +70,34 @@ class EdsService(
             ),
         )
 
-    private fun toEdsTimeFormat(time: String): String =
-        DateTimeUtils.parseCompactDateTime(time).format(EDS_FORMAT)
+    private fun toEdsTimeFormat(time: String): String = DateTimeUtils.parseCompactDateTime(time).format(EDS_FORMAT)
 
     private fun createCctv(edsCamera: EdsCameraInfo) {
         val site = findSite(edsCamera.longitude, edsCamera.latitude)
-        val cctv = Cctv(
-            edsCameraId = edsCamera.cameraId,
-        )
+        val cctv =
+            Cctv(
+                edsCameraId = edsCamera.cameraId,
+            )
         cctv.updateFromEds(edsCamera, site)
         cctvRepository.save(cctv)
     }
 
-    private fun updateCctv(cctv: Cctv, edsCamera: EdsCameraInfo): Boolean {
+    private fun updateCctv(
+        cctv: Cctv,
+        edsCamera: EdsCameraInfo,
+    ): Boolean {
         val site = findSite(edsCamera.longitude, edsCamera.latitude)
         return cctv.updateFromEds(edsCamera, site)
     }
 
-    private fun findSite(longitude: Double?, latitude: Double?) =
-        if (longitude != null && latitude != null) {
-            siteRepository.findFirstByPointInPolygon(longitude, latitude)
-        } else {
-            null
-        }
+    private fun findSite(
+        longitude: Double?,
+        latitude: Double?,
+    ) = if (longitude != null && latitude != null) {
+        siteRepository.findFirstByPointInPolygon(longitude, latitude)
+    } else {
+        null
+    }
 
     companion object {
         private val EDS_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss.SSS")

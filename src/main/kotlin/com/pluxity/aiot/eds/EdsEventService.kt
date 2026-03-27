@@ -1,7 +1,6 @@
 package com.pluxity.aiot.eds
 
 import com.pluxity.aiot.eds.dto.EdsEventData
-import com.pluxity.aiot.file.service.FileService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -10,19 +9,21 @@ import org.springframework.transaction.annotation.Transactional
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
 class EdsEventService(
     private val edsEventRepository: EdsEventRepository,
-    private val fileService: FileService,
 ) {
     @Transactional
-    fun saveEvent(eventData: EdsEventData, thumbnailBytes: ByteArray?) {
-        val existing = edsEventRepository.findByEventId(eventData.id)
+    fun saveEvent(
+        eventData: EdsEventData,
+        thumbnailFileId: Long?,
+    ) {
+        val existing = edsEventRepository.findByEventIdAndEventStatusNot(eventData.id, EdsEventStatus.ENDED)
 
         if (existing != null) {
-            existing.updateOnEnd(eventData.eventEnd, eventData.frameTime, eventData.status)
+            existing.updateOnEnd(
+                eventData.eventEnd,
+                eventData.frameTime,
+                EdsEventStatus.fromCode(eventData.status) ?: EdsEventStatus.ENDED,
+            )
             return
-        }
-
-        val thumbnailFileId = thumbnailBytes?.let {
-            fileService.initiateUpload(it, "eds-event-${eventData.index}.jpg", "image/jpeg")
         }
 
         edsEventRepository.save(
@@ -31,11 +32,11 @@ class EdsEventService(
                 eventId = eventData.id,
                 profileName = eventData.profileName,
                 cameraId = eventData.cameraId,
-                eventType = eventData.type,
+                eventType = EdsEventType.fromCode(eventData.type),
                 eventStart = eventData.eventStart,
                 eventEnd = eventData.eventEnd,
                 frameTime = eventData.frameTime,
-                status = eventData.status,
+                eventStatus = EdsEventStatus.fromCode(eventData.status) ?: EdsEventStatus.STARTED,
                 eventZoneId = eventData.eventZoneId,
                 eventZoneName = eventData.eventZoneName,
                 latitude = eventData.latitude,

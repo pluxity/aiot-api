@@ -1,6 +1,7 @@
 package com.pluxity.aiot.eds
 
 import com.pluxity.aiot.eds.dto.EdsEventData
+import com.pluxity.aiot.file.service.FileService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
@@ -9,9 +10,14 @@ import org.springframework.stereotype.Component
 class EdsEventFacade(
     private val edsClient: EdsClient,
     private val edsEventService: EdsEventService,
+    private val fileService: FileService,
 ) {
     fun processEvent(eventData: EdsEventData) {
         val thumbnailBytes = edsClient.getEventThumbnail(eventData.index)
-        edsEventService.saveEvent(eventData, thumbnailBytes)
+        val thumbnailFileId =
+            thumbnailBytes?.let {
+                fileService.initiateUpload(it, "eds-event-${eventData.index}.jpg", "image/jpeg")
+            }
+        edsEventService.saveEvent(eventData, thumbnailFileId)
     }
 }

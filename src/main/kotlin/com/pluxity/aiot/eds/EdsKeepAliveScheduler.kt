@@ -23,18 +23,19 @@ class EdsKeepAliveScheduler(
         stop()
         val intervalSeconds = edsProperties.keepAliveTimeout / 2
         log.info { "EDS keepAlive 스케줄러 시작 (간격: ${intervalSeconds}초)" }
-        task = scheduler.scheduleAtFixedRate(
-            {
-                try {
-                    edsClient.keepAlive()
-                } catch (e: Exception) {
-                    log.error { "EDS keepAlive 스케줄러 실행 중 오류: ${e.message}" }
-                }
-            },
-            intervalSeconds,
-            intervalSeconds,
-            TimeUnit.SECONDS,
-        )
+        task =
+            scheduler.scheduleAtFixedRate(
+                {
+                    try {
+                        edsClient.keepAlive()
+                    } catch (e: Exception) {
+                        log.error { "EDS keepAlive 스케줄러 실행 중 오류: ${e.message}" }
+                    }
+                },
+                intervalSeconds,
+                intervalSeconds,
+                TimeUnit.SECONDS,
+            )
     }
 
     fun stop() {

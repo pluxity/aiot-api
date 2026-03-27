@@ -11,7 +11,9 @@ import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClien
 import reactor.core.Disposable
 import reactor.core.scheduler.Schedulers
 import reactor.netty.http.client.HttpClient
+import reactor.util.retry.Retry
 import java.net.URI
+import java.time.Duration
 
 private val log = KotlinLogging.logger {}
 
@@ -23,39 +25,49 @@ class EdsWebSocketClient(
     private val edsEventFacade: EdsEventFacade,
 ) {
     private var disposable: Disposable? = null
+    private var stopped = false
 
     fun connect() {
         disconnect()
-
-        val wsBaseUrl = edsClient.getWebSocketUrl()
-        val apiKey = edsClient.getApiKey()
-        val uri = URI("$wsBaseUrl?api-key=$apiKey&evtMeta=begun,ended&crowdCountMeta")
-
-        log.info { "EDS WebSocket 연결 시도" }
+        stopped = false
 
         val client = ReactorNettyWebSocketClient(HttpClient.create())
 
-        disposable = client
-            .execute(uri) { session ->
-                log.info { "EDS WebSocket 연결 성공" }
+        disposable =
+            client
+                .execute(buildUri()) { session ->
+                    log.info { "EDS WebSocket 연결 성공" }
 
-                session
-                    .receive()
-                    .filter { it.type == WebSocketMessage.Type.TEXT }
-                    .map { it.payloadAsText }
-                    .publishOn(Schedulers.boundedElastic())
-                    .doOnNext { handleMessage(it) }
-                    .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
-                    .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
-                    .then()
-            }
-            .doOnError { e -> log.error(e) { "EDS WebSocket 연결 실패" } }
-            .subscribe()
+                    session
+                        .receive()
+                        .filter { it.type == WebSocketMessage.Type.TEXT }
+                        .map { it.payloadAsText }
+                        .publishOn(Schedulers.boundedElastic())
+                        .doOnNext { handleMessage(it) }
+                        .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
+                        .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
+                        .then()
+                }.doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
+                .repeatWhen { it.delayElements(Duration.ofSeconds(5)).takeWhile { !stopped } }
+                .retryWhen(
+                    Retry
+                        .backoff(Long.MAX_VALUE, Duration.ofSeconds(5))
+                        .maxBackoff(Duration.ofMinutes(2))
+                        .filter { !stopped }
+                        .doBeforeRetry { log.info { "EDS WebSocket 재연결 시도 (${it.totalRetries() + 1}회)" } },
+                ).subscribe()
     }
 
     fun disconnect() {
+        stopped = true
         disposable?.dispose()
         disposable = null
+    }
+
+    private fun buildUri(): URI {
+        val wsBaseUrl = edsClient.getWebSocketUrl()
+        val apiKey = edsClient.getApiKey()
+        return URI("$wsBaseUrl?api-key=$apiKey&evtMeta=begun,ended&crowdCountMeta")
     }
 
     private fun handleMessage(json: String) {
@@ -64,7 +76,11 @@ class EdsWebSocketClient(
             when {
                 tree.has("event_start") -> {
                     val event = objectMapper.readValue(json, EdsEventData::class.java)
-                    log.info { "EDS 이벤트: id=${event.id}, camera=${event.cameraId}, type=${EdsEventType.fromCode(event.type)?.description}, status=${EdsEventStatus.fromCode(event.status)?.description}" }
+                    log.info {
+                        "EDS 이벤트: id=${event.id}, camera=${event.cameraId}, type=${EdsEventType.fromCode(
+                            event.type,
+                        )?.description}, status=${EdsEventStatus.fromCode(event.status)?.description}"
+                    }
                     edsEventFacade.processEvent(event)
                 }
                 tree.has("zones") -> {

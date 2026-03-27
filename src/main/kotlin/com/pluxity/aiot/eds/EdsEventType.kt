@@ -1,6 +1,9 @@
 package com.pluxity.aiot.eds
 
-enum class EdsEventType(val code: Int, val description: String) {
+enum class EdsEventType(
+    val code: Int,
+    val description: String,
+) {
     LOITERING(0, "배회"),
     PATH_PASS(1, "경로통과"),
     DIRECTIONAL_MOVE(2, "방향성이동"),

@@ -12,7 +12,6 @@ enum class EdsCameraStatus(
     ;
 
     companion object {
-        fun fromCode(code: Int): EdsCameraStatus =
-            entries.find { it.code == code } ?: DISCONNECTED
+        fun fromCode(code: Int): EdsCameraStatus = entries.find { it.code == code } ?: DISCONNECTED
     }
 }

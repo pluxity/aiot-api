@@ -37,9 +37,10 @@ fun Cctv.toCctvResponse() =
         cameraType = this.cameraType,
         cameraStatus = this.cameraStatus,
         cameraAddress = this.cameraAddress,
-        streamResolution = this.streamResolutionWidth?.let { w ->
-            this.streamResolutionHeight?.let { h -> listOf(w, h) }
-        },
+        streamResolution =
+            this.streamResolutionWidth?.let { w ->
+                this.streamResolutionHeight?.let { h -> listOf(w, h) }
+            },
         cameraRecordType = this.cameraRecordType,
         cameraAnalysisConfigured = this.cameraAnalysisConfigured,
         site = this.site?.toSiteResponse(),

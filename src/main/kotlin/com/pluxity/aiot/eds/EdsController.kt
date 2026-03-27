@@ -57,11 +57,14 @@ class EdsController(
         @Parameter(description = "카메라 ID", required = true) @PathVariable cameraId: String,
         @Parameter(description = "녹화 시작 시간 (yyyyMMddHHmmss)", required = true) @RequestParam recordStartTime: String,
         @Parameter(description = "녹화 종료 시간 (yyyyMMddHHmmss)", required = true) @RequestParam recordEndTime: String,
-    ): ResponseEntity<DataResponseBody<EdsStreamResult>> = ResponseEntity.ok(DataResponseBody(
-        edsService.getRecordStreamUrl(
-            cameraId,
-            recordStartTime,
-            recordEndTime
+    ): ResponseEntity<DataResponseBody<EdsStreamResult>> =
+        ResponseEntity.ok(
+            DataResponseBody(
+                edsService.getRecordStreamUrl(
+                    cameraId,
+                    recordStartTime,
+                    recordEndTime,
+                ),
+            ),
         )
-    ))
 }

@@ -33,20 +33,21 @@ class EdsClient(
     fun getApiKey(): String = apiKey
 
     fun login() {
-        val request = EdsLoginRequest(
-            systemKey = edsProperties.systemKey,
-            systemToken = edsProperties.systemToken,
-        )
+        val request =
+            EdsLoginRequest(
+                systemKey = edsProperties.systemKey,
+                systemToken = edsProperties.systemToken,
+            )
 
-        val response = client
-            .post()
-            .uri("/api/eds/v1/external/users/login")
-            .bodyValue(request)
-            .exchangeToMono { resp ->
-                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
-            }
-            .block()
-            ?: throw CustomException(ErrorCode.EDS_LOGIN_FAILED, "응답 없음")
+        val response =
+            client
+                .post()
+                .uri("/api/eds/v1/external/users/login")
+                .bodyValue(request)
+                .exchangeToMono { resp ->
+                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
+                }.block()
+                ?: throw CustomException(ErrorCode.EDS_LOGIN_FAILED, "응답 없음")
 
         if (response.code != 200 || response.result == null) {
             throw CustomException(ErrorCode.EDS_LOGIN_FAILED, response.message)
@@ -58,15 +59,15 @@ class EdsClient(
 
     fun keepAlive() {
         try {
-            val response = client
-                .post()
-                .uri("/api/eds/v1/external/users/keepalive")
-                .header("api-key", apiKey)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<Void>>() {})
-                }
-                .block()
-                ?: throw CustomException(ErrorCode.EDS_API_ERROR, "keepAlive 응답 없음")
+            val response =
+                client
+                    .post()
+                    .uri("/api/eds/v1/external/users/keepalive")
+                    .header("api-key", apiKey)
+                    .exchangeToMono { resp ->
+                        resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<Void>>() {})
+                    }.block()
+                    ?: throw CustomException(ErrorCode.EDS_API_ERROR, "keepAlive 응답 없음")
 
             if (response.code != 200) {
                 throw CustomException(ErrorCode.EDS_API_ERROR, "keepAlive 실패: ${response.message}")
@@ -79,15 +80,15 @@ class EdsClient(
     }
 
     fun getCameraList(): List<EdsCameraInfo> {
-        val response = client
-            .post()
-            .uri("/api/eds/v1/external/camera/list")
-            .header("api-key", apiKey)
-            .exchangeToMono { resp ->
-                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<List<EdsCameraInfo>>>() {})
-            }
-            .block()
-            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "카메라 목록 응답 없음")
+        val response =
+            client
+                .post()
+                .uri("/api/eds/v1/external/camera/list")
+                .header("api-key", apiKey)
+                .exchangeToMono { resp ->
+                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<List<EdsCameraInfo>>>() {})
+                }.block()
+                ?: throw CustomException(ErrorCode.EDS_API_ERROR, "카메라 목록 응답 없음")
 
         if (response.code != 200) {
             throw CustomException(ErrorCode.EDS_API_ERROR, "카메라 목록 조회 실패: ${response.message}")
@@ -99,16 +100,16 @@ class EdsClient(
     }
 
     fun getRealtimeStreamUrl(request: EdsRealtimeStreamRequest): EdsStreamResult {
-        val response = client
-            .post()
-            .uri("/api/eds/v1/external/camera/stream/realtime")
-            .header("api-key", apiKey)
-            .bodyValue(request)
-            .exchangeToMono { resp ->
-                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
-            }
-            .block()
-            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 응답 없음")
+        val response =
+            client
+                .post()
+                .uri("/api/eds/v1/external/camera/stream/realtime")
+                .header("api-key", apiKey)
+                .bodyValue(request)
+                .exchangeToMono { resp ->
+                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
+                }.block()
+                ?: throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
             throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 요청 실패: ${response.message}")
@@ -118,16 +119,16 @@ class EdsClient(
     }
 
     fun getRecordStreamUrl(request: EdsRecordStreamRequest): EdsStreamResult {
-        val response = client
-            .post()
-            .uri("/api/eds/v1/external/camera/stream/record")
-            .header("api-key", apiKey)
-            .bodyValue(request)
-            .exchangeToMono { resp ->
-                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
-            }
-            .block()
-            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 응답 없음")
+        val response =
+            client
+                .post()
+                .uri("/api/eds/v1/external/camera/stream/record")
+                .header("api-key", apiKey)
+                .bodyValue(request)
+                .exchangeToMono { resp ->
+                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
+                }.block()
+                ?: throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
             throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 요청 실패: ${response.message}")
@@ -136,8 +137,8 @@ class EdsClient(
         return response.result
     }
 
-    fun getEventThumbnail(index: Long): ByteArray? {
-        return try {
+    fun getEventThumbnail(index: Long): ByteArray? =
+        try {
             client
                 .get()
                 .uri("/api/eds/v1/external/event/thumbnail?index=$index&type=evtImg")
@@ -146,26 +147,25 @@ class EdsClient(
                     if (resp.statusCode().is2xxSuccessful) {
                         resp.bodyToMono<ByteArray>()
                     } else {
-                        reactor.core.publisher.Mono.empty()
+                        reactor.core.publisher.Mono
+                            .empty()
                     }
-                }
-                .block()
+                }.block()
         } catch (e: Exception) {
             log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
             null
         }
-    }
 
     fun getWebSocketUrl(): String {
-        val response = client
-            .get()
-            .uri("/api/eds/v1/external/websocket/url?external_flag=2")
-            .header("api-key", apiKey)
-            .exchangeToMono { resp ->
-                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsWebSocketUrlResult>>() {})
-            }
-            .block()
-            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 응답 없음")
+        val response =
+            client
+                .get()
+                .uri("/api/eds/v1/external/websocket/url?external_flag=2")
+                .header("api-key", apiKey)
+                .exchangeToMono { resp ->
+                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsWebSocketUrlResult>>() {})
+                }.block()
+                ?: throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
             throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 요청 실패: ${response.message}")

@@ -16,7 +16,6 @@ enum class EdsCameraType(
     ;
 
     companion object {
-        fun fromCode(code: String): EdsCameraType =
-            entries.find { it.code == code } ?: UNSUPPORTED
+        fun fromCode(code: String): EdsCameraType = entries.find { it.code == code } ?: UNSUPPORTED
     }
 }

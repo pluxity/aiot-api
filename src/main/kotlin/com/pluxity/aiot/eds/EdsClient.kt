@@ -7,6 +7,7 @@ import com.pluxity.aiot.eds.dto.EdsRealtimeStreamRequest
 import com.pluxity.aiot.eds.dto.EdsRecordStreamRequest
 import com.pluxity.aiot.eds.dto.EdsResponse
 import com.pluxity.aiot.eds.dto.EdsStreamResult
+import com.pluxity.aiot.eds.dto.EdsWebSocketUrlResult
 import com.pluxity.aiot.global.config.WebClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -16,6 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.bodyToMono
 
 private val log = KotlinLogging.logger {}
 
@@ -27,6 +29,8 @@ class EdsClient(
 ) {
     private val client: WebClient = webClientFactory.createClient(edsProperties.baseUrl)
     private lateinit var apiKey: String
+
+    fun getApiKey(): String = apiKey
 
     fun login() {
         val request = EdsLoginRequest(
@@ -130,5 +134,43 @@ class EdsClient(
         }
 
         return response.result
+    }
+
+    fun getEventThumbnail(index: Long): ByteArray? {
+        return try {
+            client
+                .get()
+                .uri("/api/eds/v1/external/event/thumbnail?index=$index&type=evtImg")
+                .header("api-key", apiKey)
+                .exchangeToMono { resp ->
+                    if (resp.statusCode().is2xxSuccessful) {
+                        resp.bodyToMono<ByteArray>()
+                    } else {
+                        reactor.core.publisher.Mono.empty()
+                    }
+                }
+                .block()
+        } catch (e: Exception) {
+            log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
+            null
+        }
+    }
+
+    fun getWebSocketUrl(): String {
+        val response = client
+            .get()
+            .uri("/api/eds/v1/external/websocket/url?external_flag=2")
+            .header("api-key", apiKey)
+            .exchangeToMono { resp ->
+                resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsWebSocketUrlResult>>() {})
+            }
+            .block()
+            ?: throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 응답 없음")
+
+        if (response.code != 200 || response.result == null) {
+            throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 요청 실패: ${response.message}")
+        }
+
+        return response.result.wsUrl
     }
 }

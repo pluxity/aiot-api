@@ -97,6 +97,41 @@ class FileService(
     }
 
     @Transactional
+    fun initiateUpload(
+        bytes: ByteArray,
+        fileName: String,
+        contentType: String,
+    ): Long {
+        val tempPath = FileUtils.createTempFile(fileName)
+        Files.write(tempPath, bytes)
+
+        try {
+            val context =
+                FileProcessingContext(
+                    contentType = contentType,
+                    tempPath = tempPath,
+                    originalFileName = fileName,
+                )
+
+            val filePath = storageStrategy.save(context)
+
+            val fileEntity =
+                FileEntity(
+                    filePath = filePath,
+                    originalFileName = fileName,
+                    contentType = contentType,
+                )
+
+            return repository.save(fileEntity).requiredId
+        } catch (e: Exception) {
+            log.error { "File Upload Exception : ${e.message}" }
+            throw CustomException(ErrorCode.FAILED_TO_UPLOAD_FILE, e.message)
+        } finally {
+            Files.deleteIfExists(tempPath)
+        }
+    }
+
+    @Transactional
     fun finalizeUpload(
         fileId: Long,
         newPath: String,

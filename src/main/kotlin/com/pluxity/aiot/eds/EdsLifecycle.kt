@@ -13,6 +13,7 @@ class EdsLifecycle(
     private val edsClient: EdsClient,
     private val edsKeepAliveScheduler: EdsKeepAliveScheduler,
     private val edsService: EdsService,
+    private val edsWebSocketClient: EdsWebSocketClient,
 ) : SmartLifecycle {
     private var running = false
 
@@ -22,6 +23,7 @@ class EdsLifecycle(
             edsClient.login()
             edsKeepAliveScheduler.start()
             edsService.sync()
+            edsWebSocketClient.connect()
             running = true
             log.info { "EDS 연동 초기화 완료" }
         } catch (e: Exception) {
@@ -31,6 +33,7 @@ class EdsLifecycle(
 
     override fun stop() {
         log.info { "EDS 연동 종료..." }
+        edsWebSocketClient.disconnect()
         edsKeepAliveScheduler.stop()
         running = false
     }

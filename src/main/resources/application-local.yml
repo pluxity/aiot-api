@@ -61,11 +61,7 @@ springwolf: # socket documentation ui
         app: /app
 
 eds:
-  enabled: true
-  base-url: ${EDS_BASE_URL:http://115.93.67.42:28087}
-  system-key: ${EDS_SYSTEM_KEY:pluxity}
-  system-token: "${EDS_SYSTEM_TOKEN:H/zgD+BjRYWps4aXkeh2WDRcmfzhHxT1CICH0D3ZwjiqsE5w3+Y6n+NmyaQJ+fO335hUN0yn0OovD0RTLQYKIQ==}"
-  keep-alive-timeout: ${EDS_KEEP_ALIVE_TIMEOUT:900}
+  enabled: false
 
 logging:
   level:

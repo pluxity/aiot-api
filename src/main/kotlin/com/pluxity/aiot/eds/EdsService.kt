@@ -25,9 +25,13 @@ class EdsService(
     private val cctvService: CctvService,
     private val siteRepository: SiteRepository,
 ) {
-    @Transactional
     fun sync() {
         val edsCameras = edsClient.getCameraList()
+        syncCctvs(edsCameras)
+    }
+
+    @Transactional
+    fun syncCctvs(edsCameras: List<EdsCameraInfo>) {
         val edsCameraIds = edsCameras.map { it.cameraId }.toSet()
         val existingCctvs = cctvRepository.findAllWithSite()
         val existingMap = existingCctvs.associateBy { it.edsCameraId }

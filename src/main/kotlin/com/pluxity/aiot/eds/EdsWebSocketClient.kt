@@ -22,7 +22,7 @@ private val log = KotlinLogging.logger {}
 class EdsWebSocketClient(
     private val edsClient: EdsClient,
     private val objectMapper: ObjectMapper,
-    private val edsEventFacade: EdsEventFacade,
+    private val edsFacade: EdsFacade,
 ) {
     private var disposable: Disposable? = null
     private var stopped = false
@@ -81,7 +81,7 @@ class EdsWebSocketClient(
                             event.type,
                         )?.description}, status=${EdsEventStatus.fromCode(event.status)?.description}"
                     }
-                    edsEventFacade.processEvent(event)
+                    edsFacade.processEvent(event)
                 }
                 tree.has("zones") -> {
                     val crowdCount = objectMapper.readValue(json, EdsCrowdCountData::class.java)

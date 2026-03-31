@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
 class EdsController(
     private val edsService: EdsService,
+    private val edsFacade: EdsFacade,
     private val edsEventService: EdsEventService,
 ) {
     @Operation(summary = "EDS 이벤트 목록 조회", description = "EDS 이벤트 목록을 페이징하여 조회합니다.")
@@ -49,7 +50,7 @@ class EdsController(
     )
     @PostMapping("/sync")
     fun sync(): ResponseEntity<Void> {
-        edsService.sync()
+        edsFacade.sync()
         return ResponseEntity.noContent().build()
     }
 

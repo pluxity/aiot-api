@@ -52,11 +52,7 @@ class EdsEventService(
             return
         }
 
-        thumbnailFileId?.let {
-            fileService.finalizeUpload(it, "${EDS_EVENTS}${eventData.index}/")
-        }
-
-        edsEventRepository.save(
+        val saveEntity = edsEventRepository.save(
             EdsEvent(
                 index = eventData.index,
                 eventId = eventData.id,
@@ -75,5 +71,9 @@ class EdsEventService(
                 thumbnailFileId = thumbnailFileId,
             ),
         )
+
+        thumbnailFileId?.let {
+            fileService.finalizeUpload(it, "${EDS_EVENTS}${saveEntity.requiredId}/")
+        }
     }
 }

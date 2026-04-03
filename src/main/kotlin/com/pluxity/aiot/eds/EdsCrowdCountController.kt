@@ -1,9 +1,9 @@
 package com.pluxity.aiot.eds
 
 import com.pluxity.aiot.cctv.CctvService
+import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.eds.dto.CrowdCountLatestResponse
-import com.pluxity.aiot.eds.dto.CrowdCountTimeSeriesResponse
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
 import io.swagger.v3.oas.annotations.Operation
@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -41,6 +42,7 @@ class EdsCrowdCountController(
         ],
     )
     @GetMapping("/{id}/crowd-count")
+    @Transactional(readOnly = true)
     fun getTimeSeries(
         @Parameter(description = "CCTV ID", required = true) @PathVariable id: Long,
         @Parameter(description = "데이터 집계 간격", example = "HOUR")
@@ -49,7 +51,7 @@ class EdsCrowdCountController(
         @RequestParam("from") from: String,
         @Parameter(description = "조회 종료일(yyyyMMddHHmmss)", required = true)
         @RequestParam("to") to: String,
-    ): ResponseEntity<DataResponseBody<CrowdCountTimeSeriesResponse>> {
+    ): ResponseEntity<DataResponseBody<ListDataResponse>> {
         val cctv = cctvService.findById(id)
         val data = edsCrowdCountService.getTimeSeries(cctv.edsCameraId, interval, from, to)
         return ResponseEntity.ok(DataResponseBody(data))
@@ -67,6 +69,7 @@ class EdsCrowdCountController(
         ],
     )
     @GetMapping("/{id}/crowd-count/latest")
+    @Transactional(readOnly = true)
     fun getLatest(
         @Parameter(description = "CCTV ID", required = true) @PathVariable id: Long,
     ): ResponseEntity<DataResponseBody<CrowdCountLatestResponse>> {

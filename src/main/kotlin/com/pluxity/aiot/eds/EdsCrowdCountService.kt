@@ -12,6 +12,7 @@ import com.pluxity.aiot.eds.dto.CrowdCountLatestResponse
 import com.pluxity.aiot.eds.dto.CrowdCountMetrics
 import com.pluxity.aiot.eds.dto.CrowdCountSensorData
 import com.pluxity.aiot.eds.dto.EdsCrowdCountData
+import com.pluxity.aiot.cctv.CctvService
 import com.pluxity.aiot.eds.measure.CrowdCount
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
@@ -20,6 +21,7 @@ import com.pluxity.aiot.global.utils.DateTimeUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -37,6 +39,7 @@ class EdsCrowdCountService(
     private val writeApi: WriteApi,
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxdbProperties,
+    private val cctvService: CctvService,
 ) {
     fun save(data: EdsCrowdCountData) {
         val timestamp = parseFrameTime(data.frameTime)
@@ -72,12 +75,14 @@ class EdsCrowdCountService(
         }
     }
 
+    @Transactional(readOnly = true)
     fun getTimeSeries(
-        edsCameraId: String,
+        cctvId: Long,
         interval: DataInterval,
         from: String,
         to: String,
     ): ListDataResponse {
+        val edsCameraId = cctvService.findById(cctvId).edsCameraId
         val fromInstant = DateTimeUtils.toIsoTimeFromKst(from)
         val toInstant = DateTimeUtils.toIsoTimeFromKst(to)
         val query =
@@ -117,7 +122,9 @@ class EdsCrowdCountService(
         )
     }
 
-    fun getLatest(edsCameraId: String): CrowdCountLatestResponse {
+    @Transactional(readOnly = true)
+    fun getLatest(cctvId: Long): CrowdCountLatestResponse {
+        val edsCameraId = cctvService.findById(cctvId).edsCameraId
         val query =
             """
             from(bucket: "${influxdbProperties.bucket}")

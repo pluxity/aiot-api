@@ -1,6 +1,5 @@
 package com.pluxity.aiot.eds
 
-import com.pluxity.aiot.cctv.CctvService
 import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.eds.dto.CrowdCountLatestResponse
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -27,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
 @Tag(name = "CCTV Crowd Count", description = "CCTV 군중계수 조회 API")
 class EdsCrowdCountController(
-    private val cctvService: CctvService,
     private val edsCrowdCountService: EdsCrowdCountService,
 ) {
     @Operation(summary = "군중계수 시계열 조회", description = "CCTV ID로 군중계수 데이터를 시간별로 조회합니다.")
@@ -42,7 +39,6 @@ class EdsCrowdCountController(
         ],
     )
     @GetMapping("/{id}/crowd-count")
-    @Transactional(readOnly = true)
     fun getTimeSeries(
         @Parameter(description = "CCTV ID", required = true) @PathVariable id: Long,
         @Parameter(description = "데이터 집계 간격", example = "HOUR")
@@ -52,8 +48,7 @@ class EdsCrowdCountController(
         @Parameter(description = "조회 종료일(yyyyMMddHHmmss)", required = true)
         @RequestParam("to") to: String,
     ): ResponseEntity<DataResponseBody<ListDataResponse>> {
-        val cctv = cctvService.findById(id)
-        val data = edsCrowdCountService.getTimeSeries(cctv.edsCameraId, interval, from, to)
+        val data = edsCrowdCountService.getTimeSeries(id, interval, from, to)
         return ResponseEntity.ok(DataResponseBody(data))
     }
 
@@ -69,12 +64,10 @@ class EdsCrowdCountController(
         ],
     )
     @GetMapping("/{id}/crowd-count/latest")
-    @Transactional(readOnly = true)
     fun getLatest(
         @Parameter(description = "CCTV ID", required = true) @PathVariable id: Long,
     ): ResponseEntity<DataResponseBody<CrowdCountLatestResponse>> {
-        val cctv = cctvService.findById(id)
-        val data = edsCrowdCountService.getLatest(cctv.edsCameraId)
+        val data = edsCrowdCountService.getLatest(id)
         return ResponseEntity.ok(DataResponseBody(data))
     }
 }

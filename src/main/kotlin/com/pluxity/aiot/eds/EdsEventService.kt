@@ -48,6 +48,10 @@ class EdsEventService(
             return
         }
 
+        thumbnailFileId?.let {
+            fileService.finalizeUpload(it, "eds/events/eds-event-${eventData.index}.jpg")
+        }
+
         edsEventRepository.save(
             EdsEvent(
                 index = eventData.index,

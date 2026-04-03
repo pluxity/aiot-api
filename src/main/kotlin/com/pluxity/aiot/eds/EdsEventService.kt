@@ -20,6 +20,10 @@ class EdsEventService(
     private val edsEventRepository: EdsEventRepository,
     private val fileService: FileService,
 ) {
+    companion object {
+        private const val EDS_EVENTS: String = "eds-events/"
+    }
+
     fun findAll(
         page: Int,
         size: Int,
@@ -49,7 +53,7 @@ class EdsEventService(
         }
 
         thumbnailFileId?.let {
-            fileService.finalizeUpload(it, "eds/events/eds-event-${eventData.index}.jpg")
+            fileService.finalizeUpload(it, "${EDS_EVENTS}${eventData.index}/")
         }
 
         edsEventRepository.save(

@@ -1,5 +1,6 @@
 package com.pluxity.aiot.eds
 
+import com.pluxity.aiot.eds.dto.EdsCrowdCountData
 import com.pluxity.aiot.eds.dto.EdsEventData
 import com.pluxity.aiot.file.service.FileService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -11,6 +12,7 @@ class EdsFacade(
     private val edsClient: EdsClient,
     private val edsService: EdsService,
     private val edsEventService: EdsEventService,
+    private val edsCrowdCountService: EdsCrowdCountService,
     private val fileService: FileService,
 ) {
     fun sync() {
@@ -25,5 +27,9 @@ class EdsFacade(
                 fileService.initiateUpload(it, "eds-event-${eventData.index}.jpg", "image/jpeg")
             }
         edsEventService.saveEvent(eventData, thumbnailFileId)
+    }
+
+    fun processCrowdCount(crowdCountData: EdsCrowdCountData) {
+        edsCrowdCountService.save(crowdCountData)
     }
 }

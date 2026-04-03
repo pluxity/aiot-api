@@ -1,6 +1,7 @@
 package com.pluxity.aiot.eds
 
 import com.pluxity.aiot.cctv.Cctv
+import com.pluxity.aiot.cctv.CctvService
 import com.pluxity.aiot.cctv.repository.CctvRepository
 import com.pluxity.aiot.eds.dto.EdsCameraInfo
 import com.pluxity.aiot.eds.dto.EdsRealtimeStreamRequest
@@ -21,11 +22,11 @@ private val log = KotlinLogging.logger {}
 class EdsService(
     private val edsClient: EdsClient,
     private val cctvRepository: CctvRepository,
+    private val cctvService: CctvService,
     private val siteRepository: SiteRepository,
 ) {
     @Transactional
-    fun sync() {
-        val edsCameras = edsClient.getCameraList()
+    fun sync(edsCameras: List<EdsCameraInfo>) {
         val edsCameraIds = edsCameras.map { it.cameraId }.toSet()
         val existingCctvs = cctvRepository.findAllWithSite()
         val existingMap = existingCctvs.associateBy { it.edsCameraId }
@@ -54,21 +55,25 @@ class EdsService(
         log.info { "EDS 카메라 동기화 완료: 신규=$created, 업데이트=$updated, 미연동처리=$deactivated" }
     }
 
-    fun getRealtimeStreamUrl(cameraId: String): EdsStreamResult =
-        edsClient.getRealtimeStreamUrl(EdsRealtimeStreamRequest(cameraId = cameraId))
+    fun getRealtimeStreamUrl(id: Long): EdsStreamResult {
+        val cctv = cctvService.findById(id)
+        return edsClient.getRealtimeStreamUrl(EdsRealtimeStreamRequest(cameraId = cctv.edsCameraId))
+    }
 
     fun getRecordStreamUrl(
-        cameraId: String,
+        id: Long,
         recordStartTime: String,
         recordEndTime: String,
-    ): EdsStreamResult =
-        edsClient.getRecordStreamUrl(
+    ): EdsStreamResult {
+        val cctv = cctvService.findById(id)
+        return edsClient.getRecordStreamUrl(
             EdsRecordStreamRequest(
-                cameraId = cameraId,
+                cameraId = cctv.edsCameraId,
                 recordStartTime = toEdsTimeFormat(recordStartTime),
                 recordEndTime = toEdsTimeFormat(recordEndTime),
             ),
         )
+    }
 
     private fun toEdsTimeFormat(time: String): String = DateTimeUtils.parseCompactDateTime(time).format(EDS_FORMAT)
 

@@ -8,12 +8,18 @@ import org.springframework.stereotype.Component
 
 @Component
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
-class EdsEventFacade(
+class EdsFacade(
     private val edsClient: EdsClient,
+    private val edsService: EdsService,
     private val edsEventService: EdsEventService,
     private val edsCrowdCountService: EdsCrowdCountService,
     private val fileService: FileService,
 ) {
+    fun sync() {
+        val edsCameras = edsClient.getCameraList()
+        edsService.sync(edsCameras)
+    }
+
     fun processEvent(eventData: EdsEventData) {
         val thumbnailBytes = edsClient.getEventThumbnail(eventData.index)
         val thumbnailFileId =

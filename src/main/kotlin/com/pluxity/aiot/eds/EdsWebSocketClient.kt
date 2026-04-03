@@ -22,7 +22,7 @@ private val log = KotlinLogging.logger {}
 class EdsWebSocketClient(
     private val edsClient: EdsClient,
     private val objectMapper: ObjectMapper,
-    private val edsEventFacade: EdsEventFacade,
+    private val edsFacade: EdsFacade,
 ) {
     private var disposable: Disposable? = null
     private var stopped = false
@@ -81,12 +81,12 @@ class EdsWebSocketClient(
                             event.type,
                         )?.description}, status=${EdsEventStatus.fromCode(event.status)?.description}"
                     }
-                    edsEventFacade.processEvent(event)
+                    edsFacade.processEvent(event)
                 }
                 tree.has("zones") -> {
                     val crowdCount = objectMapper.readValue(json, EdsCrowdCountData::class.java)
                     log.info { "EDS 군중계수: camera=${crowdCount.cameraId}, total=${crowdCount.total}" }
-                    edsEventFacade.processCrowdCount(crowdCount)
+                    edsFacade.processCrowdCount(crowdCount)
                 }
                 else -> {
                     log.debug { "EDS 알 수 없는 메시지: $json" }

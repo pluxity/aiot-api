@@ -4,6 +4,7 @@ import com.pluxity.aiot.cctv.entity.dummyCctv
 import com.pluxity.aiot.cctv.repository.CctvRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.site.SiteRepository
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -14,8 +15,9 @@ import org.springframework.data.repository.findByIdOrNull
 class CctvServiceKoTest :
     BehaviorSpec({
         val cctvRepository: CctvRepository = mockk()
+        val siteRepository: SiteRepository = mockk()
 
-        val cctvService = CctvService(cctvRepository)
+        val cctvService = CctvService(cctvRepository, siteRepository)
 
         Given("CCTV 목록 조회를 진행할 때") {
             When("정상 요청이 오면") {

@@ -50,9 +50,12 @@ class Cctv(
     ) {
         this.longitude = longitude
         this.latitude = latitude
-        val gf = GeometryFactory(PrecisionModel(), 4326)
-        this.geom = gf.createPoint(Coordinate(longitude, latitude))
+        this.geom = GEOMETRY_FACTORY.createPoint(Coordinate(longitude, latitude))
         this.site = site
+    }
+
+    companion object {
+        private val GEOMETRY_FACTORY = GeometryFactory(PrecisionModel(), 4326)
     }
 
     fun updateLocationEmpty() {

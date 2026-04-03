@@ -86,6 +86,7 @@ class EdsWebSocketClient(
                 tree.has("zones") -> {
                     val crowdCount = objectMapper.readValue(json, EdsCrowdCountData::class.java)
                     log.info { "EDS 군중계수: camera=${crowdCount.cameraId}, total=${crowdCount.total}" }
+                    edsEventFacade.processCrowdCount(crowdCount)
                 }
                 else -> {
                     log.debug { "EDS 알 수 없는 메시지: $json" }

@@ -23,8 +23,8 @@ domain:
   url: ${API_URL:http://localhost:8080}
 
 influx:
-  url: http://dev.pluxity.com:8086
-  token: kg04O5mxWTYM--k28CKYgNChc4pv0C3s1yx1VuUjp7kxoyzQDtkeT6M22af2A6RwXRAdbpEucV2GTqXN_iYlGQ==
+  url: http://localhost:8086
+  token: Lt190k0grM2oMQ1zUF-b61ZUpjanN72ko7v9_9IGywVgw169itG4YlSL0KhSczJQy8wmd6IL60Uo6HGaRRWjSg==
   org: pluxity
   bucket: aiot-bucket
 

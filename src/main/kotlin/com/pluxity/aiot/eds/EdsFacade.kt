@@ -21,10 +21,14 @@ class EdsFacade(
     }
 
     fun processEvent(eventData: EdsEventData) {
-        val thumbnailBytes = edsClient.getEventThumbnail(eventData.index)
         val thumbnailFileId =
-            thumbnailBytes?.let {
-                fileService.initiateUpload(it, "eds-event-${eventData.index}.jpg", "image/jpeg")
+            if (eventData.status == EdsEventStatus.STARTED) {
+                val thumbnailBytes = edsClient.getEventThumbnail(eventData.index)
+                thumbnailBytes?.let {
+                    fileService.initiateUpload(it, "eds-event-${eventData.index}.jpg", "image/jpeg")
+                }
+            } else {
+                null
             }
         edsEventService.saveEvent(eventData, thumbnailFileId)
     }

@@ -47,7 +47,7 @@ class EdsEventService(
             existing.updateOnEnd(
                 eventData.eventEnd,
                 eventData.frameTime,
-                EdsEventStatus.fromCode(eventData.status) ?: EdsEventStatus.ENDED,
+                eventData.status ?: EdsEventStatus.ENDED,
             )
             return
         }
@@ -58,11 +58,11 @@ class EdsEventService(
                 eventId = eventData.id,
                 profileName = eventData.profileName,
                 cameraId = eventData.cameraId,
-                eventType = EdsEventType.fromCode(eventData.type),
+                eventType = eventData.type,
                 eventStart = eventData.eventStart,
                 eventEnd = eventData.eventEnd,
                 frameTime = eventData.frameTime,
-                eventStatus = EdsEventStatus.fromCode(eventData.status) ?: EdsEventStatus.STARTED,
+                eventStatus = eventData.status ?: EdsEventStatus.STARTED,
                 eventZoneId = eventData.eventZoneId,
                 eventZoneName = eventData.eventZoneName,
                 latitude = eventData.latitude,

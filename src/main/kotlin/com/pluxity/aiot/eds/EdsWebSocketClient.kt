@@ -77,9 +77,7 @@ class EdsWebSocketClient(
                 tree.has("event_start") -> {
                     val event = objectMapper.readValue(json, EdsEventData::class.java)
                     log.info {
-                        "EDS 이벤트: id=${event.id}, camera=${event.cameraId}, type=${EdsEventType.fromCode(
-                            event.type,
-                        )?.description}, status=${EdsEventStatus.fromCode(event.status)?.description}"
+                        "EDS 이벤트: id=${event.id}, camera=${event.cameraId}, type=${event.type?.description}, status=${event.status?.description}"
                     }
                     edsFacade.processEvent(event)
                 }

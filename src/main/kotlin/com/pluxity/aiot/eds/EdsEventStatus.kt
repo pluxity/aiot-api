@@ -1,5 +1,7 @@
 package com.pluxity.aiot.eds
 
+import com.fasterxml.jackson.annotation.JsonCreator
+
 enum class EdsEventStatus(
     val code: Int,
     val description: String,
@@ -10,6 +12,7 @@ enum class EdsEventStatus(
     ;
 
     companion object {
+        @JsonCreator
         fun fromCode(code: Int): EdsEventStatus? = entries.find { it.code == code }
     }
 }

@@ -1,9 +1,7 @@
 package com.pluxity.aiot.eds
 
-import com.fasterxml.jackson.annotation.JsonValue
-
 enum class EdsCameraStatus(
-    @JsonValue val code: Int,
+    val code: Int,
     val description: String,
 ) {
     DISCONNECTED(0, "미연동"),

@@ -1,9 +1,7 @@
 package com.pluxity.aiot.eds
 
-import com.fasterxml.jackson.annotation.JsonValue
-
 enum class EdsCameraType(
-    @JsonValue val code: String,
+    val code: String,
     val description: String,
 ) {
     IP("ip", "IP 카메라"),

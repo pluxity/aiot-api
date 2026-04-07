@@ -41,36 +41,38 @@ class EdsEventService(
         eventData: EdsEventData,
         thumbnailFileId: Long?,
     ) {
+        val status = EdsEventStatus.fromCode(eventData.status)
         val existing = edsEventRepository.findByEventIdAndEventStatusNot(eventData.id, EdsEventStatus.ENDED)
 
         if (existing != null) {
             existing.updateOnEnd(
                 eventData.eventEnd,
                 eventData.frameTime,
-                eventData.status ?: EdsEventStatus.ENDED,
+                status ?: EdsEventStatus.ENDED,
             )
             return
         }
 
-        val saveEntity = edsEventRepository.save(
-            EdsEvent(
-                index = eventData.index,
-                eventId = eventData.id,
-                profileName = eventData.profileName,
-                cameraId = eventData.cameraId,
-                eventType = eventData.type,
-                eventStart = eventData.eventStart,
-                eventEnd = eventData.eventEnd,
-                frameTime = eventData.frameTime,
-                eventStatus = eventData.status ?: EdsEventStatus.STARTED,
-                eventZoneId = eventData.eventZoneId,
-                eventZoneName = eventData.eventZoneName,
-                latitude = eventData.latitude,
-                longitude = eventData.longitude,
-                detectedVehicleNumber = eventData.detectedVehicleNumber,
-                thumbnailFileId = thumbnailFileId,
-            ),
-        )
+        val saveEntity =
+            edsEventRepository.save(
+                EdsEvent(
+                    index = eventData.index,
+                    eventId = eventData.id,
+                    profileName = eventData.profileName,
+                    cameraId = eventData.cameraId,
+                    eventType = EdsEventType.fromCode(eventData.type),
+                    eventStart = eventData.eventStart,
+                    eventEnd = eventData.eventEnd,
+                    frameTime = eventData.frameTime,
+                    eventStatus = status ?: EdsEventStatus.STARTED,
+                    eventZoneId = eventData.eventZoneId,
+                    eventZoneName = eventData.eventZoneName,
+                    latitude = eventData.latitude,
+                    longitude = eventData.longitude,
+                    detectedVehicleNumber = eventData.detectedVehicleNumber,
+                    thumbnailFileId = thumbnailFileId,
+                ),
+            )
 
         thumbnailFileId?.let {
             fileService.finalizeUpload(it, "${EDS_EVENTS}${saveEntity.requiredId}/")

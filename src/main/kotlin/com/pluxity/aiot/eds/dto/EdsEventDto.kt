@@ -2,8 +2,6 @@ package com.pluxity.aiot.eds.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.pluxity.aiot.eds.EdsEventStatus
-import com.pluxity.aiot.eds.EdsEventType
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EdsEventData(
@@ -13,14 +11,14 @@ data class EdsEventData(
     val profileName: String,
     @field:JsonProperty("camera_id")
     val cameraId: String,
-    val type: EdsEventType?,
+    val type: Int?,
     @field:JsonProperty("event_start")
     val eventStart: String,
     @field:JsonProperty("event_end")
     val eventEnd: String? = null,
     @field:JsonProperty("frame_time")
     val frameTime: String? = null,
-    val status: EdsEventStatus?,
+    val status: Int?,
     @field:JsonProperty("event_zone_id")
     val eventZoneId: Int? = null,
     @field:JsonProperty("event_zone_name")

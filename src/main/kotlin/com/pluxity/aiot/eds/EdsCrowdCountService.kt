@@ -3,6 +3,7 @@ package com.pluxity.aiot.eds
 import com.influxdb.client.QueryApi
 import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
+import com.pluxity.aiot.cctv.CctvService
 import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.dto.ListMetaData
 import com.pluxity.aiot.data.dto.ListMetricData
@@ -12,7 +13,6 @@ import com.pluxity.aiot.eds.dto.CrowdCountLatestResponse
 import com.pluxity.aiot.eds.dto.CrowdCountMetrics
 import com.pluxity.aiot.eds.dto.CrowdCountSensorData
 import com.pluxity.aiot.eds.dto.EdsCrowdCountData
-import com.pluxity.aiot.cctv.CctvService
 import com.pluxity.aiot.eds.measure.CrowdCount
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException

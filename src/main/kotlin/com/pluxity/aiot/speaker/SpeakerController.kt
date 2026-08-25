@@ -6,7 +6,6 @@ import com.pluxity.aiot.global.response.PageResponse
 import com.pluxity.aiot.speaker.dto.SpeakerBroadcastRequest
 import com.pluxity.aiot.speaker.dto.SpeakerBroadcastResponse
 import com.pluxity.aiot.speaker.dto.SpeakerBroadcastSearchRequest
-import com.pluxity.aiot.speaker.dto.SpeakerBroadcastSummaryResponse
 import com.pluxity.aiot.speaker.dto.SpeakerResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -18,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -60,7 +58,7 @@ class SpeakerController(
             "선택한 스피커로 음성 안내를 송출합니다. " +
                 "프리셋(presetId)과 직접 입력(message) 중 하나를 지정하고, " +
                 "송출 대상은 스피커 아이디(speakerIds) 또는 현장 아이디(siteIds) 중 하나 이상을 지정합니다. " +
-                "대상별 성공/실패는 송출 이력 상세 조회에서 확인합니다.",
+                "장치별 성공/실패는 송출 이력 조회에서 확인합니다.",
     )
     @ApiResponses(
         value = [
@@ -106,7 +104,12 @@ class SpeakerController(
         return ResponseEntity.noContent().build()
     }
 
-    @Operation(summary = "스피커 송출 이력 조회", description = "스피커 송출 이력을 페이징 조회합니다. 기간 · 송출자 · 현장으로 필터링할 수 있습니다.")
+    @Operation(
+        summary = "스피커 송출 이력 조회",
+        description =
+            "스피커 송출 이력을 페이징 조회합니다. 기간 · 송출자 · 현장으로 필터링할 수 있습니다. " +
+                "이력은 장치 1건 단위로 남으며 각 건에 성공 여부와 실패 사유가 포함됩니다.",
+    )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "조회 성공"),
@@ -136,45 +139,10 @@ class SpeakerController(
         @RequestParam("userId", required = false) userId: String? = null,
         @Parameter(description = "현장 아이디", example = "1")
         @RequestParam("siteId", required = false) siteId: Long? = null,
-    ): ResponseEntity<DataResponseBody<PageResponse<SpeakerBroadcastSummaryResponse>>> =
+    ): ResponseEntity<DataResponseBody<PageResponse<SpeakerBroadcastResponse>>> =
         ResponseEntity.ok(
             DataResponseBody(
                 speakerBroadcastService.findAll(SpeakerBroadcastSearchRequest(page, size, from, to, userId, siteId)),
             ),
         )
-
-    @Operation(
-        summary = "스피커 송출 이력 상세 조회",
-        description = "송출 이력 한 건을 조회합니다. 송출 대상별 성공/실패와 실패 사유를 포함합니다.",
-    )
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "조회 성공"),
-            ApiResponse(
-                responseCode = "404",
-                description = "송출 이력을 찾을 수 없음",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "500",
-                description = "서버 오류",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-        ],
-    )
-    @GetMapping("/broadcasts/{broadcastId}")
-    fun getBroadcast(
-        @Parameter(description = "송출 이력 아이디", required = true) @PathVariable broadcastId: Long,
-    ): ResponseEntity<DataResponseBody<SpeakerBroadcastResponse>> =
-        ResponseEntity.ok(DataResponseBody(speakerBroadcastService.findById(broadcastId)))
 }

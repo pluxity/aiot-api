@@ -1,7 +1,6 @@
 package com.pluxity.aiot.speaker.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.pluxity.aiot.broadcast.dto.BroadcastResult
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.Size
@@ -45,29 +44,11 @@ data class SpeakerBroadcastSearchRequest(
     val siteId: Long? = null,
 )
 
-@Schema(description = "스피커 송출 이력 목록 항목")
-data class SpeakerBroadcastSummaryResponse(
-    @field:Schema(description = "송출 이력 아이디", example = "1")
-    val id: Long,
-    @field:Schema(description = "실제 송출된 메시지", example = "잠시 후 공원이 폐장합니다.")
-    val message: String,
-    @field:Schema(description = "프리셋 송출인 경우 프리셋 아이디. 직접 입력이면 null", example = "1")
-    val presetId: Long?,
-    @field:Schema(description = "프리셋 송출인 경우 프리셋 제목. 직접 입력이면 null", example = "폐장 안내")
-    val presetTitle: String?,
-    @field:Schema(description = "송출자 아이디", example = "admin")
-    val userId: String,
-    @field:Schema(description = "송출 시각", example = "2026-08-25T09:00:00")
-    val broadcastAt: String,
-    @field:Schema(description = "송출 대상 총 개수", example = "2")
-    val totalCount: Int,
-    @field:Schema(description = "송출 성공 개수", example = "1")
-    val successCount: Int,
-    @field:Schema(description = "송출 실패 개수", example = "1")
-    val failureCount: Int,
+@Schema(
+    description =
+        "스피커 송출 이력. 업체 API 가 장치 단건 처리이므로 이력도 장치 1건 단위로 남습니다. " +
+            "한 번의 송출 요청이 스피커 N개를 대상으로 하면 이력 N건이 생성됩니다",
 )
-
-@Schema(description = "스피커 송출 이력 상세. 대상별 성공/실패 사유를 포함합니다")
 data class SpeakerBroadcastResponse(
     @field:Schema(description = "송출 이력 아이디", example = "1")
     val id: Long,
@@ -77,16 +58,20 @@ data class SpeakerBroadcastResponse(
     val presetId: Long?,
     @field:Schema(description = "프리셋 송출인 경우 프리셋 제목. 직접 입력이면 null", example = "폐장 안내")
     val presetTitle: String?,
+    @field:Schema(description = "송출 대상 스피커 아이디", example = "1")
+    val speakerId: Long,
+    @field:Schema(description = "송출 대상 스피커 명칭", example = "정문 스피커")
+    val speakerName: String,
+    @field:Schema(description = "송출 대상 스피커의 소속 현장 아이디", example = "1")
+    val siteId: Long?,
+    @field:Schema(description = "송출 대상 스피커의 소속 현장 명칭", example = "중앙공원")
+    val siteName: String?,
     @field:Schema(description = "송출자 아이디", example = "admin")
     val userId: String,
     @field:Schema(description = "송출 시각", example = "2026-08-25T09:00:00")
     val broadcastAt: String,
-    @field:Schema(description = "송출 대상 총 개수", example = "2")
-    val totalCount: Int,
-    @field:Schema(description = "송출 성공 개수", example = "1")
-    val successCount: Int,
-    @field:Schema(description = "송출 실패 개수", example = "1")
-    val failureCount: Int,
-    @field:Schema(description = "송출 대상별 결과")
-    val results: List<BroadcastResult>,
+    @field:Schema(description = "송출 성공 여부", example = "true")
+    val success: Boolean,
+    @field:Schema(description = "송출 실패 사유. 성공 시 null", example = "장치가 응답하지 않습니다.")
+    val failureReason: String?,
 )

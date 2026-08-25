@@ -24,10 +24,10 @@ Service 는 **가짜 데이터를 돌려주지 않는다.** 목록은 빈 응답
 |---|---|
 | 스피커/전광판 **목록 조회** | 장치 등록 · 수정 · 삭제 (#24) |
 | 스피커/전광판 **송출** (#26 #28) | 표출/음성 옵션 필드 (업체 스펙 미수령) |
-| **송출 이력** 목록 · 상세 (#26 #28) | 예약 송출 (이슈에서 이미 제외) |
+| **송출 이력** 목록 (#26 #28) | 예약 송출 (이슈에서 이미 제외) |
 | 프리셋 **CRUD 5종** (#25 #27) | |
 
-## 2. 엔드포인트 18개
+## 2. 엔드포인트 16개
 
 ### 스피커 (TTS)
 
@@ -35,17 +35,19 @@ Service 는 **가짜 데이터를 돌려주지 않는다.** 목록은 빈 응답
 |---|---|---|---|
 | GET | `/speakers` | `DataResponseBody<List<SpeakerResponse>>` | `siteId` 필터. 비페이징 |
 | POST | `/speakers/broadcasts` | `204` | 프리셋 또는 직접 입력 송출 |
-| GET | `/speakers/broadcasts` | `DataResponseBody<PageResponse<SpeakerBroadcastSummaryResponse>>` | `page` `size` `from` `to` `userId` `siteId` |
-| GET | `/speakers/broadcasts/{broadcastId}` | `DataResponseBody<SpeakerBroadcastResponse>` | 대상별 성공/실패와 실패 사유 |
+| GET | `/speakers/broadcasts` | `DataResponseBody<PageResponse<SpeakerBroadcastResponse>>` | `page` `size` `from` `to` `userId` `siteId` |
 | GET | `/speaker-presets` | `DataResponseBody<PageResponse<SpeakerPresetResponse>>` | `page` `size` `title` |
 | GET | `/speaker-presets/{presetId}` | `DataResponseBody<SpeakerPresetResponse>` | |
 | POST | `/speaker-presets` | `201` + `Long` | `@ResponseCreated` |
 | PUT | `/speaker-presets/{presetId}` | `204` | |
 | DELETE | `/speaker-presets/{presetId}` | `204` | |
 
+Swagger Tag 는 도메인별로 「장치 · 송출 · 이력」 과 「프리셋」 둘로 나뉜다.
+프론트 송출 화면이 장치 목록과 송출을 함께 쓰므로 한 그룹에 두는 편이 찾기 쉽다.
+
 ### 전광판 (LED)
 
-`/displays`, `/displays/broadcasts/**`, `/display-presets/**` — 스피커와 **완전히 동일한 형태**다.
+`/displays`, `/displays/broadcasts`, `/display-presets/**` — 스피커와 **완전히 동일한 형태**다.
 `speakerIds` 자리에 `displayIds` 가 들어가는 것만 다르다.
 
 ## 3. 스키마
@@ -68,18 +70,14 @@ SpeakerBroadcastRequest(
     siteIds: List<Long>?,     // 해당 현장의 모든 장치로 송출
 )
 
-// 이력 목록 항목 — 건별 요약
-SpeakerBroadcastSummaryResponse(
-    id: Long, message: String,
-    presetId: Long?, presetTitle: String?,   // 직접 입력이면 둘 다 null
-    userId: String, broadcastAt: String,
-    totalCount: Int, successCount: Int, failureCount: Int,
-)
-
-// 이력 상세 — 요약 + 대상별 결과
+// 이력 1건 = 장치 1건. 요청 한 번이 스피커 N개를 대상으로 하면 이력 N건이 남는다
 SpeakerBroadcastResponse(
-    ...요약과 동일...,
-    results: List<BroadcastResult>,   // targetId, targetName, siteId, siteName, success, failureReason?
+    id: Long, message: String,
+    presetId: Long?, presetTitle: String?,     // 직접 입력이면 둘 다 null
+    speakerId: Long, speakerName: String,
+    siteId: Long?, siteName: String?,
+    userId: String, broadcastAt: String,
+    success: Boolean, failureReason: String?,  // 성공 시 사유는 null
 )
 
 SpeakerPresetRequest(
@@ -94,11 +92,12 @@ SpeakerPresetResponse(id, title, message, @JsonUnwrapped BaseResponse)
 
 | 결정 | 근거 |
 |---|---|
-| 송출 응답을 **`204`** 로. 성공/실패는 이력에서 확인 | 기존 `AnnouncementController.broadcast` 와 같은 형태. 송출은 요청 접수이고 대상별 결과는 이력이 단일 출처가 된다 |
-| 이력을 **목록/상세로 분리** | `204` 로 간 이상 프론트가 대상별 실패 사유를 볼 경로가 이력뿐이다. 목록에 매번 `results` 를 싣지 않기 위해 요약만 내리고, 상세에서 대상별 결과를 준다 |
+| **이력 1건 = 장치 1건** | 업체 API 가 장치 단건 처리다 — 한 대에 보내고 결과를 받는 형태. 요청 단위로 묶어 집계 필드를 두면 실제 호출 단위와 어긋난다. 장치 단위로 남기면 실패한 장치만 재송출하기도 쉽다 |
+| 이력에 **집계 카운트를 두지 않음** | 위와 같은 이유. 건수가 필요하면 목록의 `totalElements` 로 충분하고, 성공/실패 집계는 필터로 얻는 편이 정확하다 |
+| 이력 **상세 조회 없음** | 이력이 장치 단위라 목록 항목 하나가 이미 완결된 정보(대상 · 성공 여부 · 실패 사유)를 담는다. 상세로 더 보여줄 것이 없다 |
+| 송출 응답을 **`204`** 로. 결과는 이력에서 확인 | 기존 `AnnouncementController.broadcast` 와 같은 형태. 송출은 요청 접수이고 장치별 결과는 이력이 단일 출처가 된다 |
 | 이력 경로를 **`GET /speakers/broadcasts`** 로 (송출과 같은 경로) | 같은 컬렉션에 `POST` 는 송출, `GET` 은 이력. 프론트 입장에서 짝이 명확하다 |
-| `BroadcastResult` 에 **`siteId` · `siteName` 포함** | 이력 상세에서 실패한 장치가 어느 현장인지 즉시 보여줄 수 있다 |
-| 프리셋을 `/speakers/presets` 가 아니라 **`/speaker-presets`** 로 분리 | 후속에 `GET /speakers/{id}` 가 붙을 때 경로 변수와 섞이지 않는다. Swagger Tag 는 도메인별로 **장치·송출·이력** 과 **프리셋** 둘로만 나뉜다 — 프론트에서 송출 화면은 장치 목록과 송출을 함께 쓰므로 한 그룹에 두는 편이 찾기 쉽다 |
+| 프리셋을 `/speakers/presets` 가 아니라 **`/speaker-presets`** 로 분리 | 후속에 `GET /speakers/{id}` 가 붙을 때 경로 변수와 섞이지 않는다 |
 | 프리셋 저장소를 **스피커/전광판 분리** | 업체 스펙 확정 후 붙일 옵션 필드(음색·볼륨 vs 스크롤·색상)가 서로 겹치지 않는다. 공유 테이블로 두면 nullable 범벅이 된다 |
 | 송출 대상을 **장치 ID + 현장 ID 둘 다** 허용 | 개별 선택(#26)과 현장 일괄(#28)이 둘 다 요구사항이다. 현장 일괄을 프론트가 목록 조회 후 전체 선택으로 흉내내면 장치가 늘 때마다 요청이 커진다 |
 | 장치 목록 조회는 **비페이징** | 기존 `CctvController.getAll` 과 같은 형태. 한 현장의 장치 수가 페이징이 필요할 규모가 아니다 |
@@ -110,9 +109,10 @@ SpeakerPresetResponse(id, title, message, @JsonUnwrapped BaseResponse)
 | 항목 | 확정 조건 |
 |---|---|
 | 업체 송출 API 호출 | 하드웨어 업체 스펙 수령. `SpeakerBroadcastService.broadcast` / `DisplayBroadcastService.broadcast` 의 `TODO` 지점 |
+| 다중 장치 송출의 처리 방식 | 업체가 단건 처리라 N개 대상이면 N번 호출한다. 순차/병렬 여부와 일부 실패 시 나머지 진행 정책은 스펙 수령 후 결정 |
 | 표출/음성 옵션 필드 | 업체 스펙 수령 후 `SpeakerPresetRequest` 에 `options` 중첩 객체로 추가 (기존 필드는 그대로 두는 additive 변경) |
 | `DeviceStatus` 조회 방식 | 업체 API 가 상태를 주는지에 따라. 안 주면 `UNKNOWN` 고정 |
-| 송출 성공/실패 판정 시점 | 업체 API 가 동기 응답을 주면 송출 시점에 확정, 비동기면 이력이 `PENDING` 을 거쳐야 한다. 후자면 이력 스키마에 상태 필드가 추가된다 |
+| 송출 성공/실패 판정 시점 | 업체 API 가 동기 응답을 주면 이력 적재 시점에 확정. 비동기면 이력에 `PENDING` 상태 필드가 추가된다 |
 | 장치 등록/수정/삭제 (#24) | 프론트 관리 화면 착수 시점 |
 
 ## 6. 후속 작업

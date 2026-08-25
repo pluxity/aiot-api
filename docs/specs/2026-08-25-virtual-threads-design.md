@@ -13,6 +13,7 @@
 | 지적 | 판정 | 반영 |
 |---|---|---|
 | 썸네일 크기 검사가 `bodyTo(ByteArray)` **이후**라 상한을 복원하지 못한다 (chunked/과소 신고 시 전량 적재) | **타당** — "복원한다" 는 서술이 틀렸다 | §6.6 을 `response.body` + `readNBytes(상한+1)` 스트림 판정으로 교체, §6.5 서술 정정, §8.3 확인 항목 추가 |
+| §6.8 의 "Mobius 동시 호출이 1이었다" 가 틀렸다. 코루틴은 단일 스레드에서도 동시적이라 이미 동시 호출 중이며, `Semaphore(10)` 은 상한 신설이 아니라 **기존 동시성을 조이는 것** | **타당** — §5.1 에 맞게 써놓고 §6.8 에서 뒤집었다 | §6.8 전면 재작성(Reactor Netty `max(코어,8)×2` 실측 근거 추가, 기본값 10 → 20), §5.1 보강, §6.4·§8.3·§9 갱신 |
 
 ## 0. 배경 — 왜 지금인가
 
@@ -518,6 +519,10 @@ runBlocking {                    // ← 디스패처 미지정: 호출 스레드
 동시성은 오직 `WebClient` 서스펜션 지점에서만 생긴다. 그 사이의 JPA 호출
 (`siteRepository.findFirstByPointInPolygon`)과 엔티티 변경은 전부 직렬이다.
 
+**단 "동시성이 없다" 는 뜻이 아니다.** 서스펜션 지점이 곧 HTTP 호출이므로
+**아웃바운드 요청은 이미 동시에 나가고 있다.** 직렬인 것은 CPU 작업과 블로킹 JDBC 뿐이다.
+전환 시 동시성을 "새로 만드는" 것이 아니라는 점이 상한 설정에 영향을 준다 — §6.8.
+
 **부수 효과 하나는 다행이다** — `@Transactional` 이 붙은 `statusSynchronize` / `scheduledBatteryDataUpdate`
 에서 엔티티 변경이 호출 스레드(= 트랜잭션 스레드)에서 일어나므로 dirty checking 이 동작한다.
 `Dispatchers.IO` 를 붙였다면 조용히 깨졌을 코드다.
@@ -746,7 +751,7 @@ class AsyncConfig {
 
 | | 변경 전 | 변경 후 |
 |---|---|---|
-| `scheduledBatteryDataUpdate` (Mobius) | 순차, 단일 스레드 | 즉시 시작, 가상 스레드 fan-out(§6.8) |
+| `scheduledBatteryDataUpdate` (Mobius) | 다른 cron 이 끝난 뒤 시작. HTTP 자체는 이미 동시(§5.1) | **즉시 시작**, 동시성은 세마포어로 현행 유지(§6.8) |
 | `generateDailyMessage` (LLM) | 앞 작업 완료 후 시작 | **동시 시작**, 상한 `Semaphore(5)` 유지(§6.7) |
 
 **LLM 쪽은 `concurrencyLimit` 상한이 있으므로 안전하다.** Mobius 쪽은 §6.8 에서 상한을 새로 건다.
@@ -1073,18 +1078,52 @@ fun statusSynchronize() {
     }
 ```
 
-**`statusSemaphore` 를 새로 도입한다.** 현재는 단일 스레드라 Mobius 동시 호출이 사실상 1이었다.
-진짜 병렬이 되면 Feature 개수만큼 동시 호출이 나간다. **하류 보호를 위해 상한이 필요하다.**
+#### `statusSemaphore` — 새 상한이 아니라 **기존 상한의 이전(移轉)이다**
+
+여기서 흔한 오해를 먼저 정리한다. **"지금은 단일 스레드라 Mobius 동시 호출이 1" 이 아니다.**
+
+`async` 는 단일 스레드에서 돌지만 **코루틴은 한 스레드에서도 동시적**이다. A 가 `awaitBody` 에서
+suspend 하면 스레드를 놓고 B 가 자기 요청을 쏜다. 즉 **아웃바운드 HTTP 는 이미 동시에 나가고 있다**
+(§5.1 에서 "동시성은 오직 WebClient 서스펜션 지점에서만 생긴다" 고 쓴 것이 정확히 이 뜻이다).
+직렬화되는 것은 CPU 작업과 블로킹 JDBC 호출뿐이다.
+
+**그럼 현재 무엇이 상한을 잡고 있나 — Reactor Netty 커넥션 풀이다.**
+
+```bash
+javap -c -p -cp <reactor-netty-core-1.3.3 전개경로> reactor.netty.resources.ConnectionProvider
+#   DEFAULT_POOL_MAX_CONNECTIONS = Math.max(Runtime.availableProcessors(), 8) * 2
+#   pendingAcquireMaxCount = 500
+#   reactor.netty.pool.acquireTimeout = 45000 (ms)
+```
+
+`WebClientFactory` 가 `HttpClient.create()` 로 **공유 기본 커넥션 프로바이더**를 쓰므로
+호스트당 `max(코어수, 8) × 2` 가 실효 상한이다. **10코어 장비면 20이다.**
+
+| | 현재 | RestClient + JDK HttpClient 전환 후 |
+|---|---|---|
+| Mobius 동시 호출 상한 | **`max(코어,8)×2`** (10코어 → 20), 초과분은 최대 500개 대기 / 45초 타임아웃 | **없음** — JDK `HttpClient` 에는 HTTP/1.1 호스트당 커넥션 상한 설정이 없다 |
+
+**즉 전환하면 암묵적 상한이 사라진다. 세마포어는 그것을 명시적으로 되살리는 장치다.**
 
 ```kotlin
-    // 현재는 runBlocking 단일 스레드라 동시 호출이 1이었다. 병렬화하면서 상한을 명시한다
-    // (설계문서 §4.1 — 가상 스레드는 (A)만 해결하고 (B)는 남는다).
+    // 지금은 Reactor Netty 커넥션 풀(max(코어,8)×2)이 암묵적 상한이었다.
+    // JDK HttpClient 로 바꾸면 그 상한이 사라지므로 명시적으로 되살린다
+    // (설계문서 §6.8 — 새 제한이 아니라 기존 제한의 이전이다).
     private val statusSemaphore = Semaphore(mobiusProperties.concurrencyLimit)
 ```
 
-> `MobiusProperties` 에 `concurrencyLimit: Int = 10` 을 추가한다. `LlmProperties` 와 같은 형태다.
-> **10 은 보수적 출발점이다.** Mobius 가 견디는 수치를 모르므로, 적용 후 08:00 배치 로그에서
-> 타임아웃/5xx 비율을 확인하고 조정한다.
+> **`MobiusProperties.concurrencyLimit` 기본값은 `20` 으로 둔다.** 초안의 `10` 은
+> **현재 실효 동시성의 절반이라 08:00 배치를 느리게 만든다.** 목표는 "조이는 것" 이 아니라
+> "지금과 같게 유지하는 것" 이므로, 운영 장비의 코어 수를 확인해
+> `max(코어, 8) × 2` 에 맞춘다.
+>
+> ```bash
+> # 운영 컨테이너에서
+> nproc    # 또는 애플리케이션 로그에 Runtime.availableProcessors() 를 한 번 찍는다
+> ```
+>
+> 값을 바꾸려면 **먼저 현재 값을 알아야 한다.** 조정은 08:00 배치 로그의 타임아웃/5xx 비율을
+> 본 뒤에 한다.
 
 `FeatureScheduler.scheduledBatteryDataUpdate` 도 **동일한 구조**로 바꾼다 —
 `aiotService.fetchDeviceBatteryData` 병렬 조회 → 트랜잭션 스레드에서 `feature.updateBatteryLevel(...)`.
@@ -1228,6 +1267,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 |---|---|
 | `@Scheduled` 3개가 `app-sched-` 에서 도는가 | 로그 `[%thread]` 확인. `pool-N-thread-` 가 안 나와야 한다 |
 | 08:00 두 cron 이 동시에 시작하는가 | 시작 로그 타임스탬프 비교 |
+| Mobius 배치 소요 시간 (§6.8) | **전환 전후를 비교한다.** 느려졌다면 `concurrencyLimit` 이 기존 실효 상한보다 작다는 뜻이다 |
 | STOMP 하트비트가 살아 있는가 | 클라이언트 연결 유지 확인 + `stomp-heartbeat-` 스레드 존재 |
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
@@ -1253,8 +1293,9 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 4. **`heartBeatScheduler` 는 플랫폼 스레드로 남는다.** poolSize 1 이고 하는 일이 타이밍 관리라 무해하다.
 5. **RestClient 로 바뀌면서 `responseTimeout` / write 타임아웃이 사라진다.** connect/read 2종만 남고,
    `readTimeout` 이 유일한 방어선이 된다(§6.5).
-6. **Semaphore 값 2개(LLM 5, Mobius 10)가 추정치다.** 부하 데이터 없이 정한 보수적 출발점이며,
-   08:00 배치 로그로 검증해야 한다.
+6. **Semaphore 값의 성격이 서로 다르다.** LLM 5 는 기존 코드에 있던 값을 그대로 옮긴 것이고,
+   Mobius 20 은 **Reactor Netty 가 암묵적으로 걸고 있던 상한을 재현한 값**이다(§6.8).
+   후자는 운영 장비 코어 수에 따라 달라지므로 배포 전 확인이 필요하다.
 7. **커넥션 풀 대기자 수에 상한이 없어진다**(§6.3). 설정을 바꾸지 않기로 했으므로 이 상태로 운영하며,
    `SQLTransientConnectionException` 이 관측되면 그때 재검토한다.
 8. **PostGIS 의존 쿼리가 테스트되지 않는다**(§3.7). H2 `MODE=PostgreSQL` 은 PostGIS 함수를 제공하지 않는다.
@@ -1286,7 +1327,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 |---|---|---|
 | 1 | `EdsWebSocketClient` → `StandardWebSocketClient` 전환, `webflux`/`coroutines` 제거 | 재연결 수동 시험 시간 확보 시 (§7) |
 | 2 | `EdsClient` → `@HttpExchange` 인터페이스 + `RestClientAdapter` | §6.6 안정화 후. `if (response.code != 200) throw` 반복이 `defaultStatusHandler` 로 모인다 |
-| 3 | Semaphore 값 조정 (LLM 5 / Mobius 10) | 08:00 배치 로그 2주 관측 후 (§9-6) |
+| 3 | Semaphore 값 조정 (LLM 5 / Mobius 20) | 08:00 배치 로그 2주 관측 후 (§9-6). **Mobius 값은 배포 전 운영 장비 코어 수 확인이 선행돼야 한다** (§6.8) |
 | 4 | `publishOn` 순차성 의존 여부 확인 | `edsFacade.processEvent` 가 이벤트 순서에 의존하는지 (§6.10-3) |
 | 5 | H2 → Testcontainers PostgreSQL | **H2 는 `@SpringBootTest` 3개가 실제로 쓰고 있어 제거 대상이 아니다.** 다만 PostGIS 함수를 제공하지 않아 `findFirstByPointInPolygon` 경로가 미검증이다 (§3.7). safers `2026-08-07-postgres-testcontainers-design.md` 참조 |
 | 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |

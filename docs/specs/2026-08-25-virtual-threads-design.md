@@ -16,6 +16,8 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| §6.8 R4 표가 `setupSubscriptionForFeature` 를 leaf 로 분류했으나 실제로는 `fetchSubscription` 에 위임하고 409 시 `fetchRemoveSubscription` 재시도를 탄다 — 중첩 획득 데드락 | **타당** — 중첩 금지 규칙을 써놓고 바로 아래 표에서 어겼다 | leaf 목록을 `fetchSubscription`/`fetchRemoveSubscription` 으로 정정, 판정 기준을 "이름이 아니라 `client` 직접 호출 여부" 로 명시, §9-10 갱신 |
+| `createClient` 마다 executor·HttpClient 가 생기는데 `RestClient` 만 반환해 스프링이 닫을 수 없다 | **타당** — Java 25 에서 `HttpClient` 는 `AutoCloseable` 이다. `@SpringBootTest` 3개가 컨텍스트를 띄우므로 테스트에서 누적된다 | §6.5 를 `DisposableBean` + executor 공유 구조로 변경하고 라이프사이클 항목 추가 |
 | `fetchMobiusUril` 의 `?: emptyList()` 가 빈 응답을 정상 빈 목록으로 바꿔 **Feature 전량 삭제**로 이어진다 | **타당** — 5차 반영에서 내가 새로 만든 결함이다. 현재 `awaitBody` 는 예외를 던져 안전했다 | `?: throw CustomException(MOBIUS_EMPTY_RESPONSE)` 로 교체, `RestClient.body()` 의 null 계약을 §6.8·§9-11 에 경고로 명시, §8.3 확인 항목 추가 |
 | `@Transactional` 이 `findAll()` 전에 시작해 HTTP fan-out 내내 살아 있다 — "트랜잭션 밖" 이라는 주석이 사실이 아니다. `handleMobiusUrlUpdated` 도 동일 | **타당** — private 메서드로 뺐다고 경계가 생기지 않는다 | §6.8 전면 재작성: 읽기/HTTP/쓰기 3단계 분리, `FeatureQueryService`·`FeatureStatusWriter` 신설(self-invocation 회피), `handleMobiusUrlUpdated`·`checkSynchronization` 의 `@Transactional` 제거 |
 | 세마포어가 `fetchAllStatuses` 에만 걸려 다른 Mobius 경로를 덮지 못한다. Reactor Netty 는 호스트당 **집계** 상한이라 경로별 상한의 합이 기존 상한을 넘는다 | **타당** — §6.4 로 08:00 두 cron 이 겹치게 만들어 놓고 상한은 경로별로 뒀다 | 세마포어를 `AiotService` 공유 `mobiusSemaphore` 로 승격하고 **leaf 호출에만** 적용(중첩 획득 데드락 회피). §9-10 한계 추가 |
@@ -794,7 +796,13 @@ javap -cp <같은 경로> 'org.springframework.web.client.RestClient$Builder' | 
 
 ```kotlin
 @Component
-class RestClientFactory {
+class RestClientFactory : DisposableBean {
+    // 생성한 HttpClient 를 들고 있다가 종료 시 닫는다 — 아래 라이프사이클 항목 참조.
+    private val clients = java.util.concurrent.CopyOnWriteArrayList<HttpClient>()
+
+    // 모든 HttpClient 가 공유한다. 가상 스레드라 개수를 늘릴 이유가 없다.
+    private val executor = Executors.newVirtualThreadPerTaskExecutor()
+
     fun createClient(
         baseUrl: String,
         connectionTimeoutMs: Long = 5000,
@@ -803,17 +811,40 @@ class RestClientFactory {
         // EDS 처럼 "HTTP 상태가 아니라 응답 본문의 code 로 판정" 하는 계약을 지킬 때 쓴다(§6.6).
         throwOnHttpError: Boolean = true,
     ): RestClient
+
+    override fun destroy() {
+        clients.forEach { it.close() }   // HttpClient 는 Java 21+ AutoCloseable
+        executor.close()
+    }
 }
 ```
 
-**구성 결정 셋.**
+**구성 결정 넷.**
 
 - **`JdkClientHttpRequestFactory(HttpClient)`** 를 쓴다. connect 타임아웃은 `HttpClient.newBuilder()`
   쪽에, read 타임아웃은 팩토리 쪽(`setReadTimeout(Duration)`)에 건다.
-- **`HttpClient.newBuilder().executor(Executors.newVirtualThreadPerTaskExecutor())`** 를 지정한다.
-  지정하지 않으면 JDK HttpClient 가 자체 플랫폼 스레드 풀을 만든다.
+- **executor 를 명시한다.** 지정하지 않으면 JDK HttpClient 가 자체 플랫폼 스레드 풀을 만든다.
+  **다만 `createClient` 마다 새로 만들지 않고 팩토리가 하나를 공유한다** — 아래 라이프사이클 항목.
+- **생성한 `HttpClient` 와 executor 를 스프링이 닫을 수 있어야 한다**(`DisposableBean`).
 - `throwOnHttpError = false` 일 때 `defaultStatusHandler({ true }, { _, _ -> })` 를 건다 —
   모든 상태코드를 "에러 아님" 으로 처리해 `retrieve()` 가 본문을 디코딩하게 둔다.
+
+#### 라이프사이클 — 팩토리가 자원을 들고 있어야 한다
+
+`createClient` 는 **`EdsClient`·`NgrokConfig`·`AiotService`·`LlmMessageService` 네 곳에서** 호출된다.
+`RestClient` 만 반환하면 그 뒤에 매달린 `HttpClient` 와 executor 를 **스프링이 닫을 방법이 없다.**
+
+```bash
+jshell> java.net.http.HttpClient.class.getInterfaces()
+$1 ==> [interface java.lang.AutoCloseable]     # Java 21+ 부터 닫을 수 있다 (Java 25 확인)
+```
+
+닫지 않으면 `HttpClient` 의 셀렉터 스레드와 커넥션 풀이 컨텍스트 종료 후에도 남는다.
+JVM 이 곧 죽는 운영 환경에서는 티가 안 나지만, **`@SpringBootTest` 3개가 컨텍스트를 띄우므로
+테스트에서 누적된다.**
+
+> **executor 를 클라이언트마다 만들지 않는 이유.** 가상 스레드 executor 는 플랫폼 스레드를
+> 붙잡지 않으므로 여러 개 둘 이득이 없고, 닫아야 할 자원만 늘어난다. 하나를 공유한다.
 
 확인:
 
@@ -1232,17 +1263,36 @@ Mobius HTTP 는 전부 `AiotService` 의 `client` 를 지나므로 이 한 곳�
 > 또 획득하면 **자기 자신을 기다리는 데드락**이 된다. 그래서 **fan-out 이 아니라 leaf 에만 건다.**
 > 이 규칙을 지키면 호출자가 어떻게 조합하든 안전하다.
 
-적용 대상은 **실제로 `client` 를 호출하는 메서드 전부**다.
+적용 대상은 **실제로 `client.get()`/`client.post()` 를 호출하는 메서드뿐**이다.
 
-| 메서드 | 성격 |
-|---|---|
-| `fetchDeviceLocationData` | leaf |
-| `fetchDeviceBatteryData` | leaf |
-| `fetchMobiusUril` | leaf |
-| `findByDateRange` | leaf |
-| `setupSubscriptionForFeature` / `fetchRemoveSubscription` | leaf |
+| 메서드 | 성격 | 적용 |
+|---|---|---|
+| `fetchDeviceLocationData` | leaf | O |
+| `fetchDeviceBatteryData` | leaf | O |
+| `fetchMobiusUril` | leaf | O |
+| `findByDateRange` | leaf | O |
+| `fetchSubscription` | leaf | O |
+| `fetchRemoveSubscription` | leaf | O |
+| `setupSubscriptionForFeature` | **조합** — 아래 참조 | **X** |
+| `fetchAllStatuses` / `statusSynchronize` / `subscription` | 조합 | X |
 
-`fetchAllStatuses`, `statusSynchronize`, `subscription` 같은 **조합 메서드에는 걸지 않는다.**
+> **`setupSubscriptionForFeature` 는 leaf 가 아니다.** 이름과 달리 HTTP 를 직접 호출하지 않고
+> `fetchSubscription` 에 위임하며, **409(이미 존재) 를 받으면 `fetchRemoveSubscription` →
+> `fetchSubscription` 재시도 경로를 탄다.**
+>
+> ```kotlin
+> try {
+>     fetchSubscription(...)                    // ← HTTP 는 여기
+> } catch (e) {
+>     if (409 && "resource is already exist") {
+>         fetchRemoveSubscription(...)          // ← 재시도 경로에서 또 HTTP
+>         fetchSubscription(...)
+>     }
+> }
+> ```
+>
+> 여기에 permit 을 걸면 **재시도 경로가 permit 을 쥔 채 다시 획득**해 퍼밋 소진 시 데드락이다.
+> **판정 기준은 메서드 이름이 아니라 `client` 를 직접 부르는지 여부다.**
 
 #### `FeatureScheduler.scheduledBatteryDataUpdate`
 
@@ -1421,7 +1471,8 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 9. **`handleMobiusUrlUpdated` 의 원자성이 약해진다**(§6.8). 세 동기화 단계가 각자 트랜잭션을 가지므로
    중간 실패 시 부분 반영이 남는다. 다음 동기화에서 수렴하는 성질에 의존한다.
 10. **`mobiusSemaphore` 는 중첩 획득 시 데드락이다**(§6.8 R4). leaf 에만 건다는 규칙을 코드로
-   강제하지 못하므로, Mobius 호출 메서드를 새로 추가할 때 주의가 필요하다.
+   강제하지 못한다. **판정 기준은 메서드 이름이 아니라 `client` 를 직접 부르는지 여부다** —
+   `setupSubscriptionForFeature` 가 이름과 달리 조합 메서드인 것이 그 예다.
 11. **`RestClient.body()` 의 null 반환이 전역 함정이다**(§6.8). WebClient 의 `awaitBody` 와 계약이
    다르므로 전환 시 모든 호출부에서 기본값을 넣지 않았는지 확인해야 한다. 컴파일러가 잡아주지 않는다.
 

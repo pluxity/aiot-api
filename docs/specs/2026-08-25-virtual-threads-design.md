@@ -42,7 +42,7 @@
 | ③ | `@Scheduled` 가 어디서 도는가 | **익명 단일 스레드에서 직렬로 돈다.** `@Scheduled` 3개 중 2개가 같은 시각(08:00) cron 이다 (§2.3) |
 | ④ | JDK 25 에서 `synchronized` pinning 이 남아 있는가 | **없다.** JEP 491(JDK 24)로 해소 (§2.4) |
 | ⑤ | `taskExecutor` 빈(5/10/500)을 쓰는 곳이 있는가 | **없다.** `@Async` 0개, STOMP 채널도 쓰지 않는다 (§4.2) |
-| ⑥ | 현재 HikariCP 설정 | **명시 없음 → 기본 `maximum-pool-size: 10`** (§6.3) |
+| ⑥ | HikariCP 기본값이 가상 스레드에서 위험한가 | **아니다.** `connection-timeout` 기본이 무한이 아니라 **30초**(`HikariCP-7.0.2` `CONNECTION_TIMEOUT = 30`). 설정을 바꾸지 않는다 (§6.3) |
 | ⑦ | `@EnableWebSocketMessageBroker` 가 `TaskScheduler` 후보를 몇 개 추가하는가 | **3개.** `messageBrokerTaskScheduler` + `clientInbound/OutboundChannelExecutor`. 운영 로그로 확정 (§2.3) |
 | ⑧ | Boot 의 `ClientHttpRequestFactoryBuilder` 를 쓸 수 있는가 | **못 쓴다.** `org.springframework.boot.http.client.*` 는 `spring-boot-restclient` 모듈에 있고 aiot 런타임 클래스패스에 없다. `spring-web` 의 `JdkClientHttpRequestFactory` 를 직접 쓴다 (§6.5) |
 
@@ -52,7 +52,6 @@
 - `spring.threads.virtual.enabled: true` (`application-common.yml`)
 - `AsyncConfig`(`global/config/WebSocketConfig.kt` 두 번째 클래스) — `taskExecutor` 가상 스레드 교체,
   `taskScheduler` 명시 추가, `heartBeatScheduler` 주입 지점 고정
-- HikariCP 풀 크기 명시
 
 **B. 리액티브/코루틴 제거 — HTTP 클라이언트**
 - `WebClientFactory` → `RestClientFactory` (JDK `HttpClient` 기반)
@@ -78,6 +77,7 @@
 | 버전 카탈로그(`libs.versions.toml`) 도입 | 단일 모듈이라 이득이 적다. 멀티모듈화 시점에 (§3.6, §11) |
 | Flyway 도입 | aiot 는 `ddl-auto` 기반. 별건 |
 | `SensorDataMigrationService` 의 `newScheduledThreadPool(4)` | (B) 유형 — 디바이스별 타이머 관리용이지 스레드 공급용이 아니다 (§4.2) |
+| **HikariCP 설정 변경** | 측정 없이 값을 바꾸지 않는다. 기본값이 안전한 이유는 §6.3 |
 | MDC traceId 전파 | safers 의 `2026-08-04-mdc-trace-id-design.md` 에 해당. 별건 (§11) |
 | **JWT/인증 정렬 (jjwt 제거 포함)** | 별도 설계문서 `2026-08-25-auth-alignment-design.md`. 의존성 커밋만 §10 과 순서를 맞춘다 |
 
@@ -328,14 +328,22 @@ spring-boot-starter-data-jpa-test = { module = "org.springframework.boot:spring-
 spring-boot-starter-webmvc-test   = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 ```
 
-aiot 현재 사용 현황을 확인했다.
+aiot 현재 사용 현황을 확인했다. **슬라이스 테스트와 `@SpringBootTest` 는 구분해서 봐야 한다.**
 
 ```bash
-grep -rn "@DataJpaTest\|@WebMvcTest\|@SpringBootTest" --include="*.kt" src/test
+grep -rn "@DataJpaTest\|@WebMvcTest\|@JdbcTest" --include="*.kt" src/test
 # → 0건
+
+grep -rn "@SpringBootTest" --include="*.kt" src/test
+# → 3건 (FireAlarmProcessorTest, TemperatureHumidityProcessorTest, DisplacementGaugeProcessorTest)
 ```
 
-**현재는 슬라이스 테스트를 쓰지 않으므로 이번 업그레이드에서 추가 스타터가 필요 없다.**
+`@SpringBootTest` 는 **슬라이스가 아니라 전체 컨텍스트 로딩**이고 `spring-boot-starter-test` 에 그대로 있다.
+쪼개진 것은 `@DataJpaTest`(→ `spring-boot-starter-data-jpa-test`)와
+`@WebMvcTest`(→ `spring-boot-starter-webmvc-test`)이며, 이 둘은 aiot 에 0건이다.
+
+**따라서 이번 업그레이드에서 추가 스타터가 필요 없다.** 단 위 3개는 실제 DB(H2)를 띄우므로
+업그레이드 회귀 확인 대상이다(§3.7).
 다만 `plx-backend:test-controller` 스킬이 `@WebMvcTest` 를 생성하므로, 앞으로 컨트롤러 테스트를
 추가할 때 의존성 누락으로 헤맬 수 있다. **`build.gradle.kts` 에 주석으로 남긴다**(§6.1).
 
@@ -400,14 +408,34 @@ aiot 는 단일 모듈이고 `build.gradle.kts` 하나에 전부 들어 있어 �
 
 **단, safers 카탈로그의 주석들(Boot 4.1 슬라이스 분리, Kotest 6 groupId)은 지식이므로 옮긴다** — §6.1.
 
-### 3.7 H2 는 유지한다
+### 3.7 H2 는 유지한다 — **실제 사용 중이다**
 
-safers 는 Testcontainers + PostgreSQL 로 갔지만(`2026-08-07-postgres-testcontainers-design.md`),
-aiot 는 `hibernate-spatial` + JTS 를 쓰고 `siteRepository.findFirstByPointInPolygon` 같은
-**PostGIS 의존 쿼리**가 있다. H2 에서 이미 이 쿼리를 테스트하지 않고 있을 가능성이 높다.
+safers 는 Testcontainers + PostgreSQL 로 갔지만(`2026-08-07-postgres-testcontainers-design.md`)
+aiot 는 H2 를 쓰고 있고, **제거 대상이 아니다.**
 
-**이번 범위에서 판단하지 않는다.** §11 후속 과제로 넘긴다. 이번엔 H2 를 그대로 두고, 버전 업그레이드로
-기존 테스트가 깨지는지만 본다.
+```bash
+grep -rn "@SpringBootTest" --include="*.kt" src/test          # 3건
+cat src/test/resources/application.yml | grep -A3 datasource
+#   url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;...
+#   driver-class-name: org.h2.Driver
+```
+
+| 테스트 | 성격 |
+|---|---|
+| `FireAlarmProcessorTest` | `@SpringBootTest @ActiveProfiles("test") @Transactional`. `SiteRepository`·`FeatureRepository`·`EventHistoryRepository` 실제 주입 |
+| `TemperatureHumidityProcessorTest` | 동일 |
+| `DisplacementGaugeProcessorTest` | 동일 |
+
+`ddl-auto: create-drop` 으로 H2 에 스키마를 만들어 돌린다. **`com.h2database:h2` 를 지우면 이 3개가
+컨텍스트 로딩 단계에서 깨진다.**
+
+**남는 문제 — 이번 범위에서 판단하지 않는다.** aiot 는 `hibernate-spatial` + JTS 를 쓰고
+`siteRepository.findFirstByPointInPolygon` 같은 **PostGIS 의존 쿼리**가 있는데, H2 `MODE=PostgreSQL` 은
+PostGIS 함수를 제공하지 않는다. 즉 **그 경로는 지금 테스트되지 않고 있다.** §11 후속 과제로 넘긴다.
+
+> **인증 설계문서와 겹치는 지점:** `src/test/resources/application.yml` 에도 `jwt.*` 설정이
+> 운영과 같은 값으로 들어 있다. `2026-08-25-auth-alignment-design.md` §4.5 에서 `Duration` 으로
+> 바꿀 때 이 파일도 함께 고쳐야 한다.
 
 ## 4. Executor / Scheduler 판정
 
@@ -579,33 +607,49 @@ spring:
       enabled: true
 ```
 
-### 6.3 `application-common.yml` — HikariCP 명시
+### 6.3 HikariCP — **설정을 바꾸지 않는다**
 
-**가상 스레드는 DB 처리량을 늘려주지 않는다.** 요청 스레드가 사실상 무제한이 되면서
-커넥션 대기가 유일한 병목이 되므로, 지금까지 톰캣 `threads.max`(기본 200)가 암묵적으로 하던
-유입 제한이 사라진다. **현재 명시 설정이 없어 기본값 10 이다.**
+당초 `maximum-pool-size` 와 `connection-timeout` 을 명시하려 했으나, 근거를 검증한 결과
+**둘 다 넣을 이유가 없다.** 기록을 남긴다.
 
-```yaml
-spring:
-  datasource:
-    hikari:
-      # 가상 스레드 도입으로 요청 스레드 상한이 사라진다. 커넥션 풀이 유일한 유입 제한이 되므로
-      # 기본값(10)에 의존하지 않고 명시한다 (설계문서 §6.3).
-      maximum-pool-size: ${DB_POOL_MAX:20}
-      # 무한 대기로 스레드가 쌓이지 않도록 명시한다. 초과분은 빠르게 실패시킨다.
-      connection-timeout: 3000
+#### 검증: `connection-timeout` 기본값은 무한이 아니다
+
+```bash
+javap -c -p -cp <HikariCP-7.0.2 전개경로> com.zaxxer.hikari.HikariConfig | grep -A2 CONNECTION_TIMEOUT
+#   ldc2_w  long 30l
+#   putstatic  Field CONNECTION_TIMEOUT:J        ← 30초
 ```
 
-**값 근거와 검증 방법을 함께 남긴다.**
+"명시하지 않으면 무한 대기해서 가상 스레드가 쌓인다"는 전제가 **틀렸다.** 30초 후
+`SQLTransientConnectionException` 으로 터지고 로그에 남는다. 3초로 줄이면 **정상적인 부하 스파이크에서
+실패하기만 더 쉬워진다** — 진단성이 좋아지는 게 아니라 에러율이 올라간다.
 
-- 20 은 임의값이 아니라 "현행 기본값 10 의 2배" 라는 보수적 출발점이다. **부하 시험 없이 더 올리지 않는다.**
-- `connection-timeout: 3000` 이 중요하다. 이게 없으면 풀 고갈 시 가상 스레드가 무한정 쌓이고
-  증상이 "느림" 으로만 나타나 원인 파악이 어렵다. 3초 후 `SQLTransientConnectionException` 으로
-  터지면 로그에 남는다.
-- 적용 후 관측: `hikaricp_connections_pending` (actuator/micrometer 미도입이면 p6spy 로그의 지연)
+#### `maximum-pool-size` 도 근거가 없다
 
-> **인지 사항:** 이 절은 가상 스레드 도입의 부작용을 막는 것이지 성능을 올리는 게 아니다.
-> DB 가 병목이면 풀을 키워도 개선되지 않는다.
+20 이라는 값은 "기본값 10 의 2배" 외에 아무 근거가 없었다. 측정 없이 바꾸면
+**문서화된 기본값을 근거 없는 상수로 바꾸는 것**에 불과하고, 다음 사람이 "왜 20인가"를 되물을 때
+답할 수 있는 사람이 없다. 가상 스레드는 DB 처리량을 늘려주지 않으므로 풀을 키운다고 빨라지지도 않는다.
+
+**결론: `application-common.yml` 에 hikari 블록을 추가하지 않는다.**
+
+#### 다만 알고는 있어야 하는 변화 — 유입 제한 지점이 옮겨간다
+
+설정은 그대로 두되, **동작이 바뀌는 지점은 인지한다.**
+
+| | 변경 전 | 변경 후 |
+|---|---|---|
+| 동시 처리 요청 상한 | 톰캣 `threads.max` = **200** | 없음 (가상 스레드) |
+| 커넥션 대기자 수 | 최대 200 | **무제한** |
+| 초과 요청의 운명 | 톰캣 accept 큐에서 대기 → 연결 거부 | 즉시 수락 → 풀에서 최대 30초 대기 → 500 |
+
+즉 **백프레셔 지점이 톰캣 커넥터에서 커넥션 풀로 내려온다.** 과부하 시 증상이
+"연결 거부"에서 "30초 후 500" 으로 바뀐다. 풀 크기(10)는 그대로이므로 **DB 부하 자체는 늘지 않는다.**
+
+**관측만 붙인다.** 값을 바꾸는 것은 데이터를 본 뒤다.
+
+- `hikaricp_connections_pending` — actuator + micrometer 도입 시 (§11-8)
+- 미도입 상태에서는 `SQLTransientConnectionException` 발생 여부를 로그에서 본다.
+  **이 예외가 나오기 시작하면** 그때 풀 크기를 검토한다 — 그 시점엔 근거가 생긴다.
 
 ### 6.4 `global/config/WebSocketConfig.kt` — `AsyncConfig` 교체
 
@@ -1156,14 +1200,14 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
 | RestClient null 응답 (§6.7) | LLM 서버 빈 응답 시나리오 |
-| Hikari 풀 (§6.3) | 부하 시 `connection-timeout` 초과 로그 |
+| Hikari 풀 (§6.3) | 설정 변경 없음. `SQLTransientConnectionException` 이 새로 나타나는지만 본다 |
 
 ### 8.4 테스트로 못 잡는 것
 
 - **§6.8 의 dirty checking** — 단위 테스트로는 트랜잭션 스레드 경계가 재현되지 않는다.
   실제 DB 를 쓰는 통합 시나리오나 수동 확인이 필요하다.
 - **§6.10 의 stale api-key** — 재로그인 후 연결 끊김이라는 조합이 필요하다. 수동 시험.
-- **Hikari 풀 크기** — 부하가 있어야 드러난다.
+- **유입 제한 지점 이동(§6.3)** — 과부하 시에만 드러난다. 부하 시험 없이는 확인할 수 없다.
 
 ## 9. 남는 한계 (인지 사항)
 
@@ -1178,6 +1222,9 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
    `readTimeout` 이 유일한 방어선이 된다(§6.5).
 6. **Semaphore 값 2개(LLM 5, Mobius 10)가 추정치다.** 부하 데이터 없이 정한 보수적 출발점이며,
    08:00 배치 로그로 검증해야 한다.
+7. **커넥션 풀 대기자 수에 상한이 없어진다**(§6.3). 설정을 바꾸지 않기로 했으므로 이 상태로 운영하며,
+   `SQLTransientConnectionException` 이 관측되면 그때 재검토한다.
+8. **PostGIS 의존 쿼리가 테스트되지 않는다**(§3.7). H2 `MODE=PostgreSQL` 은 PostGIS 함수를 제공하지 않는다.
 
 ## 10. 작업 순서 / 커밋 단위
 
@@ -1190,13 +1237,14 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 3 | `test: Kotest 6.2.4 마이그레이션` | §3.4 | **높음** — `ProjectConfig` |
 | 4 | `fix: EdsWebSocketClient 재연결 시 api-key 재평가` | §6.10 | 낮음 — **단독으로도 가치 있음** |
 | 5 | `feat: 가상 스레드 활성화 및 taskExecutor/taskScheduler 명시` | §6.2, §6.4, §8.2 | **높음** — §2.3 해소 |
-| 6 | `chore: HikariCP 풀 크기·타임아웃 명시` | §6.3 | 중 |
-| 7 | `refactor: WebClient → RestClient 전환 (EdsClient, NgrokConfig)` | §6.5, §6.6 | 중 |
-| 8 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
-| 9 | `refactor: AiotService/FeatureScheduler 코루틴 제거 및 트랜잭션 경계 정리` | §6.8 | **최고** |
-| 10 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
+| 6 | `refactor: WebClient → RestClient 전환 (EdsClient, NgrokConfig)` | §6.5, §6.6 | 중 |
+| 7 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
+| 8 | `refactor: AiotService/FeatureScheduler 코루틴 제거 및 트랜잭션 경계 정리` | §6.8 | **최고** |
+| 9 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
 
-**1~3(버전)과 5~10(가상 스레드)은 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
+`§6.3`(HikariCP)은 **설정 변경이 없으므로 커밋이 없다.**
+
+**1~3(버전)과 5~9(가상 스레드)는 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
 분리하기 어렵다. **4번은 단독 hotfix 로 먼저 내보내도 된다** — 나머지와 독립적이고 실제 장애를 막는다.
 
 ## 11. 후속 과제
@@ -1207,7 +1255,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 2 | `EdsClient` → `@HttpExchange` 인터페이스 + `RestClientAdapter` | §6.6 안정화 후. `if (response.code != 200) throw` 반복이 `defaultStatusHandler` 로 모인다 |
 | 3 | Semaphore 값 조정 (LLM 5 / Mobius 10) | 08:00 배치 로그 2주 관측 후 (§9-6) |
 | 4 | `publishOn` 순차성 의존 여부 확인 | `edsFacade.processEvent` 가 이벤트 순서에 의존하는지 (§6.10-3) |
-| 5 | H2 → Testcontainers PostgreSQL | PostGIS 의존 쿼리 테스트 필요성 판단 후 (§3.7). safers `2026-08-07-postgres-testcontainers-design.md` 참조 |
+| 5 | H2 → Testcontainers PostgreSQL | **H2 는 `@SpringBootTest` 3개가 실제로 쓰고 있어 제거 대상이 아니다.** 다만 PostGIS 함수를 제공하지 않아 `findFirstByPointInPolygon` 경로가 미검증이다 (§3.7). safers `2026-08-07-postgres-testcontainers-design.md` 참조 |
 | 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |
 | 7 | 버전 카탈로그 도입 | 멀티모듈화 시점 (§3.6) |
-| 8 | actuator + micrometer 도입 | §6.3 의 `hikaricp_connections_pending` 관측용 |
+| 8 | actuator + micrometer 도입 | §6.3 의 `hikaricp_connections_pending` 관측용. **풀 설정 변경 여부는 이 지표를 본 뒤 판단한다** |

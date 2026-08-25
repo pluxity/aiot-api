@@ -2,7 +2,8 @@
 
 - 작성일: 2026-08-25
 - 대상: `authentication/**`, `global/config/CommonSecurityConfig.kt`, `global/properties/JwtProperties.kt`,
-  `global/constant/SecurityConstants.kt`
+  `global/constant/SecurityConstants.kt`, `src/main/resources/application-common.yml`,
+  **`src/test/resources/application.yml`**
 - 환경: Java 25, Spring Boot 4.0.3(→4.1.0), Spring Security 7, Spring Framework 7.0.5
 - 함께 읽을 것: `docs/specs/2026-08-25-virtual-threads-design.md` — §3.1 의존성 표에서 jjwt 제거를 다룬다
 - 참조: `safers-api/apps/safers/src/main/kotlin/com/pluxity/safers/auth/**`
@@ -90,6 +91,17 @@ jwt:
 
 `10h` = **36,000,000 밀리초**. `10d` = **864,000,000 밀리초**. 숫자가 정확히 일치한다 —
 **aiot 의 값은 밀리초 의도로 쓰였다.**
+
+**`src/test/resources/application.yml` 에도 같은 값이 복제돼 있다.** 두 파일을 함께 고쳐야 한다.
+
+```yaml
+# src/test/resources/application.yml:33-40 — 운영과 동일한 secret / 동일한 숫자
+jwt:
+  access-token:
+    expiration: 36000000
+  refresh-token:
+    expiration: 864000000
+```
 
 그런데 aiot 코드는 이 값을 **초로 해석한다.**
 
@@ -481,7 +493,26 @@ jwt:
     expiration: 10d
 ```
 
+```yaml
+# src/test/resources/application.yml — 운영 yml 과 표기를 맞춘다
+jwt:
+  access-token:
+    name: AccessToken
+    secret: +iBcUJRWGvl+94+ow4nXV1fzWIq4rph8x7MyRmrtWio=
+    expiration: 10h
+  refresh-token:
+    name: RefreshToken
+    secret: gtzRlqF6bIkmOi5i15A9G5xbLdwiAMmZi6JPOeemC1E=
+    expiration: 10d
+```
+
 **yml 주석을 반드시 함께 넣는다.** 단위 없는 숫자가 ms 로 해석된다는 사실이 §2 결함의 원인이었다.
+
+> **테스트 yml 을 빠뜨려도 컴파일과 테스트는 통과한다.** `Duration` 바인딩에서 단위 없는 `36000000` 은
+> **ms 로 해석돼 우연히 10시간이 되기 때문**이다. 즉 값은 맞고 표기만 갈린다.
+> 그래서 더 위험하다 — 아무 신호 없이 두 파일의 표기가 어긋난 채 남는다. §6.2 의
+> `JwtPropertiesTest` 가 `test` 프로파일로 도는 이상 이 테스트도 통과하므로 **잡아주지 못한다.**
+> 체크리스트로만 막을 수 있다.
 
 ### 4.6 `CommonSecurityConfig`
 
@@ -768,6 +799,11 @@ A 안과 함께라면 액세스 토큰이 416일 살아 있으므로 체감 영�
 ./gradlew test    # 전량 통과 확인 (2026-08-25 통과 확인됨)
 ```
 
+`@SpringBootTest` 3개(`FireAlarmProcessorTest`, `TemperatureHumidityProcessorTest`,
+`DisplacementGaugeProcessorTest`)가 H2 로 전체 컨텍스트를 띄운다.
+`CommonSecurityConfig` 도 이 컨텍스트에 올라가므로 **§4.6 의 빈 구성 변경이 이 3개를 깨뜨릴 수 있다.**
+`CorsProperties` 를 `@EnableConfigurationProperties` 에 넣지 않으면 컨텍스트 로딩이 실패한다.
+
 ```sql
 -- §4.6 의 전제. 값이 'ADMIN' 이 아니면 #13 을 범위에서 뺀다.
 SELECT DISTINCT r.auth FROM roles r JOIN user_roles ur ON ur.role_id = r.id;
@@ -869,6 +905,8 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
    §6.2 의 테스트가 커버하지 못하는 영역이다.
 5. **Jackson 2 는 클래스패스에 남는다.** jjwt-jackson 을 지워도 다른 경로로 들어온다.
    DTO 애노테이션은 Jackson 3 이 읽으므로 문제없다(검증 ⑦).
+6. **JWT 설정이 운영/테스트 두 yml 에 복제돼 있다.** 한쪽만 고쳐도 아무 오류가 나지 않는다(§4.5).
+   근본 해결은 테스트 yml 이 운영 yml 을 상속하도록 바꾸는 것인데, 이번 범위에서 다루지 않는다 — §9-7.
 
 ## 8. 작업 순서 / 커밋 단위
 
@@ -880,7 +918,7 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | 2 | `fix: 미인증 요청에 401 응답 (RestAuthenticationEntryPoint 추가)` | §4.4 + `ErrorCode.UNAUTHENTICATED` | 중 — §5.4 |
 | 3 | `fix: GET /users/me 인가 순서 수정` | §4.6 인가 규칙 중 `/users/me/**` | 낮음 |
 | 4 | `refactor: jjwt 를 nimbus-jose-jwt 로 교체` | §4.1, §4.2 + `JwtProviderTest` | **높음** — 만료 검증 |
-| 5 | `fix: 토큰 수명 설정 단위를 Duration 으로 정정` | §4.5, §4.8 호출부 + `JwtPropertiesTest` | **최고** — §5 |
+| 5 | `fix: 토큰 수명 설정 단위를 Duration 으로 정정` | §4.5(**운영 yml + 테스트 yml 둘 다**), §4.8 호출부 + `JwtPropertiesTest` | **최고** — §5 |
 | 6 | `refactor: 인증 쿠키 삭제를 ResponseCookie 기반으로 변경` | §4.8 쿠키 부분 | 중 |
 | 7 | `refactor: AuthenticationService 트랜잭션 경계 정리` | §4.8 트랜잭션 | 낮음 |
 | 8 | `refactor: JwtAuthenticationFilter Jackson 3 전환 및 예외 로깅 추가` | §4.3 | 낮음 |
@@ -905,3 +943,4 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | 4 | STOMP 구독 인가 (`StompSubscribeAuthorizationInterceptor`) | safers 참조. aiot 는 `MyDefaultHandshakeHandler` 만 있다 |
 | 5 | 인증 계층을 공용 모듈로 추출 | 두 프로젝트가 같은 코드를 복제 중. 멀티모듈화 시점에 |
 | 6 | Redis 잔여 `refresh_token` TTL 정리 | §5.3 |
+| 7 | 테스트 yml 의 설정 복제 제거 | `src/test/resources/application.yml` 이 운영 설정을 통째로 복제 중이다. 프로파일 상속이나 `@DynamicPropertySource` 로 정리. §7-6 |

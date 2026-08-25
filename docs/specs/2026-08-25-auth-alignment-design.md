@@ -15,6 +15,7 @@
 | `signOut` 의 `refreshToken?.let` 가드가 남아 `expireCookie` 변경이 무효화된다 | **타당** — 가드가 두 겹인 것을 놓쳤다 | §4.8 에 `signOut` 재구조화 추가, §3-9 판정 갱신, §6.3 확인 항목 추가 |
 | §5.1 의 제목·도입 문장이 "무효화된다" 인데 본문은 "무효화되지 않는다" 로 자기모순 | **타당** — 초안 수정 시 본문만 고치고 제목을 방치했다. 앞부분만 읽으면 정반대로 이해한다 | §5.1 제목·도입 전면 교체, §4.2 문장 정정, §5.2 도입부 보강 |
 | §5.2 의 "secret 교체" 가 단수라 액세스 쪽만 갈 여지가 있다. 그러면 리프레시 토큰이 살아남아 재발급으로 세션이 복구돼 **B 안이 아무것도 무효화하지 못한다** | **타당** — aiot 는 secret 이 두 개인데 단수로 썼다 | **secret 교체를 이번 범위에서 제외**(사용자 결정). §5.2 를 "신규 토큰에만 적용" 방침으로 재작성하고, 향후 교체 시 **두 secret 을 함께** 갈아야 한다는 주의를 각주로 남김. §7-1·§9-1 갱신 |
+| `WhiteListPath` 에 `auth/sign-out` 이 없어 만료 토큰으로는 로그아웃이 막힌다 — §4.8 의 무조건 쿠키 삭제에 도달하지 못한다 | **타당** — 수명을 10h 로 줄이면 오히려 흔해지는 시나리오다 | §4.7 에 `AUTH_OUT` 추가 + 근거·위험 분석, §3-6-1 판정 추가, §6.2 테스트·§6.3 수동 확인 항목 추가 |
 | §5.3 의 `xargs -r redis-cli TTL` 은 `TTL` 이 키 하나만 받으므로 레코드가 2개 이상이면 실패한다 | **타당** — 다만 명령 이전에 **조치 자체가 불필요**했다. B 안 전제로 쓴 절이며, A 방침에서는 레코드가 고아가 아니다 | §5.3 을 "조치 불필요" 로 재작성하고 명령 삭제. `@Id` 가 username 이라 다음 로그인에 TTL 이 자가 갱신된다는 근거 추가 |
 
 ## 0. 배경 — 왜 지금인가
@@ -175,6 +176,7 @@ if (token != null && jwtProvider.isAccessTokenValid(token)) {
 | 4 | 리프레시 토큰 검증 | `isRefreshTokenValid(token): Boolean` — 같은 문제. 호출부가 `if (!valid) throw` 로 한 번 더 감싼다 | `validateRefreshToken(token)` (Unit 또는 throw) | **교체** |
 | 5 | 미인증 진입점 | 없음 → Spring 기본 `Http403ForbiddenEntryPoint` → **403** | `RestAuthenticationEntryPoint` → **401** | **추가** |
 | 6 | `WhiteListPath` 매칭 | `path.startsWith("/${entry.path}")` | 경로 경계(`/`, `.`) 확인 | **교체** |
+| 6-1 | `WhiteListPath` 항목 | `sign-out` **누락** — 만료 토큰으로는 로그아웃이 막힌다 | safers 도 동일하게 누락 | **`AUTH_OUT` 추가**(§4.7). safers 정렬 범위를 넘는 수정 |
 | 7 | 필터 JSON 직렬화 | `com.fasterxml.jackson.databind.ObjectMapper()` — **Jackson 2**, Spring 설정 미적용 | `tools.jackson.databind.json.JsonMapper()` — Jackson 3 | **교체** |
 | 8 | 필터 예외 로깅 | `CustomException` 아니면 **조용히 무시** | `log.error(exception) { ... }` | **추가** |
 | 9 | 쿠키 삭제 | `WebUtils.getCookie(...)?.apply { }` + `signOut` 의 `refreshToken?.let` — **가드가 두 겹이라 리프레시 쿠키가 없으면 아무것도 안 지운다** | `ResponseCookie.maxAge(0)` 무조건 발행. **단 바깥 가드는 safers 도 동일하다** | **교체 + 바깥 가드 제거**(§4.8) |
@@ -639,6 +641,7 @@ enum class WhiteListPath(
 ) {
     AUTH_IN("auth/sign-in"),
     AUTH_UP("auth/sign-up"),
+    AUTH_OUT("auth/sign-out"),
     REFRESH_TOKEN("auth/refresh-token"),
     ACTUATOR("actuator"),
     APIDOC("api-docs"),
@@ -666,6 +669,37 @@ enum class WhiteListPath(
 
 **`HEALTH("health")` 는 aiot 고유이므로 유지한다** (safers 에는 없다). 이 항목이야말로
 `startsWith` 결함의 실제 위험 대상이다 — `/health` 로 시작하는 다른 엔드포인트가 생기면 인증이 뚫린다.
+
+#### `AUTH_OUT("auth/sign-out")` 을 새로 추가한다 — 없으면 로그아웃이 막힌다
+
+현재 화이트리스트에 `sign-in`·`sign-up`·`refresh-token` 은 있는데 **`sign-out` 이 없다.**
+`JwtAuthenticationFilter` 는 인증 실패 시 응답을 쓰고 **필터 체인을 중단**하므로:
+
+```
+POST /auth/sign-out  (만료된 AccessToken 쿠키 동봉)
+  → authenticationRequired = true         (화이트리스트에 없으므로)
+  → extractUsername → EXPIRED_ACCESS_TOKEN
+  → handleAuthenticationError 가 401 을 쓰고 return    ← 컨트롤러 미실행
+  → signOut() 이 돌지 않아 쿠키·Redis 레코드가 그대로 남는다
+```
+
+**§4.8 에서 "쿠키 만료는 조건 없이 항상 수행한다" 로 고쳐도 그 코드에 도달하지 못한다.**
+
+**이번 작업이 이 문제를 더 자주 만든다.** 지금은 액세스 토큰이 416일이라 만료가 드물지만,
+10시간으로 줄이면 **10시간 뒤 돌아온 사용자가 로그아웃을 누르는 것이 평범한 시나리오**가 된다.
+
+실질 위험은 재로그인 여부에 갈린다.
+
+| 이후 행동 | 결과 |
+|---|---|
+| 다시 로그인한다 | `publishToken` 이 같은 이름·path 로 쿠키를 덮어쓰고 Redis 레코드도 upsert 된다 → **자가 치유** |
+| 로그아웃만 하고 떠난다 | **리프레시 토큰이 최대 10일간 살아 있다.** `/auth/refresh-token` 은 화이트리스트라 액세스 토큰을 보지 않으므로, 같은 브라우저에서 앱을 다시 열면 세션이 복구된다 |
+
+두 번째가 문제다 — **"로그아웃을 눌렀는데 로그아웃되지 않은 상태"** 가 남는다. 공용 PC 라면
+다음 사용자가 세션을 이어받을 수 있다.
+
+**화이트리스트 추가는 안전하다.** `signOut` 은 리프레시 쿠키만 읽어 동작하므로 액세스 토큰 인증이
+필요 없고, 쿠키를 가진 주체만 자기 세션을 끊을 수 있다.
 
 `JwtAuthenticationFilter.authenticationRequired` 를 `!WhiteListPath.matches(path)` 로 바꾼다.
 
@@ -940,6 +974,7 @@ WhiteListPath.matches("/swagger-ui.html") shouldBe true
 WhiteListPath.matches("/health-actions") shouldBe false   // ← 현재 코드가 true 를 반환하는 케이스
 WhiteListPath.matches("/actuators") shouldBe false
 WhiteListPath.matches("/auth/sign-in") shouldBe true
+WhiteListPath.matches("/auth/sign-out") shouldBe true      // ← 없으면 로그아웃이 막힌다(§4.7)
 ```
 
 ### 6.3 수동 확인
@@ -952,6 +987,7 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | 기존 토큰 계속 동작 | **배포 전 발급한 쿠키로 요청 → 여전히 통과해야 한다.** §5.2 방침의 전제다 |
 | 로그아웃 후 쿠키 제거 | 응답에 `Max-Age=0` `Set-Cookie` 3개(Access/Refresh/expiry) |
 | **리프레시 쿠키 없이 로그아웃** | `AccessToken` 쿠키만 들고 `/auth/sign-out` 호출 → **여전히 `Set-Cookie` 3개가 나와야 한다.** 현재는 0개(§4.8) |
+| **만료 토큰으로 로그아웃** | 만료된 `AccessToken` + 유효한 `RefreshToken` 으로 `/auth/sign-out` → **204 와 `Set-Cookie` 3개.** 401 이 나오면 `AUTH_OUT` 이 빠진 것(§4.7) |
 | 리프레시 | `/auth/refresh-token` 200 + 새 쿠키 |
 | `/admin/**` | ADMIN 역할 없는 사용자로 403, 있는 사용자로 200 |
 | 기존 토큰 호환 | **배포 전 발급한 쿠키로 요청** → 여전히 통과해야 한다(§5.1) |
@@ -1012,4 +1048,4 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | 4 | STOMP 구독 인가 (`StompSubscribeAuthorizationInterceptor`) | safers 참조. aiot 는 `MyDefaultHandshakeHandler` 만 있다 |
 | 5 | 인증 계층을 공용 모듈로 추출 | 두 프로젝트가 같은 코드를 복제 중. 멀티모듈화 시점에 |
 | 6 | 테스트 yml 의 설정 복제 제거 | `src/test/resources/application.yml` 이 운영 설정을 통째로 복제 중이다. 프로파일 상속이나 `@DynamicPropertySource` 로 정리. §7-6 |
-| 7 | safers-api 에 `signOut` 가드 수정 제안 | §4.8 — 동일 결함이 그쪽에도 있다 |
+| 7 | safers-api 에 `signOut` 가드 · `sign-out` 화이트리스트 수정 제안 | §4.8 · §4.7 — 두 결함 모두 그쪽에도 있다 |

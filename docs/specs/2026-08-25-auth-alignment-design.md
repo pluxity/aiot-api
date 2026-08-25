@@ -233,123 +233,48 @@ Jackson 2 자체가 클래스패스에서 없어지지는 않는다(검증 ⑦).
 **만료된 토큰이 그대로 통과한다.** 아래 `expirationTime` 블록이 그 대응이다.
 
 ```kotlin
-package com.pluxity.aiot.authentication.security
-
-import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.JWSHeader
-import com.nimbusds.jose.crypto.MACSigner
-import com.nimbusds.jose.crypto.MACVerifier
-import com.nimbusds.jwt.JWTClaimsSet
-import com.nimbusds.jwt.SignedJWT
-import com.pluxity.aiot.authentication.repository.RefreshTokenRepository
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.properties.JwtProperties
-import jakarta.servlet.http.HttpServletRequest
-import org.springframework.stereotype.Service
-import org.springframework.web.util.WebUtils
-import java.time.Duration
-import java.util.Base64
-import java.util.Date
-
 @Service
 class JwtProvider(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProperties: JwtProperties,
 ) {
-    fun extractUsername(
-        token: String,
-        isRefreshToken: Boolean = false,
-    ): String = extractAllClaims(token, isRefreshToken).subject
+    fun extractUsername(token: String, isRefreshToken: Boolean = false): String
 
-    private fun extractAllClaims(
-        token: String,
-        isRefreshToken: Boolean,
-    ): JWTClaimsSet {
-        val errorCode = if (isRefreshToken) ErrorCode.INVALID_REFRESH_TOKEN else ErrorCode.INVALID_ACCESS_TOKEN
-        try {
-            val signedJWT = SignedJWT.parse(token)
-            val verifier = MACVerifier(getSecretKeyBytes(isRefreshToken))
-            if (!signedJWT.verify(verifier)) {
-                throw CustomException(errorCode)
-            }
-            val claims = signedJWT.jwtClaimsSet
-            // jjwt 와 달리 nimbus 는 만료를 자동 검사하지 않는다. 빠뜨리면 만료 토큰이 통과한다.
-            val expirationTime = claims.expirationTime
-            if (expirationTime != null && expirationTime.before(Date())) {
-                throw CustomException(
-                    if (isRefreshToken) ErrorCode.EXPIRED_REFRESH_TOKEN else ErrorCode.EXPIRED_ACCESS_TOKEN,
-                )
-            }
-            return claims
-        } catch (e: CustomException) {
-            throw e
-        } catch (_: Exception) {
-            throw CustomException(errorCode)
-        }
-    }
+    // 서명 검증 + 만료 검증. 실패 시 CustomException. 성공 시 클레임 반환.
+    private fun extractAllClaims(token: String, isRefreshToken: Boolean): JWTClaimsSet
 
-    fun generateAccessToken(
-        username: String,
-        extraClaims: Map<String, Any> = emptyMap(),
-    ): String = buildToken(extraClaims, username, jwtProperties.accessToken.expiration, false)
+    fun generateAccessToken(username: String, extraClaims: Map<String, Any> = emptyMap()): String
+    fun generateRefreshToken(username: String): String
 
-    fun generateRefreshToken(username: String): String =
-        buildToken(emptyMap(), username, jwtProperties.refreshToken.expiration, true)
+    // Redis 레코드 조회 + JWT 검증. 실패 시 CustomException. (기존 isRefreshTokenValid 대체)
+    fun validateRefreshToken(token: String?)
 
-    private fun buildToken(
-        extraClaims: Map<String, Any>,
-        username: String,
-        expiration: Duration,
-        isRefreshToken: Boolean,
-    ): String {
-        val now = System.currentTimeMillis()
-        val claimsBuilder =
-            JWTClaimsSet
-                .Builder()
-                .subject(username)
-                .issueTime(Date(now))
-                .expirationTime(Date(now + expiration.toMillis()))
-
-        extraClaims.forEach { (key, value) -> claimsBuilder.claim(key, value) }
-
-        val signedJWT = SignedJWT(JWSHeader(JWSAlgorithm.HS256), claimsBuilder.build())
-        signedJWT.sign(MACSigner(getSecretKeyBytes(isRefreshToken)))
-        return signedJWT.serialize()
-    }
-
-    fun validateRefreshToken(token: String?) {
-        if (token.isNullOrBlank()) throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-
-        val refreshToken =
-            refreshTokenRepository
-                .findByToken(token)
-                ?: throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-
-        if (!refreshToken.isValidToken()) {
-            throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-        }
-
-        extractAllClaims(refreshToken.token, true)
-    }
-
-    private fun getSecretKeyBytes(isRefreshToken: Boolean): ByteArray {
-        val key = if (isRefreshToken) jwtProperties.refreshToken.secretKey else jwtProperties.accessToken.secretKey
-        return Base64.getDecoder().decode(key)
-    }
-
-    fun getAccessTokenFromRequest(request: HttpServletRequest): String? =
-        getJwtFromRequest(jwtProperties.accessToken.name, request)
-
-    fun getJwtFromRequest(
-        name: String,
-        request: HttpServletRequest,
-    ): String? = WebUtils.getCookie(request, name)?.value
+    fun getAccessTokenFromRequest(request: HttpServletRequest): String?
+    fun getJwtFromRequest(name: String, request: HttpServletRequest): String?
 }
 ```
 
-**제거되는 것: `extractClaim(token, claimsResolver, isRefreshToken)`.**
-현재 `extractUsername` 만 쓰고 있어(전 코드베이스 검색 결과 외부 호출 없음) 안전하게 지운다.
+**결정 사항 넷.**
+
+1. **만료 검증을 직접 구현한다.** `extractAllClaims` 안에서 `SignedJWT.verify()` 로 서명을 본 뒤
+   **반드시 `claims.expirationTime` 을 `Date()` 와 비교**한다. 빠뜨리면 만료 토큰이 통과한다.
+   실패 시 `EXPIRED_ACCESS_TOKEN` / `EXPIRED_REFRESH_TOKEN` 으로 구분한다.
+2. **`Boolean` 반환 API 를 없앤다.** 기존 `isAccessTokenValid` / `isRefreshTokenValid` 는 실패 시
+   throw 하고 성공 시 `true` 를 반환해 **반환값이 의미가 없다.** 클레임을 반환하거나 던지는 형태로 바꾼다.
+3. **`extractClaim(token, claimsResolver, isRefreshToken)` 은 제거한다.** `extractUsername` 만
+   쓰고 있다(전 코드베이스 검색 결과 외부 호출 없음).
+4. **키 선택은 기존 그대로.** `isRefreshToken` 으로 `accessToken.secretKey` / `refreshToken.secretKey` 를
+   가르고 `Base64.getDecoder().decode(...)` 한 바이트를 `MACSigner`/`MACVerifier` 에 넘긴다.
+
+```kotlin
+// 만료 검증 — 이 블록이 이번 전환의 핵심이다. jjwt 는 자동이었고 nimbus 는 아니다.
+val expirationTime = claims.expirationTime
+if (expirationTime != null && expirationTime.before(Date())) {
+    throw CustomException(
+        if (isRefreshToken) ErrorCode.EXPIRED_REFRESH_TOKEN else ErrorCode.EXPIRED_ACCESS_TOKEN,
+    )
+}
+```
 
 **서명 알고리즘은 HS256 으로 동일하고 키 바이트도 같다.** jjwt 의
 `Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))` 와 nimbus 의 `MACSigner(Base64.decode(secretKey))` 는
@@ -408,48 +333,24 @@ secret 문자열 44바이트 -> secretKey(base64) 디코딩 후 44바이트 = 35
 `authentication/security/RestAuthenticationEntryPoint.kt`
 
 ```kotlin
-package com.pluxity.aiot.authentication.security
-
-import com.pluxity.aiot.global.constant.ErrorCode
-import com.pluxity.aiot.global.response.ErrorResponseBody
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
-import org.springframework.http.MediaType
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.web.AuthenticationEntryPoint
-import tools.jackson.databind.json.JsonMapper
-
-/**
- * 인증되지 않은 요청의 진입점. 지정하지 않으면 Spring 기본값이 `Http403ForbiddenEntryPoint` 라서
- * 미인증 요청에도 403이 나간다 — 인증 부재는 401, 권한 부족이 403이므로 여기서 401로 맞춘다.
- *
- * 이 응답은 `ExceptionTranslationFilter` 단계에서 나가 `@RestControllerAdvice` 를 타지 않으므로,
- * 본문을 직접 `ErrorResponseBody` 로 써서 나머지 API 와 형식을 통일한다.
- */
 class RestAuthenticationEntryPoint : AuthenticationEntryPoint {
-    private val objectMapper = JsonMapper()
-
-    override fun commence(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        authException: AuthenticationException,
-    ) {
-        val code = ErrorCode.UNAUTHENTICATED
-        response.status = code.getHttpStatus().value()
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = "UTF-8"
-        response.writer.write(
-            objectMapper.writeValueAsString(
-                ErrorResponseBody(
-                    status = code.getHttpStatus(),
-                    message = code.getMessage(),
-                    code = code.getHttpStatus().value().toString(),
-                    error = code.name,
-                ),
-            ),
-        )
+    override fun commence(request, response, authException) {
+        // ErrorCode.UNAUTHENTICATED(401) 을 ErrorResponseBody 형태로 직접 write
     }
 }
+```
+
+**왜 필요한가.** 지정하지 않으면 Spring 기본값이 `Http403ForbiddenEntryPoint` 라 **미인증 요청에도
+403 이 나간다.** 인증 부재는 401, 권한 부족이 403 이다.
+
+**왜 본문을 직접 쓰는가.** 이 응답은 `ExceptionTranslationFilter` 단계에서 나가
+`@RestControllerAdvice` 를 타지 않는다. 나머지 API 와 형식을 맞추려면 `ErrorResponseBody` 를
+직접 직렬화해야 한다. 직렬화는 **Jackson 3(`tools.jackson.databind.json.JsonMapper`)** 을 쓴다.
+
+**`ErrorCode.UNAUTHENTICATED` 를 새로 추가한다.** aiot 에는 없다.
+
+```kotlin
+UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
 ```
 
 **`ErrorCode.UNAUTHENTICATED` 를 새로 추가한다.** aiot 에는 없다.
@@ -586,36 +487,12 @@ class CommonSecurityConfig(
 > SELECT id, name, auth FROM roles;
 > SELECT DISTINCT r.auth FROM roles r JOIN user_roles ur ON ur.role_id = r.id;
 > ```
-> 값이 맞지 않으면 **#13 만 이번 범위에서 뺀다.** 나머지와 독립적이다.
+**CORS:** 기존 하드코딩 4개(`localhost:*`, `127.0.0.1:*`, `192.168.*.*:*`, `*.pluxity.com`)를
+기본값으로 두고 `corsProperties.additionalOriginPatterns` 를 더한다. 최종 목록을 기동 시 `log.info` 로 남긴다.
+나머지 설정(`allowedMethods`, `allowCredentials = true`, `maxAge = 3600`)은 현행 유지.
 
-CORS:
-
-```kotlin
-    @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource {
-        val defaultPatterns =
-            listOf(
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-                "http://192.168.*.*:*",
-                "https://*.pluxity.com",
-            )
-
-        val allPatterns = defaultPatterns + corsProperties.additionalOriginPatterns
-        log.info { "CORS allowedOriginPatterns: $allPatterns" }
-
-        val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = allPatterns.toMutableList()
-        configuration.allowedMethods = mutableListOf("GET", "PATCH", "POST", "PUT", "DELETE", "OPTIONS")
-        configuration.allowedHeaders = mutableListOf("*")
-        configuration.allowCredentials = true
-        configuration.maxAge = 3600L
-
-        val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", configuration)
-        return source
-    }
-```
+**aiot 는 `127.0.0.1` 패턴을 유지한다** — safers 에는 없지만 지울 이유가 없다.
+safers 의 `*.trycloudflare.com` 은 넣지 않는다(aiot 에 해당 사용 이력 없음).
 
 `global/properties/CorsProperties.kt` 신규:
 
@@ -636,36 +513,26 @@ safers 의 `*.trycloudflare.com` 은 넣지 않는다(aiot 에 해당 사용 이
 ### 4.7 `WhiteListPath`
 
 ```kotlin
-enum class WhiteListPath(
-    val path: String,
-) {
+enum class WhiteListPath(val path: String) {
     AUTH_IN("auth/sign-in"),
     AUTH_UP("auth/sign-up"),
-    AUTH_OUT("auth/sign-out"),
+    AUTH_OUT("auth/sign-out"),        // 신규 — 아래 참조
     REFRESH_TOKEN("auth/refresh-token"),
-    ACTUATOR("actuator"),
-    APIDOC("api-docs"),
-    HEALTH("health"),
-    INFO("info"),
-    PROMETHEUS("prometheus"),
-    SWAGGER("swagger-ui"),
+    ACTUATOR("actuator"), APIDOC("api-docs"), HEALTH("health"),
+    INFO("info"), PROMETHEUS("prometheus"), SWAGGER("swagger-ui"),
     ;
 
     companion object {
-        /**
-         * 경로 경계 기준 매칭. 단순 startsWith 는 "/health" 가 "/health-actions" 까지 삼켜
-         * 인증을 건너뛰게 하므로, 정확히 일치하거나 다음 문자가 경로 구분자('/')
-         * 또는 확장자 구분자('.', /swagger-ui.html)일 때만 화이트리스트로 본다.
-         */
-        fun matches(path: String): Boolean =
-            entries.any { entry ->
-                val prefix = "/${entry.path}"
-                path.startsWith(prefix) &&
-                    (path.length == prefix.length || path[prefix.length] == '/' || path[prefix.length] == '.')
-            }
+        fun matches(path: String): Boolean   // 경로 경계 매칭 — 아래 제약
     }
 }
 ```
+
+**`matches` 의 제약:** 정확히 일치하거나 **다음 문자가 `/` 또는 `.` 일 때만** 화이트리스트로 본다
+(`/swagger-ui.html` 때문에 `.` 도 포함). 단순 `startsWith` 는 `/health` 가 `/health-actions` 까지
+삼켜 인증을 건너뛰게 한다.
+
+`JwtAuthenticationFilter.authenticationRequired` 를 `!WhiteListPath.matches(path)` 로 바꾼다.
 
 **`HEALTH("health")` 는 aiot 고유이므로 유지한다** (safers 에는 없다). 이 항목이야말로
 `startsWith` 결함의 실제 위험 대상이다 — `/health` 로 시작하는 다른 엔드포인트가 생기면 인증이 뚫린다.
@@ -736,36 +603,15 @@ class AuthenticationService(
 
 쿠키 path 단일 소스 + `ResponseCookie` 기반 삭제:
 
-```kotlin
-    // 쿠키 경로는 생성/삭제가 반드시 동일해야 브라우저가 매칭하여 제거할 수 있다. 단일 소스로 관리한다.
-    private fun resolveAccessTokenPath(request: HttpServletRequest): String =
-        request.contextPath.takeIf { it.isNotBlank() } ?: "/"
+**규칙 둘.**
 
-    private fun resolveRefreshTokenPath(request: HttpServletRequest): String = "${request.contextPath}/"
-
-    private fun resolveExpiryPath(request: HttpServletRequest): String =
-        request.contextPath.takeIf { it.isNotEmpty() } ?: "/"
-
-    // maxAge=0 + 생성과 동일한 path로 Set-Cookie를 내려 브라우저가 즉시 제거하도록 한다.
-    private fun expireCookie(
-        name: String,
-        path: String,
-        response: HttpServletResponse,
-    ) {
-        val cookie =
-            ResponseCookie
-                .from(name, "")
-                .secure(false)
-                .httpOnly(true)
-                .sameSite("Lax")
-                .maxAge(0)
-                .path(path)
-                .build()
-                .toString()
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie)
-    }
-```
+- **path 는 단일 소스로 관리한다.** `resolveAccessTokenPath` / `resolveRefreshTokenPath` /
+  `resolveExpiryPath` 세 함수를 두고 생성·삭제가 같은 함수를 쓰게 한다.
+  **생성과 삭제의 path 가 다르면 브라우저가 매칭하지 못해 쿠키가 지워지지 않는다.**
+  현재는 호출부마다 `request.contextPath` / `"${request.contextPath}/"` 를 인라인으로 쓰고 있다.
+- **삭제는 `ResponseCookie(maxAge = 0)` 를 무조건 발행한다.** 현재 `WebUtils.getCookie(...)?.apply { }`
+  방식은 **요청에 쿠키가 실려오지 않으면 아무 `Set-Cookie` 도 내려보내지 않아** 브라우저에 남은
+  쿠키를 영원히 지우지 못한다.
 
 **현재 `deleteAuthCookie` 는 `WebUtils.getCookie(request, name)?.apply { ... }` 라서
 요청에 쿠키가 없으면 아무 `Set-Cookie` 도 내려보내지 않는다.** 브라우저에 쿠키가 남아 있는데
@@ -913,39 +759,17 @@ SELECT DISTINCT r.auth FROM roles r JOIN user_roles ur ON ur.role_id = r.id;
 
 **`JwtProviderTest` — nimbus 전환의 핵심 회귀 방지.**
 
-```kotlin
-class JwtProviderTest : BehaviorSpec({
-    given("만료 시각이 지난 액세스 토큰") {
-        `when`("extractUsername 을 호출하면") {
-            then("EXPIRED_ACCESS_TOKEN 으로 실패한다") {
-                // nimbus 는 만료를 자동 검사하지 않는다. 이 테스트가 설계문서 §4.2 의 방어선이다.
-                val provider = JwtProvider(refreshTokenRepository, expiredProperties)
-                val token = provider.generateAccessToken("tester")
-                val ex = shouldThrow<CustomException> { provider.extractUsername(token) }
-                ex.errorCode shouldBe ErrorCode.EXPIRED_ACCESS_TOKEN
-            }
-        }
-    }
+검증할 케이스 넷. **1번이 이번 전환의 핵심 방어선이다** — nimbus 는 만료를 자동 검사하지 않는다.
 
-    given("서명이 위조된 토큰") {
-        `when`("extractUsername 을 호출하면") {
-            then("INVALID_ACCESS_TOKEN 으로 실패한다") { /* 마지막 세그먼트 변조 */ }
-        }
-    }
+| # | 입력 | 기대 |
+|---|---|---|
+| 1 | 만료 시각이 지난 액세스 토큰 | `EXPIRED_ACCESS_TOKEN` |
+| 2 | 마지막 세그먼트를 변조한 토큰 | `INVALID_ACCESS_TOKEN` |
+| 3 | 리프레시 secret 으로 서명한 토큰을 액세스로 검증 | `INVALID_ACCESS_TOKEN` (키 분리 확인) |
+| 4 | 정상 액세스 토큰 | subject 반환 |
 
-    given("리프레시 secret 으로 서명한 토큰") {
-        `when`("액세스 토큰으로 검증하면") {
-            then("INVALID_ACCESS_TOKEN 으로 실패한다") { /* 키 분리 확인 */ }
-        }
-    }
-
-    given("정상 액세스 토큰") {
-        `when`("extractUsername 을 호출하면") {
-            then("subject 를 반환한다") { }
-        }
-    }
-})
-```
+> 1번은 `Duration.ofSeconds(-1)` 같은 음수 만료로 토큰을 만든다.
+> **`Thread.sleep` 으로 기다리는 테스트는 쓰지 않는다.**
 
 > `expiredProperties` 는 `Duration.ofSeconds(-1)` 같은 음수 만료로 만든다.
 > `Thread.sleep` 으로 기다리는 테스트는 쓰지 않는다.

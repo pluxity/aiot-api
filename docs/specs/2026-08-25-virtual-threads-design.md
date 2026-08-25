@@ -793,16 +793,6 @@ javap -cp <같은 경로> 'org.springframework.web.client.RestClient$Builder' | 
 > 모듈 하나를 더 끌어오는 값이 `HttpClient.newBuilder()` 두 줄보다 크지 않다.
 
 ```kotlin
-package com.pluxity.aiot.global.config
-
-import org.springframework.http.MediaType
-import org.springframework.http.client.JdkClientHttpRequestFactory
-import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
-import java.net.http.HttpClient
-import java.time.Duration
-import java.util.concurrent.Executors
-
 @Component
 class RestClientFactory {
     fun createClient(
@@ -810,41 +800,20 @@ class RestClientFactory {
         connectionTimeoutMs: Long = 5000,
         readTimeoutMs: Long = 30000,
         // false 면 4xx/5xx 에 예외를 던지지 않고 본문을 그대로 디코딩한다.
-        // EDS 처럼 "HTTP 상태가 아니라 응답 본문의 code 로 성공/실패를 판정" 하는
-        // 계약을 지켜야 할 때 쓴다 (설계문서 §6.6).
+        // EDS 처럼 "HTTP 상태가 아니라 응답 본문의 code 로 판정" 하는 계약을 지킬 때 쓴다(§6.6).
         throwOnHttpError: Boolean = true,
-    ): RestClient {
-        val httpClient =
-            HttpClient
-                .newBuilder()
-                .connectTimeout(Duration.ofMillis(connectionTimeoutMs))
-                // JDK HttpClient 는 지정하지 않으면 자체 플랫폼 스레드 풀을 만든다.
-                // 응답 처리도 가상 스레드에서 하도록 명시한다.
-                .executor(Executors.newVirtualThreadPerTaskExecutor())
-                .build()
-
-        // connect 타임아웃은 HttpClient, read 타임아웃은 팩토리 쪽에 건다.
-        val requestFactory =
-            JdkClientHttpRequestFactory(httpClient).apply {
-                setReadTimeout(Duration.ofMillis(readTimeoutMs))
-            }
-
-        val builder =
-            RestClient
-                .builder()
-                .baseUrl(baseUrl)
-                .requestFactory(requestFactory)
-                .defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }
-
-        if (!throwOnHttpError) {
-            // 모든 상태코드를 "에러 아님" 으로 처리해 retrieve() 가 본문을 디코딩하도록 둔다.
-            builder.defaultStatusHandler({ true }, { _, _ -> })
-        }
-
-        return builder.build()
-    }
+    ): RestClient
 }
 ```
+
+**구성 결정 셋.**
+
+- **`JdkClientHttpRequestFactory(HttpClient)`** 를 쓴다. connect 타임아웃은 `HttpClient.newBuilder()`
+  쪽에, read 타임아웃은 팩토리 쪽(`setReadTimeout(Duration)`)에 건다.
+- **`HttpClient.newBuilder().executor(Executors.newVirtualThreadPerTaskExecutor())`** 를 지정한다.
+  지정하지 않으면 JDK HttpClient 가 자체 플랫폼 스레드 풀을 만든다.
+- `throwOnHttpError = false` 일 때 `defaultStatusHandler({ true }, { _, _ -> })` 를 건다 —
+  모든 상태코드를 "에러 아님" 으로 처리해 `retrieve()` 가 본문을 디코딩하게 둔다.
 
 확인:
 
@@ -898,39 +867,24 @@ HTTP 200 + `code != 200` 도, HTTP 4xx 도 낼 수 있고 **양쪽 모두 위 �
 `exchangeToMono` 와 같은 의미가 되고, 기존 `response.code` 검사가 그대로 동작한다.
 
 ```kotlin
-@Component
-@ConditionalOnProperty("eds.enabled", havingValue = "true")
-class EdsClient(
-    restClientFactory: RestClientFactory,
-    private val edsProperties: EdsProperties,
-) {
-    // 상태코드가 아니라 본문의 code 로 판정하는 API 다. 위 설명 참조.
-    private val client: RestClient =
-        restClientFactory.createClient(edsProperties.baseUrl, throwOnHttpError = false)
-
-    @Volatile
-    private lateinit var apiKey: String
-
-    fun login() {
-        val request = EdsLoginRequest(edsProperties.systemKey, edsProperties.systemToken)
-
-        val response =
-            client
-                .post()
-                .uri("/api/eds/v1/external/users/login")
-                .body(request)
-                .retrieve()
-                .body(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
-                ?: throw CustomException(ErrorCode.EDS_LOGIN_FAILED, "응답 없음")
-
-        if (response.code != 200 || response.result == null) {
-            throw CustomException(ErrorCode.EDS_LOGIN_FAILED, response.message)
-        }
-
-        apiKey = response.result.apiKey
-        log.info { "EDS 로그인 성공" }
+// 비-2xx 를 예외 없이 null 로 넘기는 계약이라 .exchange 를 쓴다.
+.exchange { _, response ->
+    if (!response.statusCode.is2xxSuccessful) return@exchange null
+    response.body.use { input ->
+        val bytes = input.readNBytes(MAX_THUMBNAIL_BYTES + 1)   // 상한+1 만 읽는다
+        if (bytes.size > MAX_THUMBNAIL_BYTES) null else bytes
     }
+}
 ```
+
+**제약 셋.**
+
+- `MAX_THUMBNAIL_BYTES` 는 `Int` 여야 한다 (`readNBytes(int)`). `1024L * 1024` 로 두면 컴파일되지 않는다.
+- **`Content-Length` 로 판단하지 않는다.** chunked 응답이면 `-1` 이라 검사를 통과하고, 서버가
+  과소 신고해도 통과한다. 그 뒤 전량이 힙에 올라간다.
+- **`use` 로 닫는다.** `exchange` 콜백이 응답을 자동으로 닫아주지 않는 경로가 있다.
+
+초과 시 경고 로그를 남기고 `null` 을 반환한다(현행 계약 유지).
 
 `getCameraList` / `getRealtimeStreamUrl` / `getRecordStreamUrl` / `getWebSocketUrl` 도 동일 패턴이다
 (`.bodyValue()` → `.body()`, `.exchangeToMono{ resp -> resp.bodyToMono(T) }.block()` → `.retrieve().body(T)`).
@@ -947,37 +901,20 @@ class EdsClient(
 **상한 + 1 바이트만 읽어서 초과 여부를 판정한다** — 할당량이 상한에 묶인다.
 
 ```kotlin
-    fun getEventThumbnail(index: Long): ByteArray? =
-        try {
-            client
-                .get()
-                .uri("/api/eds/v1/external/event/thumbnail?index=$index&type=evtImg")
-                .header("api-key", apiKey)
-                .exchange { _, response ->
-                    if (!response.statusCode.is2xxSuccessful) return@exchange null
-                    // WebClient 의 maxInMemorySize(1MB) 를 대체한다(설계문서 §6.5).
-                    // Content-Length 로 판단하면 chunked(-1)·과소 신고에서 전량이 힙에 올라가므로
-                    // 스트림에서 상한+1 바이트만 읽어 초과를 판정한다.
-                    response.body.use { input ->
-                        val bytes = input.readNBytes(MAX_THUMBNAIL_BYTES + 1)
-                        if (bytes.size > MAX_THUMBNAIL_BYTES) {
-                            log.warn { "EDS 썸네일 크기 초과 (index=$index, ${MAX_THUMBNAIL_BYTES}바이트 상한)" }
-                            null
-                        } else {
-                            bytes
-                        }
-                    }
-                }
-        } catch (e: Exception) {
-            log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
-            null
-        }
-
-    companion object {
-        // readNBytes(int) 에 넘기므로 Int 다. Long 으로 두면 컴파일되지 않는다.
-        private const val MAX_THUMBNAIL_BYTES = 1024 * 1024
-    }
+// 6개 메서드가 모두 같은 형태로 바뀐다. login() 대표.
+-   .bodyValue(request)
+-   .exchangeToMono { resp -> resp.bodyToMono(object : ParameterizedTypeReference<...>() {}) }
+-   .block()
++   .body(request)
++   .retrieve()
++   .body(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
 ```
+
+`?: throw CustomException(...)` 과 뒤따르는 `if (response.code != 200) throw ...` 검사는 **그대로 둔다.**
+`throwOnHttpError = false` 덕분에 의미가 보존된다.
+
+**`apiKey` 에 `@Volatile` 을 붙인다.** `EdsKeepAliveScheduler` 스레드가 쓰고 요청 스레드가 읽는다.
+현재 가시성 보장이 없다 — 기존 결함이며 §6.10 과 같은 부류다.
 
 확인:
 
@@ -1004,50 +941,33 @@ javap -cp <같은 경로> org.springframework.http.HttpInputMessage
 ```kotlin
 @Service
 class LlmMessageService(
-    private val queryApi: QueryApi,
-    private val influxdbProperties: InfluxdbProperties,
-    private val llmMessageRepository: LlmMessageRepository,
-    private val siteRepository: SiteRepository,
-    llmProperties: LlmProperties,
-    restClientFactory: RestClientFactory,
+    ...,
+    restClientFactory: RestClientFactory,   // webClientBuilder 대체
 ) {
     private val client: RestClient = restClientFactory.createClient(llmProperties.baseUrl)
 
-    // LLM 하류 보호용 동시 호출 상한. 가상 스레드는 (A) 스레드 공급만 해결하므로
-    // (B) 동시성 제어는 그대로 유지한다 (설계문서 §4.1).
-    private val semaphore = Semaphore(llmProperties.concurrencyLimit)
+    // (B) 유형이므로 상한을 유지한다(§4.1). 기존 llm.api.concurrency-limit(기본 5) 그대로.
+    private val semaphore = java.util.concurrent.Semaphore(llmProperties.concurrencyLimit)
 
-    fun generateAndSaveMessage() {
-        val sites = siteRepository.findAll()
-        if (sites.isEmpty()) {
-            log.warn { "등록된 사이트가 없습니다." }
-            return
-        }
-
-        val now = LocalDateTime.now()
-        val targetHour = if (now.hour > 0) now.hour - 1 else 23
-        val today = LocalDate.now()
-        val yesterday = today.minusDays(1)
-
-        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            sites
-                .map { site ->
-                    executor.submit {
-                        semaphore.acquire()
-                        try {
-                            generateMessageForSite(site, yesterday, today, targetHour)
-                        } catch (e: Exception) {
-                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
-                        } finally {
-                            semaphore.release()
-                        }
-                    }
-                }.forEach { it.get() }   // close() 가 기다려주지만, 예외를 여기서 확인한다
-        }
-
-        log.info { "모든 사이트의 LLM 메시지 생성 완료" }
-    }
+    fun generateAndSaveMessage()                 // suspend 제거
+}
 ```
+
+**변경 제약 넷.**
+
+- `coroutineScope { async { } }` → `Executors.newVirtualThreadPerTaskExecutor().use { }` fan-out.
+  `submit` 결과를 `forEach { it.get() }` 로 받아 **예외를 확인한다** (`close()` 가 대기는 해주지만
+  실패를 알려주지 않는다).
+- `withPermit { }` → `semaphore.acquire()` / `finally { release() }`.
+- 사이트별 실패는 삼키고 로그만 남긴다(현행과 동일).
+- **`withContext(Dispatchers.IO) { llmMessageRepository.save(...) }` 래핑을 제거한다.**
+  이것이 이번 전환의 핵심 이득 중 하나다 — 지금은 JPA save 가 다른 스레드에서 일어나
+  트랜잭션 컨텍스트 밖이다. 이 메서드에 `@Transactional` 이 없어 우연히 동작할 뿐이며,
+  상위에 트랜잭션이 붙는 순간 깨진다.
+
+**`retrieve().body(T)` 의 null 반환에 주의한다.** 현행 `awaitBody<LlmResponse>()` 는 빈 응답에
+예외를 던지지만 RestClient 는 `null` 을 반환한다. `?: throw CustomException(...)` 으로 받는다 —
+흘리면 `generatedText` 접근에서 NPE 다. (같은 함정의 파괴적인 사례는 §6.8 참조.)
 
 `generateMessageForSite` / `getHourlyAverageTemperature` 는 `suspend` 를 떼고
 `withContext(Dispatchers.IO) { }` 래핑을 제거한다. 본문은 그대로 둔다 — 이미 블로킹 코드다.
@@ -1164,31 +1084,20 @@ class FeatureStatusWriter(
 
 HTTP 단계는 트랜잭션과 무관한 순수 함수가 된다.
 
+HTTP 단계는 트랜잭션과 무관한 순수 함수가 된다.
+
 ```kotlin
-    // 트랜잭션 밖에서 호출된다. 엔티티를 받지 않고 deviceId 만 받는다.
-    private fun fetchAllStatuses(deviceIds: List<String>): Map<String, DeviceStatus> =
-        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            deviceIds
-                .map { deviceId ->
-                    deviceId to
-                        executor.submit<DeviceStatus?> {
-                            try {
-                                // 상한은 leaf 메서드 안에서 건다 — 아래 R4 참조.
-                                val location = fetchDeviceLocationData(deviceId) ?: return@submit null
-                                DeviceStatus(
-                                    longitude = location.longitude,
-                                    latitude = location.latitude,
-                                    batteryLevel = fetchDeviceBatteryData(deviceId),
-                                )
-                            } catch (e: Exception) {
-                                log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
-                                null
-                            }
-                        }
-                }.mapNotNull { (deviceId, future) -> future.get()?.let { deviceId to it } }
-                .toMap()
-        }
+// 트랜잭션 밖에서 호출된다. 엔티티가 아니라 deviceId 만 받는다(R3).
+private fun fetchAllStatuses(deviceIds: List<String>): Map<String, DeviceStatus>
 ```
+
+**구현 제약 셋.**
+
+- `Executors.newVirtualThreadPerTaskExecutor()` 를 `use { }` 로 감싸 종료를 보장한다.
+- **개별 실패는 삼키고 `null` 로 처리한다** — 한 디바이스 실패가 전체 동기화를 중단시키면 안 된다.
+  로그는 남긴다(현행 `log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }` 유지).
+- **세마포어를 여기서 획득하지 않는다.** leaf 인 `fetchDeviceLocationData` /
+  `fetchDeviceBatteryData` 안에서 건다 — 이유는 아래 R4.
 
 #### `handleMobiusUrlUpdated` 의 `@Transactional` 을 제거한다
 
@@ -1449,32 +1358,14 @@ grep "pool-[0-9]*-thread-" <운영로그>                 # §2.3 보조 확인
 safers 의 `ExecutorPolicyTest` / `AsyncConfigTest` 와 같은 형태로 **빈이 실제로 가상 스레드를 쓰는지**
 런타임 확인한다. 설정 파일을 읽는 테스트가 아니라 스레드를 실제로 띄워 `Thread.isVirtual()` 을 본다.
 
-```kotlin
-// src/test/kotlin/com/pluxity/aiot/global/config/AsyncConfigTest.kt
-class AsyncConfigTest : BehaviorSpec({
-    given("AsyncConfig 의 taskExecutor") {
-        `when`("작업을 제출하면") {
-            then("가상 스레드에서 실행된다") {
-                val executor = AsyncConfig().taskExecutor()
-                val virtual = AtomicBoolean(false)
-                val latch = CountDownLatch(1)
-                executor.execute {
-                    virtual.set(Thread.currentThread().isVirtual)
-                    latch.countDown()
-                }
-                latch.await(5, TimeUnit.SECONDS) shouldBe true
-                virtual.get() shouldBe true
-            }
-        }
-    }
+| 대상 | 확인 |
+|---|---|
+| `taskExecutor` | `execute { }` 로 제출한 작업의 `Thread.currentThread().isVirtual` 이 `true` |
+| `taskScheduler` | 즉시 실행 작업에서 동일 확인 |
+| 빈 이름 | `context.getBeanNamesForType(TaskScheduler::class.java)` 에 **`"taskScheduler"` 가 있을 것** |
 
-    given("AsyncConfig 의 taskScheduler") {
-        `when`("cron 이 아닌 즉시 실행 작업을 제출하면") {
-            then("가상 스레드에서 실행된다") { /* 위와 동일 형태 */ }
-        }
-    }
-})
-```
+세 번째가 회귀 테스트의 핵심이다 — **이름이 바뀌면 §2.3 의 익명 폴백으로 조용히 되돌아간다.**
+`CountDownLatch` + `AtomicBoolean` 으로 받고, 타임아웃을 걸어 무한 대기를 막는다.
 
 **`taskScheduler` 빈 이름 회귀 테스트도 넣는다.** 이 이름이 바뀌면 §2.3 의 익명 폴백으로 조용히 되돌아간다.
 

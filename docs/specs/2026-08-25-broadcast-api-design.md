@@ -72,8 +72,8 @@ SpeakerBroadcastRequest(
 
 // 이력 1건 = 장치 1건. 요청 한 번이 스피커 N개를 대상으로 하면 이력 N건이 남는다
 SpeakerBroadcastResponse(
-    id: Long, message: String,
-    presetId: Long?, presetTitle: String?,     // 직접 입력이면 둘 다 null
+    id: Long, message: String,                 // 송출 시점 스냅샷
+    presetTitle: String?,                      // 프리셋 제목 스냅샷. 직접 입력이면 null
     speakerId: Long, speakerName: String,
     siteId: Long?, siteName: String?,
     userId: String, userName: String,          // 계정 아이디 / 성명
@@ -95,6 +95,7 @@ SpeakerPresetResponse(id, title, message, @JsonUnwrapped BaseResponse)
 |---|---|
 | **이력 1건 = 장치 1건** | 업체 API 가 장치 단건 처리다 — 한 대에 보내고 결과를 받는 형태. 요청 단위로 묶어 집계 필드를 두면 실제 호출 단위와 어긋난다. 장치 단위로 남기면 실패한 장치만 재송출하기도 쉽다 |
 | 이력에 **집계 카운트를 두지 않음** | 위와 같은 이유. 건수가 필요하면 목록의 `totalElements` 로 충분하고, 성공/실패 집계는 필터로 얻는 편이 정확하다 |
+| 이력에 **`presetId` 를 두지 않음** | 메시지와 프리셋 제목이 송출 시점 스냅샷으로 남는다. 프리셋 아이디를 들고 있으면 프리셋이 수정·삭제됐을 때 이력이 실제 송출 내용과 다른 것을 가리키게 된다 |
 | 이력 **상세 조회 없음** | 이력이 장치 단위라 목록 항목 하나가 이미 완결된 정보(대상 · 성공 여부 · 실패 사유)를 담는다. 상세로 더 보여줄 것이 없다 |
 | 송출 응답을 **`204`** 로. 결과는 이력에서 확인 | 기존 `AnnouncementController.broadcast` 와 같은 형태. 송출은 요청 접수이고 장치별 결과는 이력이 단일 출처가 된다 |
 | 이력 경로를 **`GET /speakers/broadcasts`** 로 (송출과 같은 경로) | 같은 컬렉션에 `POST` 는 송출, `GET` 은 이력. 프론트 입장에서 짝이 명확하다 |

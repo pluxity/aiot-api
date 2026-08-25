@@ -52,11 +52,12 @@ data class DisplayBroadcastSearchRequest(
 data class DisplayBroadcastResponse(
     @field:Schema(description = "송출 이력 아이디", example = "1")
     val id: Long,
-    @field:Schema(description = "실제 송출된 메시지", example = "잠시 후 공원이 폐장합니다.")
+    @field:Schema(description = "송출 시점의 메시지 스냅샷", example = "잠시 후 공원이 폐장합니다.")
     val message: String,
-    @field:Schema(description = "프리셋 송출인 경우 프리셋 아이디. 직접 입력이면 null", example = "1")
-    val presetId: Long?,
-    @field:Schema(description = "프리셋 송출인 경우 프리셋 제목. 직접 입력이면 null", example = "폐장 안내")
+    @field:Schema(
+        description = "송출 시점의 프리셋 제목 스냅샷. 직접 입력 송출이면 null. 현재 프리셋을 참조하지 않는다",
+        example = "폐장 안내",
+    )
     val presetTitle: String?,
     @field:Schema(description = "송출 대상 전광판 아이디", example = "1")
     val displayId: Long,

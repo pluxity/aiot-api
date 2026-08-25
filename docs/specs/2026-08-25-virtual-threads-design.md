@@ -16,6 +16,8 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| `@Transactional` 이 `findAll()` 전에 시작해 HTTP fan-out 내내 살아 있다 — "트랜잭션 밖" 이라는 주석이 사실이 아니다. `handleMobiusUrlUpdated` 도 동일 | **타당** — private 메서드로 뺐다고 경계가 생기지 않는다 | §6.8 전면 재작성: 읽기/HTTP/쓰기 3단계 분리, `FeatureQueryService`·`FeatureStatusWriter` 신설(self-invocation 회피), `handleMobiusUrlUpdated`·`checkSynchronization` 의 `@Transactional` 제거 |
+| 세마포어가 `fetchAllStatuses` 에만 걸려 다른 Mobius 경로를 덮지 못한다. Reactor Netty 는 호스트당 **집계** 상한이라 경로별 상한의 합이 기존 상한을 넘는다 | **타당** — §6.4 로 08:00 두 cron 이 겹치게 만들어 놓고 상한은 경로별로 뒀다 | 세마포어를 `AiotService` 공유 `mobiusSemaphore` 로 승격하고 **leaf 호출에만** 적용(중첩 획득 데드락 회피). §9-10 한계 추가 |
 | §6.8 의 "Mobius 동시 호출이 1이었다" 가 틀렸다. 코루틴은 단일 스레드에서도 동시적이라 이미 동시 호출 중이며, `Semaphore(10)` 은 상한 신설이 아니라 **기존 동시성을 조이는 것** | **타당** — §5.1 에 맞게 써놓고 §6.8 에서 뒤집었다 | §6.8 전면 재작성(Reactor Netty `max(코어,8)×2` 실측 근거 추가, 기본값 10 → 20), §5.1 보강, §6.4·§8.3·§9 갱신 |
 
 ## 0. 배경 — 왜 지금인가
@@ -541,10 +543,10 @@ runBlocking {                    // ← 디스패처 미지정: 호출 스레드
 | `LlmMessageController:29` | `runBlocking{}` | 직접 호출 | 낮음 |
 | `LlmMessageScheduler:22` | `runBlocking{}` | 직접 호출 | 낮음 |
 | `LlmMessageService` | `suspend` + `coroutineScope`+`async`+`Semaphore`+`withContext(IO)` | 가상 스레드 executor + `j.u.c.Semaphore` | **중** — §6.7 |
-| `AiotService.checkSynchronization:75` | `runBlocking{}` (병렬 없음) | 직접 호출 | 낮음 |
-| `AiotService.statusSynchronize:89` | `runBlocking{supervisorScope{async}}` | 가상 스레드 fan-out + **트랜잭션 재설계** | **높음** — §6.8 |
+| `AiotService.checkSynchronization:75` | `runBlocking{}` (병렬 없음) | HTTP 1회를 트랜잭션 밖으로 분리 | **중** — §6.8 |
+| `AiotService.statusSynchronize:89` | `runBlocking{supervisorScope{async}}` | **읽기/HTTP/쓰기 3단계 분리 + 빈 2개 신설** | **최고** — §6.8 |
 | `AiotService` suspend 5개 | `awaitBody` / `.block()` 혼재 | RestClient 동기 | 낮음 |
-| `FeatureScheduler:104` | `runBlocking{supervisorScope{async}}` | §6.8 과 동일 패턴 | **높음** |
+| `FeatureScheduler:104` | `runBlocking{supervisorScope{async}}` | §6.8 과 동일한 3단계 구조 | **높음** |
 | `SensorDataMigrationService:148` | `runBlocking{}` | 직접 호출 | 낮음 |
 | `EdsWebSocketClient` | Reactor 전량 | **유지** | — §7 |
 | `AiotServiceKoTest` | `runBlocking` 테스트 | 일반 테스트 | 낮음 |
@@ -1068,128 +1070,260 @@ class LlmMessageService(
 지금은 JPA save 가 다른 스레드에서 일어나 트랜잭션 컨텍스트 밖이다. 이 메서드에 `@Transactional` 이
 없어서 우연히 동작할 뿐이며, 상위에 트랜잭션이 붙는 순간 깨진다. 제거하면 이 함정이 사라진다.
 
-### 6.8 `AiotService.statusSynchronize` / `FeatureScheduler.scheduledBatteryDataUpdate` — 트랜잭션 재설계
+### 6.8 Mobius 동기화 — 트랜잭션 경계와 동시성 상한 재설계
 
-**이 두 곳이 가장 위험하다.** §5.1 에서 봤듯 현재는 `runBlocking` 의 단일 스레드 덕분에 엔티티 변경이
-트랜잭션 스레드에서 일어나 dirty checking 이 동작한다. **가상 스레드로 진짜 병렬화하면 이게 깨진다.**
+**이번 작업에서 가장 위험한 구간이다.** 요구사항이 네 개인데 서로 얽혀 있어, 하나만 보고 고치면
+다른 하나가 깨진다. 먼저 전부 나열한다.
+
+| # | 요구사항 | 어기면 |
+|---|---|---|
+| R1 | 엔티티 변경은 **트랜잭션 스레드**에서 일어나야 한다 | dirty checking 이 조용히 깨진다 |
+| R2 | HTTP fan-out 은 **트랜잭션 밖**이어야 한다 | 응답 대기 내내 JDBC 커넥션을 점유한다(풀 기본 10) |
+| R3 | 트랜잭션 간에 **엔티티를 넘기면 안 된다** | 뒤 트랜잭션에서 detached → 역시 dirty checking 이 안 된다 |
+| R4 | 동시성 상한은 **모든 Mobius 경로에 공유**돼야 한다 | 경로별 상한의 합이 기존 상한을 넘는다 |
+
+R1 과 R2 는 서로 밀어낸다. 둘 다 만족시키려면 **읽기 / HTTP / 쓰기를 세 단계로 쪼개고
+단계 사이에는 엔티티가 아니라 식별자와 값만 넘겨야 한다**(R3).
+
+#### 현재 코드의 문제
 
 ```kotlin
 @Transactional                              // ← 트랜잭션은 호출 스레드에 바인딩
 fun statusSynchronize() {
-    features.map { executor.submit {        // ← 다른 스레드
-        feature.updateStatusInfo(...)       // ← 영속성 컨텍스트 밖. flush 안 됨
+    features.map { async {                  // ← 디스패처 미지정이라 같은 스레드(§5.1)
+        feature.updateStatusInfo(...)       // ← 그래서 우연히 동작 중이다
     } }
 }
 ```
 
-**해법: I/O 와 영속성 변경을 분리한다.** 병렬화가 필요한 것은 HTTP 호출이지 엔티티 변경이 아니다.
+현재는 `runBlocking` 단일 스레드 덕분에 R1 이 **우연히** 지켜지고 있다. 가상 스레드로 진짜
+병렬화하면 깨진다. 반대로 R2 는 **지금도 위반 중**이다 — HTTP fan-out 전체가 트랜잭션 안에 있다.
+
+#### 단계 분리
+
+세 단계를 **서로 다른 빈**에 둔다. 같은 빈 안에서 호출하면 **프록시를 타지 않아 `@Transactional`
+이 아예 적용되지 않는다**(self-invocation). 이것이 별도 빈으로 빼는 유일한 이유다.
 
 ```kotlin
-    // fetchAllStatuses 의 반환 타입. AiotService 내부 전용이라 별도 파일로 빼지 않는다.
-    // LocationData(latitude, longitude) 를 그대로 담지 않고 평탄화한다 — 아래 사용부가
-    // status.longitude / status.latitude 로 접근하기 때문이다.
-    private data class DeviceStatus(
-        val longitude: Double,
-        val latitude: Double,
-        val batteryLevel: Int?,
-    )
+// AiotService — 오케스트레이션만. @Transactional 을 붙이지 않는다.
+fun statusSynchronize() {
+    // ① 읽기 트랜잭션: 엔티티가 아니라 deviceId 만 꺼낸다 (R3)
+    val deviceIds = featureQueryService.findAllDeviceIds()
+    log.info { "총 ${deviceIds.size}개의 Feature 위치 동기화 시작" }
 
-    // 트랜잭션 밖에서 병렬 조회만 수행한다.
-    private fun fetchAllStatuses(features: List<Feature>): Map<String, DeviceStatus> =
+    // ② 트랜잭션 밖: 순수 HTTP fan-out (R2)
+    val statuses = fetchAllStatuses(deviceIds)
+
+    // ③ 쓰기 트랜잭션: 별도 빈이므로 프록시를 탄다 (R1)
+    featureStatusWriter.applyStatuses(statuses)
+
+    log.info { "위치 동기화 완료" }
+}
+```
+
+```kotlin
+// 신규. 읽기 전용 조회를 트랜잭션 경계로 감싼다.
+@Service
+class FeatureQueryService(
+    private val featureRepository: FeatureRepository,
+) {
+    @Transactional(readOnly = true)
+    fun findAllDeviceIds(): List<String> = featureRepository.findAll().map { it.deviceId }
+}
+```
+
+```kotlin
+// 신규. 쓰기 단계 전용. AiotService 와 별도 빈이어야 프록시가 적용된다.
+@Service
+class FeatureStatusWriter(
+    private val featureRepository: FeatureRepository,
+    private val siteRepository: SiteRepository,
+) {
+    @Transactional
+    fun applyStatuses(statuses: Map<String, DeviceStatus>) {
+        if (statuses.isEmpty()) return
+
+        // 이 트랜잭션 안에서 다시 로드해야 영속 상태가 된다 (R3).
+        // ①에서 읽은 엔티티를 넘겨받으면 detached 라 변경이 flush 되지 않는다.
+        featureRepository.findAllByDeviceIdIn(statuses.keys.toList()).forEach { feature ->
+            val status = statuses[feature.deviceId] ?: return@forEach
+            val site = siteRepository.findFirstByPointInPolygon(status.longitude, status.latitude)
+            feature.updateStatusInfo(status.longitude, status.latitude, status.batteryLevel, site)
+        }
+    }
+}
+```
+
+> **`FeatureRepository.findAllByDeviceIdIn(deviceIds: List<String>): List<Feature>` 를 추가한다.**
+> 기존에 `deleteAllByDeviceIdIn` 이 있으므로 같은 파생 쿼리 패턴이다.
+
+> **`DeviceStatus` 는 `AiotService` 내부가 아니라 공유 위치로 옮긴다.** 세 빈이 함께 쓰므로
+> `data/dto/AiotDto.kt` 에 `internal data class DeviceStatus(longitude, latitude, batteryLevel)` 로 둔다.
+> (3차 리뷰에서 `private data class` 로 정의했으나, 단계 분리로 가시성이 맞지 않게 됐다.)
+
+HTTP 단계는 트랜잭션과 무관한 순수 함수가 된다.
+
+```kotlin
+    // 트랜잭션 밖에서 호출된다. 엔티티를 받지 않고 deviceId 만 받는다.
+    private fun fetchAllStatuses(deviceIds: List<String>): Map<String, DeviceStatus> =
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            features
-                .map { feature ->
-                    feature.deviceId to
+            deviceIds
+                .map { deviceId ->
+                    deviceId to
                         executor.submit<DeviceStatus?> {
-                            statusSemaphore.acquire()
                             try {
-                                val location = fetchDeviceLocationData(feature.deviceId) ?: return@submit null
+                                // 상한은 leaf 메서드 안에서 건다 — 아래 R4 참조.
+                                val location = fetchDeviceLocationData(deviceId) ?: return@submit null
                                 DeviceStatus(
                                     longitude = location.longitude,
                                     latitude = location.latitude,
-                                    batteryLevel = fetchDeviceBatteryData(feature.deviceId),
+                                    batteryLevel = fetchDeviceBatteryData(deviceId),
                                 )
                             } catch (e: Exception) {
-                                log.error(e) { "위치 데이터 가져오기 실패: ${feature.deviceId}" }
+                                log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
                                 null
-                            } finally {
-                                statusSemaphore.release()
                             }
                         }
                 }.mapNotNull { (deviceId, future) -> future.get()?.let { deviceId to it } }
                 .toMap()
         }
+```
 
-    @Transactional
-    fun statusSynchronize() {
-        val features = featureRepository.findAll()
-        log.info { "총 ${features.size}개의 Feature 위치 동기화 시작" }
+#### `handleMobiusUrlUpdated` 의 `@Transactional` 을 제거한다
 
-        // ① 트랜잭션 스레드에서 조회 결과를 받는다 (내부 병렬은 트랜잭션과 무관한 순수 HTTP).
-        val statuses = fetchAllStatuses(features)
+```kotlin
+@EventListener
+@Transactional                          // ← 이것 때문에 아래 전부가 한 트랜잭션 안이다
+fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
+    this.cachedMobiusUrl = event.newUrl
+    checkSynchronization()
+    statusSynchronize()                 // ← 게다가 자기 호출이라 프록시도 안 탄다
+    subscription()
+}
+```
 
-        // ② 엔티티 변경은 반드시 트랜잭션 스레드에서. 이 루프를 executor 안으로 옮기면
-        //    dirty checking 이 조용히 깨진다 (설계문서 §6.8).
-        features.forEach { feature ->
-            val status = statuses[feature.deviceId] ?: return@forEach
-            val site = siteRepository.findFirstByPointInPolygon(status.longitude, status.latitude)
-            feature.updateStatusInfo(status.longitude, status.latitude, status.batteryLevel, site)
+위 분리를 해놓아도 **이 어노테이션이 남아 있으면 전부 무의미하다** — 바깥 트랜잭션이 살아 있어
+HTTP fan-out 이 그 안에서 돌기 때문이다. `@Transactional` 을 떼고 각 메서드가 자기 경계를 갖게 한다.
+
+```kotlin
+@EventListener
+fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
+    this.cachedMobiusUrl = event.newUrl
+    checkSynchronization()
+    statusSynchronize()
+    subscription()
+}
+```
+
+> **원자성이 바뀐다는 점은 인지한다.** 지금은 셋이 한 트랜잭션이라 중간 실패 시 전부 롤백되지만,
+> 분리 후에는 앞 단계가 커밋된 채로 뒤가 실패할 수 있다. 다만 **셋 다 외부 시스템(Mobius) 상태를
+> 로컬에 반영하는 동기화 작업**이라 부분 반영이 치명적이지 않고, 다음 동기화에서 수렴한다.
+> 애초에 HTTP 를 트랜잭션으로 감싸 원자성을 확보하려는 설계가 잘못이었다.
+
+#### `checkSynchronization` 도 같은 문제다
+
+```kotlin
+@Transactional
+fun checkSynchronization() {
+    val existFeatures = featureRepository.findAll()
+    val features = fetchAllMobiusSensorPaths(existFeatures)   // ← HTTP 가 트랜잭션 안
+    featureRepository.deleteAllByDeviceIdIn(removedIds)
+    featureRepository.saveAll(features)
+}
+```
+
+**다만 심각도가 다르다.** `fetchAllMobiusSensorPaths` 는 fan-out 이 아니라 **HTTP 호출 1회**
+(`GET ?fu=1&ty=3&lvl=2`) + 순수 매핑이다. 점유 시간이 요청 하나 분량이라 §6.8 본체보다 가볍다.
+
+호출 1회를 앞으로 빼는 것으로 충분하다.
+
+```kotlin
+// AiotService — @Transactional 제거
+fun checkSynchronization() {
+    val uril = fetchMobiusUril()              // 트랜잭션 밖. HTTP 1회
+    featureSyncWriter.applyPaths(uril)        // 별도 빈, @Transactional
+}
+
+// 신규 — 기존 fetchAllMobiusSensorPaths 에서 HTTP 부분만 분리
+private fun fetchMobiusUril(): List<String> =
+    mobiusLimiter { client.get().uri("?fu=1&ty=3&lvl=2").retrieve().body<MobiusUrilResponse>() }
+        ?.uril ?: emptyList()
+```
+
+`applyPaths` 는 기존 `fetchAllMobiusSensorPaths` 의 **매핑 로직을 그대로 옮기되**, 트랜잭션 안에서
+`featureRepository.findAll()` 을 다시 호출해 영속 엔티티로 작업한다(R3).
+
+#### R4 — 상한은 모든 Mobius 경로가 공유해야 한다
+
+**세마포어를 `fetchAllStatuses` 에 걸면 안 된다.** Reactor Netty 의 상한은 **호스트당 집계**여서
+아래 경로 전부가 하나의 풀을 나눠 쓰고 있었다.
+
+```
+FeatureScheduler:110            → fetchDeviceBatteryData        (08:00 cron)
+FeatureController:137-139       → checkSynchronization / statusSynchronize / subscription
+SensorDataMigrationService:149  → findByDateRange
+MobiusConfigController:90       → removeAllSubscriptions
+AiotService:410-411             → handleMobiusUrlUpdated
+```
+
+경로마다 별도 세마포어를 두면 **합계가 기존 상한을 넘는다.** 특히 §6.4 로 08:00 두 cron 이
+**동시에** 돌게 되므로 배터리 동기화와 상태 동기화가 겹친다 — 상한을 재현하려다 오히려 늘리는 셈이다.
+
+**해법: `AiotService` 에 세마포어를 하나 두고, Mobius 를 때리는 모든 지점을 그것으로 감싼다.**
+Mobius HTTP 는 전부 `AiotService` 의 `client` 를 지나므로 이 한 곳으로 충분하다.
+
+```kotlin
+    // Reactor Netty 공유 커넥션 풀의 호스트당 상한(max(코어,8)×2)을 재현한다.
+    // JDK HttpClient 에는 대응 설정이 없어 전환 시 이 상한이 사라진다.
+    // 새 상수를 도입하는 게 아니라 기존 동작을 유지하는 것이다 (설계문서 §6.8).
+    private val mobiusSemaphore =
+        Semaphore(maxOf(Runtime.getRuntime().availableProcessors(), 8) * 2)
+
+    // 반드시 leaf(실제 HTTP 호출)에서만 호출한다. 중첩 획득은 데드락이다 — 아래 주의.
+    private fun <T> mobiusLimiter(block: () -> T): T {
+        mobiusSemaphore.acquire()
+        try {
+            return block()
+        } finally {
+            mobiusSemaphore.release()
         }
-
-        log.info { "위치 동기화 완료" }
     }
 ```
 
-#### `statusSemaphore` — 새 상한이 아니라 **기존 상한의 이전(移轉)이다**
+> **중첩 획득 금지 — `java.util.concurrent.Semaphore` 는 재진입이 안 된다.**
+> `fetchAllStatuses` 처럼 fan-out 하는 쪽에서 획득한 뒤 그 안의 `fetchDeviceLocationData` 가
+> 또 획득하면 **자기 자신을 기다리는 데드락**이 된다. 그래서 **fan-out 이 아니라 leaf 에만 건다.**
+> 이 규칙을 지키면 호출자가 어떻게 조합하든 안전하다.
 
-여기서 흔한 오해를 먼저 정리한다. **"지금은 단일 스레드라 Mobius 동시 호출이 1" 이 아니다.**
+적용 대상은 **실제로 `client` 를 호출하는 메서드 전부**다.
 
-`async` 는 단일 스레드에서 돌지만 **코루틴은 한 스레드에서도 동시적**이다. A 가 `awaitBody` 에서
-suspend 하면 스레드를 놓고 B 가 자기 요청을 쏜다. 즉 **아웃바운드 HTTP 는 이미 동시에 나가고 있다**
-(§5.1 에서 "동시성은 오직 WebClient 서스펜션 지점에서만 생긴다" 고 쓴 것이 정확히 이 뜻이다).
-직렬화되는 것은 CPU 작업과 블로킹 JDBC 호출뿐이다.
+| 메서드 | 성격 |
+|---|---|
+| `fetchDeviceLocationData` | leaf |
+| `fetchDeviceBatteryData` | leaf |
+| `fetchMobiusUril` | leaf |
+| `findByDateRange` | leaf |
+| `setupSubscriptionForFeature` / `fetchRemoveSubscription` | leaf |
 
-**그럼 현재 무엇이 상한을 잡고 있나 — Reactor Netty 커넥션 풀이다.**
+`fetchAllStatuses`, `statusSynchronize`, `subscription` 같은 **조합 메서드에는 걸지 않는다.**
 
-```bash
-javap -c -p -cp <reactor-netty-core-1.3.3 전개경로> reactor.netty.resources.ConnectionProvider
-#   DEFAULT_POOL_MAX_CONNECTIONS = Math.max(Runtime.availableProcessors(), 8) * 2
-#   pendingAcquireMaxCount = 500
-#   reactor.netty.pool.acquireTimeout = 45000 (ms)
-```
+#### `FeatureScheduler.scheduledBatteryDataUpdate`
 
-`WebClientFactory` 가 `HttpClient.create()` 로 **공유 기본 커넥션 프로바이더**를 쓰므로
-호스트당 `max(코어수, 8) × 2` 가 실효 상한이다. **10코어 장비면 20이다.**
-
-| | 현재 | RestClient + JDK HttpClient 전환 후 |
-|---|---|---|
-| Mobius 동시 호출 상한 | **`max(코어,8)×2`** (10코어 → 20), 초과분은 최대 500개 대기 / 45초 타임아웃 | **없음** — JDK `HttpClient` 에는 HTTP/1.1 호스트당 커넥션 상한 설정이 없다 |
-
-**즉 전환하면 암묵적 상한이 사라진다. 세마포어는 그것을 명시적으로 되살리는 장치다.**
-
-**설정 클래스를 새로 만들지 않는다.** 목표가 "지금과 같게 유지" 이므로, 임의의 상수를 yml 에
-심는 대신 **Reactor Netty 가 쓰던 식을 그대로 재현한다.** 실행 장비에 맞춰 자동으로 따라간다.
+동일한 3단계 구조로 바꾼다. 배터리만 다루므로 `FeatureStatusWriter` 에 메서드를 하나 더 둔다.
 
 ```kotlin
-    // 현재 상한은 Reactor Netty 공유 커넥션 풀의 호스트당 max(코어,8)×2 다.
-    // JDK HttpClient 에는 대응 설정이 없어 전환 시 이 상한이 사라지므로 같은 식으로 재현한다.
-    // 새 상수를 도입하는 게 아니라 기존 동작을 유지하는 것이다 (설계문서 §6.8).
-    private val statusSemaphore =
-        Semaphore(maxOf(Runtime.getRuntime().availableProcessors(), 8) * 2)
+// FeatureScheduler — @Transactional 제거
+@Profile("!local")
+@Scheduled(cron = "0 0 8 * * ?")
+fun scheduledBatteryDataUpdate() {
+    val deviceIds = featureQueryService.findAllDeviceIds()          // ① 읽기 tx
+    val levels = aiotService.fetchAllBatteryLevels(deviceIds)       // ② 트랜잭션 밖 HTTP
+    featureStatusWriter.applyBatteryLevels(levels)                  // ③ 쓰기 tx
+}
 ```
 
-> **`MobiusProperties` 를 추가하지 않는 이유.** §6.3 에서 HikariCP 에 적용한 것과 같은 원칙이다 —
-> **측정 없이 근거 없는 상수를 설정으로 승격시키지 않는다.** `concurrencyLimit: 20` 을 yml 에 넣으면
-> 다음 사람이 "왜 20인가" 를 물을 때 답할 근거가 없지만, 위 식은 **출처가 명확하고
-> 배포 장비마다 알아서 맞는다.** 운영 컨테이너 코어 수를 사전에 조사할 필요도 없어진다.
->
-> 나중에 Mobius 가 이 수준을 못 견디는 것이 **측정으로 확인되면** 그때 설정으로 뺀다 — §11-3.
-> 그 시점엔 값의 근거가 생긴다.
-
-`FeatureScheduler.scheduledBatteryDataUpdate` 도 **동일한 구조**로 바꾼다 —
-`aiotService.fetchDeviceBatteryData` 병렬 조회 → 트랜잭션 스레드에서 `feature.updateBatteryLevel(...)`.
-
-`AiotService.checkSynchronization` 은 `runBlocking { }` 만 지우면 된다 — 병렬 fan-out 이 없다.
+`aiotService.fetchAllBatteryLevels` 는 `fetchAllStatuses` 와 같은 형태의 가상 스레드 fan-out 이며,
+내부의 `fetchDeviceBatteryData` 가 `mobiusLimiter` 를 통과하므로 상한이 공유된다.
 
 ### 6.9 `SensorDataMigrationService` / 나머지
 
@@ -1331,6 +1465,8 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | Mobius 배치 소요 시간 (§6.8) | **전환 전후를 비교한다.** 크게 느려졌다면 세마포어 계산식이 기존 실효 상한을 제대로 재현하지 못한 것이다 |
 | STOMP 하트비트가 살아 있는가 | 클라이언트 연결 유지 확인 + `stomp-heartbeat-` 스레드 존재 |
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
+| 트랜잭션 점유 시간 (§6.8 R2) | 배치 중 `pg_stat_activity` 의 `idle in transaction` 또는 p6spy 로그로 **HTTP 대기 동안 커넥션을 잡고 있지 않은지** 확인 |
+| Mobius 동시 호출 상한 (§6.8 R4) | 08:00 두 cron 이 겹치는 구간에서 Mobius 측 동시 접속 수가 `max(코어,8)×2` 를 넘지 않는지 |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
 | **EDS 가 4xx/5xx 를 낼 때 (§6.6)** | 잘못된 api-key 로 호출 → **`EDS_LOGIN_FAILED`/`EDS_API_ERROR` 가 나와야 한다.** 500 이 나오면 `throwOnHttpError` 설정이 빠진 것 |
 | 썸네일 크기 상한 (§6.6) | 1MB 초과 응답을 주는 스텁으로 호출 → `null` 반환 + 경고 로그. **chunked 응답(Content-Length 없음)으로도 확인** |
@@ -1362,6 +1498,10 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 7. **커넥션 풀 대기자 수에 상한이 없어진다**(§6.3). 설정을 바꾸지 않기로 했으므로 이 상태로 운영하며,
    `SQLTransientConnectionException` 이 관측되면 그때 재검토한다.
 8. **PostGIS 의존 쿼리가 테스트되지 않는다**(§3.7). H2 `MODE=PostgreSQL` 은 PostGIS 함수를 제공하지 않는다.
+9. **`handleMobiusUrlUpdated` 의 원자성이 약해진다**(§6.8). 세 동기화 단계가 각자 트랜잭션을 가지므로
+   중간 실패 시 부분 반영이 남는다. 다음 동기화에서 수렴하는 성질에 의존한다.
+10. **`mobiusSemaphore` 는 중첩 획득 시 데드락이다**(§6.8 R4). leaf 에만 건다는 규칙을 코드로
+   강제하지 못하므로, Mobius 호출 메서드를 새로 추가할 때 주의가 필요하다.
 
 ## 10. 작업 순서 / 커밋 단위
 
@@ -1376,7 +1516,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 5 | `feat: 가상 스레드 활성화 및 taskExecutor/taskScheduler 명시` | §6.2, §6.4, §8.2 | **높음** — §2.3 해소 |
 | 6 | `refactor: WebClient → RestClient 전환 (EdsClient, NgrokConfig)` | §6.5, §6.6 | 중 |
 | 7 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
-| 8 | `refactor: AiotService/FeatureScheduler 코루틴 제거 및 트랜잭션 경계 정리` | §6.8 | **최고** |
+| 8 | `refactor: Mobius 동기화 트랜잭션 경계 분리 및 동시성 상한 공유` | §6.8 — `FeatureQueryService`·`FeatureStatusWriter` 신설, `handleMobiusUrlUpdated`/`checkSynchronization` 의 `@Transactional` 제거 | **최고** |
 | 9 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
 
 `§6.3`(HikariCP)은 **설정 변경이 없으므로 커밋이 없다.**

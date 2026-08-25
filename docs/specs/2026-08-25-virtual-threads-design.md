@@ -13,6 +13,9 @@
 | 지적 | 판정 | 반영 |
 |---|---|---|
 | 썸네일 크기 검사가 `bodyTo(ByteArray)` **이후**라 상한을 복원하지 못한다 (chunked/과소 신고 시 전량 적재) | **타당** — "복원한다" 는 서술이 틀렸다 | §6.6 을 `response.body` + `readNBytes(상한+1)` 스트림 판정으로 교체, §6.5 서술 정정, §8.3 확인 항목 추가 |
+| `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
+| `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
+| `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
 | §6.8 의 "Mobius 동시 호출이 1이었다" 가 틀렸다. 코루틴은 단일 스레드에서도 동시적이라 이미 동시 호출 중이며, `Semaphore(10)` 은 상한 신설이 아니라 **기존 동시성을 조이는 것** | **타당** — §5.1 에 맞게 써놓고 §6.8 에서 뒤집었다 | §6.8 전면 재작성(Reactor Netty `max(코어,8)×2` 실측 근거 추가, 기본값 10 → 20), §5.1 보강, §6.4·§8.3·§9 갱신 |
 
 ## 0. 배경 — 왜 지금인가
@@ -754,7 +757,8 @@ class AsyncConfig {
 | `scheduledBatteryDataUpdate` (Mobius) | 다른 cron 이 끝난 뒤 시작. HTTP 자체는 이미 동시(§5.1) | **즉시 시작**, 동시성은 세마포어로 현행 유지(§6.8) |
 | `generateDailyMessage` (LLM) | 앞 작업 완료 후 시작 | **동시 시작**, 상한 `Semaphore(5)` 유지(§6.7) |
 
-**LLM 쪽은 `concurrencyLimit` 상한이 있으므로 안전하다.** Mobius 쪽은 §6.8 에서 상한을 새로 건다.
+**LLM 쪽은 `llm.api.concurrency-limit`(기본 5) 상한이 그대로 유지된다.** Mobius 쪽도 동시 호출량은
+지금과 같다 — §6.8 에서 Reactor Netty 가 걸고 있던 상한을 계산식으로 이어받는다.
 두 하류 시스템이 다르므로 서로 간섭하지 않는다. **의도된 변경이며, 이것이 이번 작업의 목표 중 하나다.**
 
 ### 6.5 `WebClientFactory` → `RestClientFactory` (신규)
@@ -802,6 +806,10 @@ class RestClientFactory {
         baseUrl: String,
         connectionTimeoutMs: Long = 5000,
         readTimeoutMs: Long = 30000,
+        // false 면 4xx/5xx 에 예외를 던지지 않고 본문을 그대로 디코딩한다.
+        // EDS 처럼 "HTTP 상태가 아니라 응답 본문의 code 로 성공/실패를 판정" 하는
+        // 계약을 지켜야 할 때 쓴다 (설계문서 §6.6).
+        throwOnHttpError: Boolean = true,
     ): RestClient {
         val httpClient =
             HttpClient
@@ -818,15 +826,33 @@ class RestClientFactory {
                 setReadTimeout(Duration.ofMillis(readTimeoutMs))
             }
 
-        return RestClient
-            .builder()
-            .baseUrl(baseUrl)
-            .requestFactory(requestFactory)
-            .defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }
-            .build()
+        val builder =
+            RestClient
+                .builder()
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                .defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }
+
+        if (!throwOnHttpError) {
+            // 모든 상태코드를 "에러 아님" 으로 처리해 retrieve() 가 본문을 디코딩하도록 둔다.
+            builder.defaultStatusHandler({ true }, { _, _ -> })
+        }
+
+        return builder.build()
     }
 }
 ```
+
+확인:
+
+```bash
+javap -cp <spring-web-7.0.5 전개경로> 'org.springframework.web.client.RestClient$Builder' | grep statusHandler
+#   defaultStatusHandler(java.util.function.Predicate<HttpStatusCode>, RestClient$ResponseSpec$ErrorHandler)
+```
+
+> **`AiotService` 는 기본값(`true`)을 유지한다.** `AiotService:296` 이 예외를 잡아 처리하는
+> 구조이므로(현행 `WebClientResponseException` → 전환 후 `RestClientResponseException`),
+> 여기서 던지지 않게 만들면 그 catch 가 죽는다. **옵션을 전역 기본값으로 뒤집지 말 것.**
 
 **기존 `WebClientFactory` 와의 차이 — 인지 사항**
 
@@ -847,6 +873,27 @@ class RestClientFactory {
 
 6개 메서드 전부 같은 형태로 바뀐다. 대표 예:
 
+**전환 전에 EDS 의 에러 계약을 확인해야 한다 — 이것을 놓치면 동작이 바뀐다.**
+
+현재 `exchangeToMono` 는 **4xx/5xx 에도 예외를 던지지 않고** 본문을 그대로 디코딩한다.
+그래서 아래 검사가 도메인 에러로 매핑할 기회를 얻는다.
+
+```kotlin
+if (response.code != 200 || response.result == null) {
+    throw CustomException(ErrorCode.EDS_LOGIN_FAILED, response.message)
+}
+```
+
+`response.code` 는 **HTTP 상태가 아니라 EDS 응답 본문의 필드**다. 즉 EDS 는
+HTTP 200 + `code != 200` 도, HTTP 4xx 도 낼 수 있고 **양쪽 모두 위 검사로 수렴하고 있었다.**
+
+반면 `RestClient.retrieve()` 는 **기본 상태 핸들러가 4xx/5xx 에서 `RestClientResponseException` 을 던진다.**
+그대로 옮기면 위 검사에 도달하지 못하고 일반 예외 핸들러를 타 **`EDS_LOGIN_FAILED`/`EDS_API_ERROR`
+매핑이 사라지고 500 이 나간다.**
+
+→ **EDS 클라이언트는 `throwOnHttpError = false` 로 만든다**(§6.5). 그러면 `retrieve().body(T)` 가
+`exchangeToMono` 와 같은 의미가 되고, 기존 `response.code` 검사가 그대로 동작한다.
+
 ```kotlin
 @Component
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
@@ -854,7 +901,9 @@ class EdsClient(
     restClientFactory: RestClientFactory,
     private val edsProperties: EdsProperties,
 ) {
-    private val client: RestClient = restClientFactory.createClient(edsProperties.baseUrl)
+    // 상태코드가 아니라 본문의 code 로 판정하는 API 다. 위 설명 참조.
+    private val client: RestClient =
+        restClientFactory.createClient(edsProperties.baseUrl, throwOnHttpError = false)
 
     @Volatile
     private lateinit var apiKey: String
@@ -1036,6 +1085,15 @@ fun statusSynchronize() {
 **해법: I/O 와 영속성 변경을 분리한다.** 병렬화가 필요한 것은 HTTP 호출이지 엔티티 변경이 아니다.
 
 ```kotlin
+    // fetchAllStatuses 의 반환 타입. AiotService 내부 전용이라 별도 파일로 빼지 않는다.
+    // LocationData(latitude, longitude) 를 그대로 담지 않고 평탄화한다 — 아래 사용부가
+    // status.longitude / status.latitude 로 접근하기 때문이다.
+    private data class DeviceStatus(
+        val longitude: Double,
+        val latitude: Double,
+        val batteryLevel: Int?,
+    )
+
     // 트랜잭션 밖에서 병렬 조회만 수행한다.
     private fun fetchAllStatuses(features: List<Feature>): Map<String, DeviceStatus> =
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
@@ -1046,7 +1104,11 @@ fun statusSynchronize() {
                             statusSemaphore.acquire()
                             try {
                                 val location = fetchDeviceLocationData(feature.deviceId) ?: return@submit null
-                                DeviceStatus(location, fetchDeviceBatteryData(feature.deviceId))
+                                DeviceStatus(
+                                    longitude = location.longitude,
+                                    latitude = location.latitude,
+                                    batteryLevel = fetchDeviceBatteryData(feature.deviceId),
+                                )
                             } catch (e: Exception) {
                                 log.error(e) { "위치 데이터 가져오기 실패: ${feature.deviceId}" }
                                 null
@@ -1105,25 +1167,24 @@ javap -c -p -cp <reactor-netty-core-1.3.3 전개경로> reactor.netty.resources.
 
 **즉 전환하면 암묵적 상한이 사라진다. 세마포어는 그것을 명시적으로 되살리는 장치다.**
 
+**설정 클래스를 새로 만들지 않는다.** 목표가 "지금과 같게 유지" 이므로, 임의의 상수를 yml 에
+심는 대신 **Reactor Netty 가 쓰던 식을 그대로 재현한다.** 실행 장비에 맞춰 자동으로 따라간다.
+
 ```kotlin
-    // 지금은 Reactor Netty 커넥션 풀(max(코어,8)×2)이 암묵적 상한이었다.
-    // JDK HttpClient 로 바꾸면 그 상한이 사라지므로 명시적으로 되살린다
-    // (설계문서 §6.8 — 새 제한이 아니라 기존 제한의 이전이다).
-    private val statusSemaphore = Semaphore(mobiusProperties.concurrencyLimit)
+    // 현재 상한은 Reactor Netty 공유 커넥션 풀의 호스트당 max(코어,8)×2 다.
+    // JDK HttpClient 에는 대응 설정이 없어 전환 시 이 상한이 사라지므로 같은 식으로 재현한다.
+    // 새 상수를 도입하는 게 아니라 기존 동작을 유지하는 것이다 (설계문서 §6.8).
+    private val statusSemaphore =
+        Semaphore(maxOf(Runtime.getRuntime().availableProcessors(), 8) * 2)
 ```
 
-> **`MobiusProperties.concurrencyLimit` 기본값은 `20` 으로 둔다.** 초안의 `10` 은
-> **현재 실효 동시성의 절반이라 08:00 배치를 느리게 만든다.** 목표는 "조이는 것" 이 아니라
-> "지금과 같게 유지하는 것" 이므로, 운영 장비의 코어 수를 확인해
-> `max(코어, 8) × 2` 에 맞춘다.
+> **`MobiusProperties` 를 추가하지 않는 이유.** §6.3 에서 HikariCP 에 적용한 것과 같은 원칙이다 —
+> **측정 없이 근거 없는 상수를 설정으로 승격시키지 않는다.** `concurrencyLimit: 20` 을 yml 에 넣으면
+> 다음 사람이 "왜 20인가" 를 물을 때 답할 근거가 없지만, 위 식은 **출처가 명확하고
+> 배포 장비마다 알아서 맞는다.** 운영 컨테이너 코어 수를 사전에 조사할 필요도 없어진다.
 >
-> ```bash
-> # 운영 컨테이너에서
-> nproc    # 또는 애플리케이션 로그에 Runtime.availableProcessors() 를 한 번 찍는다
-> ```
->
-> 값을 바꾸려면 **먼저 현재 값을 알아야 한다.** 조정은 08:00 배치 로그의 타임아웃/5xx 비율을
-> 본 뒤에 한다.
+> 나중에 Mobius 가 이 수준을 못 견디는 것이 **측정으로 확인되면** 그때 설정으로 뺀다 — §11-3.
+> 그 시점엔 값의 근거가 생긴다.
 
 `FeatureScheduler.scheduledBatteryDataUpdate` 도 **동일한 구조**로 바꾼다 —
 `aiotService.fetchDeviceBatteryData` 병렬 조회 → 트랜잭션 스레드에서 `feature.updateBatteryLevel(...)`.
@@ -1267,10 +1328,11 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 |---|---|
 | `@Scheduled` 3개가 `app-sched-` 에서 도는가 | 로그 `[%thread]` 확인. `pool-N-thread-` 가 안 나와야 한다 |
 | 08:00 두 cron 이 동시에 시작하는가 | 시작 로그 타임스탬프 비교 |
-| Mobius 배치 소요 시간 (§6.8) | **전환 전후를 비교한다.** 느려졌다면 `concurrencyLimit` 이 기존 실효 상한보다 작다는 뜻이다 |
+| Mobius 배치 소요 시간 (§6.8) | **전환 전후를 비교한다.** 크게 느려졌다면 세마포어 계산식이 기존 실효 상한을 제대로 재현하지 못한 것이다 |
 | STOMP 하트비트가 살아 있는가 | 클라이언트 연결 유지 확인 + `stomp-heartbeat-` 스레드 존재 |
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
+| **EDS 가 4xx/5xx 를 낼 때 (§6.6)** | 잘못된 api-key 로 호출 → **`EDS_LOGIN_FAILED`/`EDS_API_ERROR` 가 나와야 한다.** 500 이 나오면 `throwOnHttpError` 설정이 빠진 것 |
 | 썸네일 크기 상한 (§6.6) | 1MB 초과 응답을 주는 스텁으로 호출 → `null` 반환 + 경고 로그. **chunked 응답(Content-Length 없음)으로도 확인** |
 | RestClient null 응답 (§6.7) | LLM 서버 빈 응답 시나리오 |
 | Hikari 풀 (§6.3) | 설정 변경 없음. `SQLTransientConnectionException` 이 새로 나타나는지만 본다 |
@@ -1293,9 +1355,10 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 4. **`heartBeatScheduler` 는 플랫폼 스레드로 남는다.** poolSize 1 이고 하는 일이 타이밍 관리라 무해하다.
 5. **RestClient 로 바뀌면서 `responseTimeout` / write 타임아웃이 사라진다.** connect/read 2종만 남고,
    `readTimeout` 이 유일한 방어선이 된다(§6.5).
-6. **Semaphore 값의 성격이 서로 다르다.** LLM 5 는 기존 코드에 있던 값을 그대로 옮긴 것이고,
-   Mobius 20 은 **Reactor Netty 가 암묵적으로 걸고 있던 상한을 재현한 값**이다(§6.8).
-   후자는 운영 장비 코어 수에 따라 달라지므로 배포 전 확인이 필요하다.
+6. **Semaphore 값의 성격이 서로 다르다.** LLM 은 기존 `llm.api.concurrency-limit`(기본 5)을
+   그대로 옮긴 것이고, Mobius 는 **설정값이 아니라 `max(코어,8)×2` 계산식**이다 —
+   Reactor Netty 가 암묵적으로 걸고 있던 상한을 재현한다(§6.8). 후자는 운영 중 조정이 불가능하며,
+   조정이 필요해지면 그때 설정으로 승격시킨다(§11-3).
 7. **커넥션 풀 대기자 수에 상한이 없어진다**(§6.3). 설정을 바꾸지 않기로 했으므로 이 상태로 운영하며,
    `SQLTransientConnectionException` 이 관측되면 그때 재검토한다.
 8. **PostGIS 의존 쿼리가 테스트되지 않는다**(§3.7). H2 `MODE=PostgreSQL` 은 PostGIS 함수를 제공하지 않는다.
@@ -1327,7 +1390,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 |---|---|---|
 | 1 | `EdsWebSocketClient` → `StandardWebSocketClient` 전환, `webflux`/`coroutines` 제거 | 재연결 수동 시험 시간 확보 시 (§7) |
 | 2 | `EdsClient` → `@HttpExchange` 인터페이스 + `RestClientAdapter` | §6.6 안정화 후. `if (response.code != 200) throw` 반복이 `defaultStatusHandler` 로 모인다 |
-| 3 | Semaphore 값 조정 (LLM 5 / Mobius 20) | 08:00 배치 로그 2주 관측 후 (§9-6). **Mobius 값은 배포 전 운영 장비 코어 수 확인이 선행돼야 한다** (§6.8) |
+| 3 | Mobius 동시성 상한을 설정으로 승격 | 08:00 배치 로그 2주 관측 후, **`max(코어,8)×2` 가 과하다는 것이 측정으로 확인되면** (§6.8). 그전에는 계산식 유지 |
 | 4 | `publishOn` 순차성 의존 여부 확인 | `edsFacade.processEvent` 가 이벤트 순서에 의존하는지 (§6.10-3) |
 | 5 | H2 → Testcontainers PostgreSQL | **H2 는 `@SpringBootTest` 3개가 실제로 쓰고 있어 제거 대상이 아니다.** 다만 PostGIS 함수를 제공하지 않아 `findFirstByPointInPolygon` 경로가 미검증이다 (§3.7). safers `2026-08-07-postgres-testcontainers-design.md` 참조 |
 | 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |

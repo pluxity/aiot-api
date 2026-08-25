@@ -16,6 +16,7 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 7개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| `AiotService` 의 `createMobiusHeaders()`(`X-M2M-RI`·`X-M2M-Origin`·`Accept: */*`)가 마이그레이션 설계에서 통째로 빠졌다 — oneM2M 필수 헤더라 Mobius 요청이 전부 거부된다 | **타당.** 8차에서 전역 `Accept` 를 복원하면서 **같은 클라이언트 생성부의 `.mutate()` 를 보지 않았다** | §6.5 에 "클라이언트별 헤더" 절 신설, `Accept` 충돌 표 추가, §8.3 확인 항목·§11-9 후속 추가 |
 | §10 커밋 6 이 `WebClientFactory`/`webClientBuilder` 를 제거하는데 소비자 3곳이 7~9 커밋에 남아 있어 **중간 커밋이 빌드되지 않는다** — "각 커밋에서 빌드 통과" 전제와 모순 | **타당** — 이분탐색을 위해 커밋을 나눠놓고 정작 이분탐색을 불가능하게 만들었다 | 커밋 6 을 "추가" 로 바꾸고 제거를 커밋 10 으로 분리, §6.5 에 존치 규칙 명시 |
 | `EdsClient` 는 6개가 아니라 **7개** 다 — `keepAlive` 가 마이그레이션 목록과 회귀 확인에서 빠졌다. 그 catch 가 `login()` 을 불러 `apiKey` 를 갱신하는 경로다 | **타당** — 문서 5곳에서 6개로 세고 있었다 | 전 지점을 7개로 정정, §6.6 에 메서드 표와 `keepAlive` 주의 추가, §8.3 에 재로그인 경로 확인 항목 추가 |
 | `throwOnHttpError` 를 클라이언트 단위로만 봤다. `AiotService` 는 `fetchDeviceBatteryData`(non-2xx → null), `fetchRemoveSubscription`(로깅 후 진행) 처럼 메서드마다 계약이 달라 `retrieve()` 로 바꾸면 예상된 4xx 가 루프 전체를 끊는다 | **타당** — §6.6 에서 EDS 에 한 검사를 `AiotService` 에는 하지 않았다 | §6.5 에 메서드별 계약 표 추가, 두 메서드는 `.exchange { }` 개별 처리로 명시 |
@@ -830,6 +831,7 @@ class RestClientFactory : DisposableBean {
   현재 `WebClientConfig.webClientBuilder` 가 전역으로 걸고 있는 값이다. 그 빈을 제거하면서
   대체하지 않으면 **EDS·LLM 요청에서 `Accept` 헤더가 사라진다** — 콘텐츠 협상을 하는
   엔드포인트가 다른 표현을 돌려주거나 요청을 거부해 본문 디코딩이 깨질 수 있다.
+  **단 Mobius 는 이 값을 덮어쓴다** — 아래 "클라이언트별 헤더" 참조.
 - **`JdkClientHttpRequestFactory(HttpClient)`** 를 쓴다. connect 타임아웃은 `HttpClient.newBuilder()`
   쪽에, read 타임아웃은 팩토리 쪽(`setReadTimeout(Duration)`)에 건다.
 - **executor 를 명시한다.** 지정하지 않으면 JDK HttpClient 가 자체 플랫폼 스레드 풀을 만든다.
@@ -841,6 +843,49 @@ class RestClientFactory : DisposableBean {
 > **`WebClientFactory` / `WebClientConfig` 는 이 시점에 지우지 않는다.** `LlmMessageService`·
 > `AiotService`·`AiotServiceKoTest` 가 아직 쓰고 있어 컴파일이 깨진다. 두 팩토리를 공존시키고
 > **마지막 소비자가 옮겨간 뒤 제거한다**(§10 커밋 10).
+
+#### 클라이언트별 헤더 — Mobius 는 팩토리 기본값만으로 동작하지 않는다
+
+**팩토리 기본값을 그대로 쓰는 것은 EDS·LLM·Ngrok 뿐이다.** `AiotService` 는 팩토리가 만든
+클라이언트에 헤더를 덧씌우고 있고, 그중 둘은 **oneM2M 프로토콜 필수 헤더**다.
+
+```kotlin
+// 현재 (AiotService:64-71, 239-244)
+webClientFactory.createClient(cachedMobiusUrl)
+    .mutate()
+    .defaultHeaders { headers -> headers.setAll(createMobiusHeaders()) }
+    .build()
+
+private fun createMobiusHeaders(): Map<String, String> =
+    mapOf(
+        "X-M2M-RI" to Instant.now().epochSecond.toString(),   // oneM2M 요청 식별자 — 필수
+        "X-M2M-Origin" to "S_AIoT_Application",               // oneM2M 발신자 — 필수
+        "Accept" to "*/*",                                    // 팩토리 기본값을 덮어쓴다
+    )
+```
+
+**`createMobiusHeaders()` 를 빠뜨리면 Mobius 요청이 전부 거부된다.** 전환 후에도 동일하게 건다.
+
+```kotlin
+private val client: RestClient =
+    restClientFactory
+        .createClient(cachedMobiusUrl)
+        .mutate()
+        .defaultHeaders { headers -> headers.setAll(createMobiusHeaders()) }
+        .build()
+```
+
+클라이언트별 `Accept` 는 이렇게 갈린다.
+
+| 클라이언트 | `Accept` | 출처 |
+|---|---|---|
+| EDS · LLM · Ngrok | `application/json` | 팩토리 기본값 |
+| **Mobius** | **`*/*`** | `createMobiusHeaders()` 가 덮어씀 |
+
+> **인지 사항 — `X-M2M-RI` 는 클라이언트 생성 시점에 고정된다.** `Instant.now()` 를 쓰지만
+> `defaultHeaders` 는 빌드 시 1회 평가되므로 **모든 요청이 같은 값을 보낸다.**
+> RestClient 도 동일하게 동작하므로 **전환으로 달라지는 것은 없다.** 다만 oneM2M 의 RI 는
+> 요청마다 고유해야 하는 값이라 현재 구현이 규격과 어긋날 소지가 있다 — 별건으로 §11-9 에 남긴다.
 
 #### 라이프사이클 — 팩토리가 자원을 들고 있어야 한다
 
@@ -1509,6 +1554,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 트랜잭션 점유 시간 (§6.8 R2) | 배치 중 `pg_stat_activity` 의 `idle in transaction` 또는 p6spy 로그로 **HTTP 대기 동안 커넥션을 잡고 있지 않은지** 확인 |
 | Mobius 동시 호출 상한 (§6.8 R4) | 08:00 두 cron 이 겹치는 구간에서 Mobius 측 동시 접속 수가 `max(코어,8)×2` 를 넘지 않는지 |
 | **빈 응답 방어 (§6.8)** | Mobius 를 빈 본문 200 으로 응답하는 스텁으로 바꾸고 `checkSynchronization` 실행 → **Feature 가 하나도 지워지지 않아야 한다.** 지워지면 `?: emptyList()` 가 남아 있는 것 |
+| **Mobius 헤더 (§6.5)** | 전환 후 첫 Mobius 호출에서 `X-M2M-RI`·`X-M2M-Origin` 이 실려 나가는지 확인. **빠지면 전 요청이 거부된다** |
 | EDS API 7개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
 | **`keepAlive` 재로그인 경로 (§6.6)** | keepAlive 를 실패시켜 catch 의 `login()` 이 돌고 `apiKey` 가 갱신되는지 확인. §6.10 과 함께 본다 |
 | **EDS 가 4xx/5xx 를 낼 때 (§6.6)** | 잘못된 api-key 로 호출 → **`EDS_LOGIN_FAILED`/`EDS_API_ERROR` 가 나와야 한다.** 500 이 나오면 `throwOnHttpError` 설정이 빠진 것 |
@@ -1601,3 +1647,4 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |
 | 7 | 버전 카탈로그 도입 | 멀티모듈화 시점 (§3.6) |
 | 8 | actuator + micrometer 도입 | §6.3 의 `hikaricp_connections_pending` 관측용. **풀 설정 변경 여부는 이 지표를 본 뒤 판단한다** |
+| 9 | `X-M2M-RI` 를 요청마다 고유값으로 | oneM2M 규격상 요청 식별자는 매 요청 고유해야 하나 현재는 클라이언트 생성 시점에 고정된다(§6.5). 전환과 무관한 기존 동작이라 이번 범위 밖 |

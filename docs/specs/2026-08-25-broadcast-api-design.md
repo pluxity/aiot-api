@@ -76,7 +76,8 @@ SpeakerBroadcastResponse(
     presetId: Long?, presetTitle: String?,     // 직접 입력이면 둘 다 null
     speakerId: Long, speakerName: String,
     siteId: Long?, siteName: String?,
-    userId: String, broadcastAt: String,
+    userId: String, userName: String,          // 계정 아이디 / 성명
+    broadcastAt: String,
     success: Boolean, failureReason: String?,  // 성공 시 사유는 null
 )
 

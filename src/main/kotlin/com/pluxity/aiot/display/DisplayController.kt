@@ -135,7 +135,7 @@ class DisplayController(
         @RequestParam("from", required = false) from: String? = null,
         @Parameter(description = "종료일", example = "20260825")
         @RequestParam("to", required = false) to: String? = null,
-        @Parameter(description = "송출자 아이디", example = "admin")
+        @Parameter(description = "송출자 계정 아이디", example = "admin")
         @RequestParam("userId", required = false) userId: String? = null,
         @Parameter(description = "현장 아이디", example = "1")
         @RequestParam("siteId", required = false) siteId: Long? = null,

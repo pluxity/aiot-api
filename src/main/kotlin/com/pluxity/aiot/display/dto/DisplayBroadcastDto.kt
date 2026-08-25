@@ -66,8 +66,10 @@ data class DisplayBroadcastResponse(
     val siteId: Long?,
     @field:Schema(description = "송출 대상 전광판의 소속 현장 명칭", example = "중앙공원")
     val siteName: String?,
-    @field:Schema(description = "송출자 아이디", example = "admin")
+    @field:Schema(description = "송출자 계정 아이디", example = "admin")
     val userId: String,
+    @field:Schema(description = "송출자 이름", example = "홍길동")
+    val userName: String,
     @field:Schema(description = "송출 시각", example = "2026-08-25T09:00:00")
     val broadcastAt: String,
     @field:Schema(description = "송출 성공 여부", example = "true")

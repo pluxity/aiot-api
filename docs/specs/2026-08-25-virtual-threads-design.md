@@ -16,6 +16,9 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| `throwOnHttpError` 를 클라이언트 단위로만 봤다. `AiotService` 는 `fetchDeviceBatteryData`(non-2xx → null), `fetchRemoveSubscription`(로깅 후 진행) 처럼 메서드마다 계약이 달라 `retrieve()` 로 바꾸면 예상된 4xx 가 루프 전체를 끊는다 | **타당** — §6.6 에서 EDS 에 한 검사를 `AiotService` 에는 하지 않았다 | §6.5 에 메서드별 계약 표 추가, 두 메서드는 `.exchange { }` 개별 처리로 명시 |
+| `WebClientConfig` 제거로 전역 `Accept: application/json` 이 사라지는데 대체가 없다 | **타당. 그리고 이건 코드 축약 패스가 만든 회귀다** — 원래 §6.5 코드에 있던 `defaultHeaders` 줄을 축약하며 결정 목록에 옮기지 않았다 | §6.5 구성 결정에 복원 |
+| `NgrokConfig` 의 연산자 타임아웃(2초·5초)이 사라지고 팩토리 기본값 30초가 적용된다 — `@PostConstruct` 라 기동이 블로킹된다 | **타당** | §6.9 에 전용 클라이언트 타임아웃 지정 추가 |
 | §6.8 R4 표가 `setupSubscriptionForFeature` 를 leaf 로 분류했으나 실제로는 `fetchSubscription` 에 위임하고 409 시 `fetchRemoveSubscription` 재시도를 탄다 — 중첩 획득 데드락 | **타당** — 중첩 금지 규칙을 써놓고 바로 아래 표에서 어겼다 | leaf 목록을 `fetchSubscription`/`fetchRemoveSubscription` 으로 정정, 판정 기준을 "이름이 아니라 `client` 직접 호출 여부" 로 명시, §9-10 갱신 |
 | `createClient` 마다 executor·HttpClient 가 생기는데 `RestClient` 만 반환해 스프링이 닫을 수 없다 | **타당** — Java 25 에서 `HttpClient` 는 `AutoCloseable` 이다. `@SpringBootTest` 3개가 컨텍스트를 띄우므로 테스트에서 누적된다 | §6.5 를 `DisposableBean` + executor 공유 구조로 변경하고 라이프사이클 항목 추가 |
 | `fetchMobiusUril` 의 `?: emptyList()` 가 빈 응답을 정상 빈 목록으로 바꿔 **Feature 전량 삭제**로 이어진다 | **타당** — 5차 반영에서 내가 새로 만든 결함이다. 현재 `awaitBody` 는 예외를 던져 안전했다 | `?: throw CustomException(MOBIUS_EMPTY_RESPONSE)` 로 교체, `RestClient.body()` 의 null 계약을 §6.8·§9-11 에 경고로 명시, §8.3 확인 항목 추가 |
@@ -819,8 +822,12 @@ class RestClientFactory : DisposableBean {
 }
 ```
 
-**구성 결정 넷.**
+**구성 결정 다섯.**
 
+- **`defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }` 를 유지한다.**
+  현재 `WebClientConfig.webClientBuilder` 가 전역으로 걸고 있는 값이다. 그 빈을 제거하면서
+  대체하지 않으면 **EDS·LLM 요청에서 `Accept` 헤더가 사라진다** — 콘텐츠 협상을 하는
+  엔드포인트가 다른 표현을 돌려주거나 요청을 거부해 본문 디코딩이 깨질 수 있다.
 - **`JdkClientHttpRequestFactory(HttpClient)`** 를 쓴다. connect 타임아웃은 `HttpClient.newBuilder()`
   쪽에, read 타임아웃은 팩토리 쪽(`setReadTimeout(Duration)`)에 건다.
 - **executor 를 명시한다.** 지정하지 않으면 JDK HttpClient 가 자체 플랫폼 스레드 풀을 만든다.
@@ -853,9 +860,26 @@ javap -cp <spring-web-7.0.5 전개경로> 'org.springframework.web.client.RestCl
 #   defaultStatusHandler(java.util.function.Predicate<HttpStatusCode>, RestClient$ResponseSpec$ErrorHandler)
 ```
 
-> **`AiotService` 는 기본값(`true`)을 유지한다.** `AiotService:296` 이 예외를 잡아 처리하는
-> 구조이므로(현행 `WebClientResponseException` → 전환 후 `RestClientResponseException`),
-> 여기서 던지지 않게 만들면 그 catch 가 죽는다. **옵션을 전역 기본값으로 뒤집지 말 것.**
+#### `throwOnHttpError` 는 클라이언트 단위지만 계약은 메서드 단위다
+
+**EDS 는 6개 메서드가 모두 같은 계약이라 클라이언트 옵션 하나로 해결되지만, `AiotService` 는 다르다.**
+메서드마다 non-2xx 처리가 갈린다.
+
+| 메서드 | 현재 non-2xx 동작 | 전환 방식 |
+|---|---|---|
+| `fetchSubscription` | 예외를 던져 호출자가 409 를 잡는다 (`setupSubscriptionForFeature` 의 재시도 경로) | `retrieve()` — 클라이언트 기본값(`true`) 그대로 |
+| `fetchDeviceBatteryData` | **`null` 반환.** 코드 주석: "4xx, 5xx 상태코드는 null 반환 (예외 발생 안함)" | **`.exchange { }`** 로 개별 처리 |
+| `fetchRemoveSubscription` | **본문을 읽어 로깅하고 계속 진행.** 성공 여부로 후처리만 가른다 | **`.exchange { }`** 로 개별 처리 |
+
+**뒤의 둘을 `retrieve()` 로 바꾸면 예상된 4xx 하나가 루프 전체를 중단시킨다** —
+배터리 동기화 fan-out 이나 `removeAllSubscriptions` 순회가 첫 실패에서 끊긴다.
+
+> **클라이언트 옵션은 `true` 로 두고, 계약이 다른 두 메서드만 `.exchange { }` 를 쓴다.**
+> `throwOnHttpError = false` 로 클라이언트 전체를 뒤집으면 `fetchSubscription` 의 409 재시도가 죽는다.
+> §6.6 에서 EDS 에 대해 확인한 것과 **같은 검사를 메서드 단위로 한 번 더** 해야 한다.
+
+> `AiotService:296` 의 `WebClientResponseException` catch 는
+> **`RestClientResponseException` 으로 교체한다**(§6.9). 놓치면 컴파일은 통과하고 런타임에 안 걸린다.
 
 **기존 `WebClientFactory` 와의 차이 — 인지 사항**
 
@@ -1315,10 +1339,36 @@ fun scheduledBatteryDataUpdate() {
 ### 6.9 `SensorDataMigrationService` / 나머지
 
 - `SensorDataMigrationService:148` — `runBlocking { aiotService.findByDateRange(...) }` → 직접 호출
-- `NgrokConfig:53,90` — `.block()` → RestClient
+- `NgrokConfig:53,90` — `.block()` → RestClient. **단 타임아웃을 함께 옮겨야 한다 — 아래 참조**
 - `AiotService:271,394` — `.block()` → RestClient. `WebClientResponseException` 캐치를
   **`RestClientResponseException` 으로 교체한다** (`AiotService:296`)
 - `AiotServiceKoTest` — `runBlocking { }` 제거
+
+#### `NgrokConfig` — 연산자 타임아웃이 사라진다
+
+```kotlin
+isNgrokRunning() → .timeout(Duration.ofSeconds(2))
+fetchNgrokUrl()  → .timeout(Duration.ofSeconds(5))
+```
+
+**Reactor 연산자 레벨 타임아웃이라 RestClient 에 대응물이 없다.** 그냥 옮기면 팩토리 기본값
+(read 30초)이 적용된다. 이 코드는 `@PostConstruct` 에서 도므로 **ngrok 이 연결은 받고 응답하지
+않으면 로컬 프로파일 기동이 최대 30초 블로킹된다.**
+
+**클라이언트 생성 시점에 짧게 건다.**
+
+```kotlin
+private val client: RestClient =
+    restClientFactory.createClient(
+        "http://localhost:4040",
+        connectionTimeoutMs = 1000,
+        readTimeoutMs = 5000,       // fetchNgrokUrl 기준
+    )
+```
+
+> **`isNgrokRunning` 의 상한이 2초 → 5초로 늘어난다.** 기동 시 1회 프로브라 허용 가능하다고 본다.
+> 정확히 맞추려면 클라이언트를 2개 두면 되지만, 5초도 30초와는 자릿수가 다르다.
+> **로컬 전용(`@Profile("local")`)이라 운영 영향은 없다.**
 
 **`WebClientResponseException` → `RestClientResponseException` 교체를 놓치면 컴파일은 통과하고
 런타임에 catch 가 안 걸린다.** `AiotService:266` 의 주석("`.retrieve()` 여기서 비-2xx면

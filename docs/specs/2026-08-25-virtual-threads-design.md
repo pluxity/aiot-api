@@ -16,6 +16,7 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| `fetchMobiusUril` 의 `?: emptyList()` 가 빈 응답을 정상 빈 목록으로 바꿔 **Feature 전량 삭제**로 이어진다 | **타당** — 5차 반영에서 내가 새로 만든 결함이다. 현재 `awaitBody` 는 예외를 던져 안전했다 | `?: throw CustomException(MOBIUS_EMPTY_RESPONSE)` 로 교체, `RestClient.body()` 의 null 계약을 §6.8·§9-11 에 경고로 명시, §8.3 확인 항목 추가 |
 | `@Transactional` 이 `findAll()` 전에 시작해 HTTP fan-out 내내 살아 있다 — "트랜잭션 밖" 이라는 주석이 사실이 아니다. `handleMobiusUrlUpdated` 도 동일 | **타당** — private 메서드로 뺐다고 경계가 생기지 않는다 | §6.8 전면 재작성: 읽기/HTTP/쓰기 3단계 분리, `FeatureQueryService`·`FeatureStatusWriter` 신설(self-invocation 회피), `handleMobiusUrlUpdated`·`checkSynchronization` 의 `@Transactional` 제거 |
 | 세마포어가 `fetchAllStatuses` 에만 걸려 다른 Mobius 경로를 덮지 못한다. Reactor Netty 는 호스트당 **집계** 상한이라 경로별 상한의 합이 기존 상한을 넘는다 | **타당** — §6.4 로 08:00 두 cron 이 겹치게 만들어 놓고 상한은 경로별로 뒀다 | 세마포어를 `AiotService` 공유 `mobiusSemaphore` 로 승격하고 **leaf 호출에만** 적용(중첩 획득 데드락 회피). §9-10 한계 추가 |
 | §6.8 의 "Mobius 동시 호출이 1이었다" 가 틀렸다. 코루틴은 단일 스레드에서도 동시적이라 이미 동시 호출 중이며, `Semaphore(10)` 은 상한 신설이 아니라 **기존 동시성을 조이는 것** | **타당** — §5.1 에 맞게 써놓고 §6.8 에서 뒤집었다 | §6.8 전면 재작성(Reactor Netty `max(코어,8)×2` 실측 근거 추가, 기본값 10 → 20), §5.1 보강, §6.4·§8.3·§9 갱신 |
@@ -1245,10 +1246,37 @@ fun checkSynchronization() {
 }
 
 // 신규 — 기존 fetchAllMobiusSensorPaths 에서 HTTP 부분만 분리
-private fun fetchMobiusUril(): List<String> =
-    mobiusLimiter { client.get().uri("?fu=1&ty=3&lvl=2").retrieve().body<MobiusUrilResponse>() }
-        ?.uril ?: emptyList()
+private fun fetchMobiusUril(): List<String> {
+    val response =
+        mobiusLimiter { client.get().uri("?fu=1&ty=3&lvl=2").retrieve().body<MobiusUrilResponse>() }
+
+    // 빈 응답을 emptyList() 로 흘리면 안 된다 — 아래 설명.
+    return response?.uril ?: throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE)
+}
 ```
+
+#### 빈 응답을 `emptyList()` 로 흘리면 Feature 가 전량 삭제된다
+
+**`?: emptyList()` 는 여기서 파괴적이다.** `RestClient.body(T)` 는 본문이 없으면 `null` 을 반환하는데,
+이를 "정상적인 빈 목록" 으로 바꾸면 뒤따르는 동기화 로직이 그대로 실행된다.
+
+```kotlin
+val removedIds = existingIds - newIds.toSet()      // newIds 가 비었으므로 = 전체
+featureRepository.deleteAllByDeviceIdIn(removedIds)  // 로컬 Feature 전량 삭제
+```
+
+**Mobius 가 일시적으로 빈 응답을 한 번 주면 로컬 Feature 가 전부 지워진다.**
+
+현재 `awaitBody<MobiusUrilResponse>()` 는 본문이 없으면 **예외를 던져** 트랜잭션이 롤백되고 DB 가
+그대로 남는다. 즉 기본값을 넣는 순간 **"안전하게 실패" 가 "조용히 전량 삭제" 로 바뀐다.**
+
+> `ErrorCode.MOBIUS_EMPTY_RESPONSE` 를 추가한다. 동기화 실패는 다음 주기에 재시도되므로
+> 예외로 끝내는 것이 맞다 — **삭제는 되돌릴 수 없지만 실패는 되돌릴 수 있다.**
+
+> **같은 함정이 `retrieve().body(T)` 를 쓰는 모든 곳에 있다.** WebClient 의 `awaitBody` 는
+> 본문 부재에 예외를 던지지만 RestClient 의 `body()` 는 `null` 을 반환한다.
+> §6.6·§6.7 처럼 `?: throw` 로 받거나, 여기처럼 **기본값을 절대 넣지 않는다.**
+> 특히 **결과가 삭제/비활성화로 이어지는 경로**에서는 기본값이 곧 데이터 손실이다.
 
 `applyPaths` 는 기존 `fetchAllMobiusSensorPaths` 의 **매핑 로직을 그대로 옮기되**, 트랜잭션 안에서
 `featureRepository.findAll()` 을 다시 호출해 영속 엔티티로 작업한다(R3).
@@ -1467,6 +1495,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
 | 트랜잭션 점유 시간 (§6.8 R2) | 배치 중 `pg_stat_activity` 의 `idle in transaction` 또는 p6spy 로그로 **HTTP 대기 동안 커넥션을 잡고 있지 않은지** 확인 |
 | Mobius 동시 호출 상한 (§6.8 R4) | 08:00 두 cron 이 겹치는 구간에서 Mobius 측 동시 접속 수가 `max(코어,8)×2` 를 넘지 않는지 |
+| **빈 응답 방어 (§6.8)** | Mobius 를 빈 본문 200 으로 응답하는 스텁으로 바꾸고 `checkSynchronization` 실행 → **Feature 가 하나도 지워지지 않아야 한다.** 지워지면 `?: emptyList()` 가 남아 있는 것 |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
 | **EDS 가 4xx/5xx 를 낼 때 (§6.6)** | 잘못된 api-key 로 호출 → **`EDS_LOGIN_FAILED`/`EDS_API_ERROR` 가 나와야 한다.** 500 이 나오면 `throwOnHttpError` 설정이 빠진 것 |
 | 썸네일 크기 상한 (§6.6) | 1MB 초과 응답을 주는 스텁으로 호출 → `null` 반환 + 경고 로그. **chunked 응답(Content-Length 없음)으로도 확인** |
@@ -1502,6 +1531,8 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
    중간 실패 시 부분 반영이 남는다. 다음 동기화에서 수렴하는 성질에 의존한다.
 10. **`mobiusSemaphore` 는 중첩 획득 시 데드락이다**(§6.8 R4). leaf 에만 건다는 규칙을 코드로
    강제하지 못하므로, Mobius 호출 메서드를 새로 추가할 때 주의가 필요하다.
+11. **`RestClient.body()` 의 null 반환이 전역 함정이다**(§6.8). WebClient 의 `awaitBody` 와 계약이
+   다르므로 전환 시 모든 호출부에서 기본값을 넣지 않았는지 확인해야 한다. 컴파일러가 잡아주지 않는다.
 
 ## 10. 작업 순서 / 커밋 단위
 

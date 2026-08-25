@@ -1,0 +1,1213 @@
+# 가상 스레드 도입 및 의존성 버전 정렬 설계
+
+- 작성일: 2026-08-25
+- 대상 모듈: `aiot-api` (단일 모듈)
+- 현재 환경: Java 25, Kotlin 2.3.10, Spring Boot 4.0.3, Spring Framework 7.0.5
+- 목표 환경: Java 25, Kotlin 2.4.10, Spring Boot 4.1.0, Spring Framework 7.0.8
+- 함께 읽을 것: `docs/specs/2026-08-25-auth-alignment-design.md` (JWT/인증 정렬 — jjwt 제거 포함)
+- 참조: `safers-api/docs/specs/2026-08-03-virtual-threads-design.md` — 판정 기준과 결론을 그대로 따르되,
+  aiot 의 실제 jar / 빈 구성으로 전부 재확인했다. **결과가 safers 와 다른 지점이 두 곳 있다(§2.2, §4.2).**
+
+## 0. 배경 — 왜 지금인가
+
+이 프로젝트는 **서블릿 MVC + JPA**(`spring-boot-starter-web`, `open-in-view: false`)라는 블로킹 스택인데,
+그 위에 WebFlux(`WebClient`/`Mono`)와 코루틴(`suspend`/`runBlocking`) 두 패러다임이 얹혀 있다.
+
+문제는 그 둘이 **아무 이득도 만들지 못하고 있다**는 점이다.
+
+| 지점 | 현재 | 실제 효과 |
+|---|---|---|
+| `LlmMessageController:29` | `runBlocking { ... }` | 톰캣 스레드를 그대로 점유. 논블로킹 이득 0 |
+| `EdsClient` 6개 메서드 | `exchangeToMono { }.block()` | Reactor Netty 스택을 지고 동기 호출 |
+| `NgrokConfig:53,90` | `.block()` | 같음 |
+| `AiotService:271,394` | `.block()` | 같음 |
+| `AiotService.statusSynchronize` | `runBlocking { supervisorScope { async { } } }` | **디스패처 미지정 → 단일 스레드**. §5.1 |
+| `FeatureScheduler:104` | 같은 패턴 | 같음 |
+
+동시에 `safers-api` 와 라이브러리 버전이 벌어졌다. 두 프로젝트가 같은 Boot 4 / Java 25 기반이고
+`kotlin-jdsl`·`springwolf`·`kotest` 처럼 마이그레이션 비용이 큰 라이브러리를 공유하므로,
+한쪽에서 이미 검증한 조합으로 맞추는 편이 싸다.
+
+## 1. 개요 / 범위
+
+`spring.threads.virtual.enabled` 를 켜고, **리액티브 타입을 걷어내되 리액티브가 실제로 필요한 한 곳은 남긴다.**
+동시에 의존성 버전을 `safers-api` 기준으로 정렬한다.
+
+### 사전 검증 결과 (2026-08-25, aiot 실제 jar / 빈 구성 기준)
+
+| # | 확인 대상 | 결과 |
+|---|---|---|
+| ① | Tomcat 요청 스레드가 가상 스레드로 바뀌는가 | **바뀐다.** `spring-boot-tomcat-4.0.3` 의 `TomcatVirtualThreadsWebServerFactoryCustomizer` 가 `protocolHandler.setExecutor(new VirtualThreadExecutor("tomcat-handler-"))` 수행 (§2.1) |
+| ② | `@Async` 자동설정이 백오프하는가 | **백오프한다.** 단 **aiot 에는 `@Async` 사용처가 0개**라 무해하다 — safers 와 갈리는 지점 (§2.2) |
+| ③ | `@Scheduled` 가 어디서 도는가 | **익명 단일 스레드에서 직렬로 돈다.** `@Scheduled` 3개 중 2개가 같은 시각(08:00) cron 이다 (§2.3) |
+| ④ | JDK 25 에서 `synchronized` pinning 이 남아 있는가 | **없다.** JEP 491(JDK 24)로 해소 (§2.4) |
+| ⑤ | `taskExecutor` 빈(5/10/500)을 쓰는 곳이 있는가 | **없다.** `@Async` 0개, STOMP 채널도 쓰지 않는다 (§4.2) |
+| ⑥ | 현재 HikariCP 설정 | **명시 없음 → 기본 `maximum-pool-size: 10`** (§6.3) |
+| ⑦ | `@EnableWebSocketMessageBroker` 가 `TaskScheduler` 후보를 몇 개 추가하는가 | **3개.** `messageBrokerTaskScheduler` + `clientInbound/OutboundChannelExecutor`. 운영 로그로 확정 (§2.3) |
+| ⑧ | Boot 의 `ClientHttpRequestFactoryBuilder` 를 쓸 수 있는가 | **못 쓴다.** `org.springframework.boot.http.client.*` 는 `spring-boot-restclient` 모듈에 있고 aiot 런타임 클래스패스에 없다. `spring-web` 의 `JdkClientHttpRequestFactory` 를 직접 쓴다 (§6.5) |
+
+### 이번 범위 (In scope)
+
+**A. 가상 스레드**
+- `spring.threads.virtual.enabled: true` (`application-common.yml`)
+- `AsyncConfig`(`global/config/WebSocketConfig.kt` 두 번째 클래스) — `taskExecutor` 가상 스레드 교체,
+  `taskScheduler` 명시 추가, `heartBeatScheduler` 주입 지점 고정
+- HikariCP 풀 크기 명시
+
+**B. 리액티브/코루틴 제거 — HTTP 클라이언트**
+- `WebClientFactory` → `RestClientFactory` (JDK `HttpClient` 기반)
+- `EdsClient`, `NgrokConfig`, `AiotService`, `LlmMessageService` 의 `.block()` / `awaitBody` 제거
+- `suspend` / `runBlocking` / `async` / `Dispatchers.IO` 전량 제거
+
+**C. 의존성 버전 정렬** (§3)
+- Boot 4.0.3 → 4.1.0, Kotlin 2.3.10 → 2.4.10, Gradle 9.3.1 → 9.7.0
+- `kotlin-jdsl` 3.8.0 → 3.9.0, `springwolf` 2.0.0 → 2.4.0, `kotest` 5.9.1 → 6.2.4
+- `influxdb-client-kotlin` → `influxdb-client-java`
+- `kotlinx-coroutines-*`, `spring-boot-starter-webflux` **제거하지 않는다** — §1.1 참조
+
+**D. 기존 결함 수정 (가상 스레드와 무관하나 같이 잡는다)**
+- `EdsWebSocketClient` 의 stale api-key 재연결 (§6.10)
+- `stopped` / `disposable` 가시성 (§6.10)
+
+### 이번 제외 (Out of scope)
+
+| 항목 | 이유 |
+|---|---|
+| **`EdsWebSocketClient` 의 WebFlux 제거** | **사용자 결정.** `ReactorNettyWebSocketClient` → `StandardWebSocketClient` 재작성은 `repeatWhen`/`retryWhen` 백오프를 직접 구현해야 하고 재연결 경로 검증이 어렵다. 이 파일 하나 때문에 `spring-boot-starter-webflux` 는 남는다 (§7) |
+| `EdsClient` 를 `@HttpExchange` 인터페이스로 전환 | 리팩터링 범위가 커진다. RestClient 전환을 먼저 하고 재판단 (§11) |
+| 버전 카탈로그(`libs.versions.toml`) 도입 | 단일 모듈이라 이득이 적다. 멀티모듈화 시점에 (§3.6, §11) |
+| Flyway 도입 | aiot 는 `ddl-auto` 기반. 별건 |
+| `SensorDataMigrationService` 의 `newScheduledThreadPool(4)` | (B) 유형 — 디바이스별 타이머 관리용이지 스레드 공급용이 아니다 (§4.2) |
+| MDC traceId 전파 | safers 의 `2026-08-04-mdc-trace-id-design.md` 에 해당. 별건 (§11) |
+| **JWT/인증 정렬 (jjwt 제거 포함)** | 별도 설계문서 `2026-08-25-auth-alignment-design.md`. 의존성 커밋만 §10 과 순서를 맞춘다 |
+
+### 1.1 `webflux` / `coroutines` 의존성을 남기는 이유
+
+`EdsWebSocketClient` 가 `org.springframework.web.reactive.socket.*` 를 쓰므로 `spring-boot-starter-webflux`
+는 남는다. `kotlinx-coroutines-core` / `-reactor` 는 §5 를 전부 적용하면 **사용처가 0이 되므로 제거 가능**하다.
+다만 `webflux` 가 남는 이상 큰 실익이 없고, 제거했다가 되돌리는 비용이 있으므로
+**`build.gradle.kts` 에 주석으로 "사용처 없음, EdsWebSocketClient 전환 시 함께 제거" 를 남기고 유지한다.**
+
+> 판단 근거: 의존성 제거는 되돌리기 쉬우나, "왜 남겼는지" 를 잃으면 다음 사람이 다시 조사한다.
+> 주석 한 줄이 그 조사를 막는다.
+
+## 2. 사전 검증 상세
+
+### 2.1 Tomcat 요청 스레드 — 적용됨
+
+```java
+// spring-boot-tomcat-4.0.3, TomcatVirtualThreadsWebServerFactoryCustomizer (바이트코드 확인)
+new VirtualThreadExecutor("tomcat-handler-")
+ProtocolHandler.setExecutor(java.util.concurrent.Executor)
+```
+
+재현:
+
+```bash
+unzip -o -q ~/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-tomcat/4.0.3/*/spring-boot-tomcat-4.0.3.jar -d /tmp/tc403
+javap -v -cp /tmp/tc403 org.springframework.boot.tomcat.autoconfigure.TomcatVirtualThreadsWebServerFactoryCustomizer | grep VirtualThreadExecutor
+```
+
+요청 스레드가 가상 스레드가 되면 JPA/JDBC, S3, Redis, InfluxDB, 그리고 §6 에서 RestClient 로 바뀔
+HTTP 호출이 전부 캐리어를 놓는다. **이 설정의 실질 이득은 대부분 여기서 나온다.**
+
+### 2.2 `@Async` — 자동설정은 백오프하지만, aiot 에서는 무해하다
+
+`TaskExecutorConfigurations$OnExecutorCondition` 은 `AnyNestedCondition` 이다 (바이트코드 확인).
+
+```
+OnExecutorCondition
+├─ ModelCondition        : @ConditionalOnProperty("spring.task.execution.mode", havingValue="force")
+└─ ExecutorBeanCondition : @ConditionalOnMissingBean(java.util.concurrent.Executor.class)
+```
+
+재현:
+
+```bash
+javap -v -cp /tmp/ac403 'org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$OnExecutorCondition$ExecutorBeanCondition' | grep -A3 ConditionalOnMissingBean
+```
+
+aiot 의 `Executor` 타입 빈은 **6개**다. `ThreadPoolTaskScheduler` 도 `Executor` 라는 점에 주의한다.
+
+```
+public class ThreadPoolTaskScheduler extends ExecutorConfigurationSupport
+    implements AsyncTaskExecutor, SchedulingTaskExecutor, TaskScheduler
+                  └─ TaskExecutor └─ java.util.concurrent.Executor
+```
+
+| 빈 | 타입 | Executor 인가 |
+|---|---|---|
+| `taskExecutor` (`AsyncConfig`, `@Primary`) | `ThreadPoolTaskExecutor` | O |
+| `heartBeatScheduler` (`AsyncConfig`) | `ThreadPoolTaskScheduler` | **O** |
+| `messageBrokerTaskScheduler` (프레임워크) | `ThreadPoolTaskScheduler` | **O** |
+| `clientInboundChannelExecutor` (프레임워크) | `ThreadPoolTaskExecutor` | **O** |
+| `clientOutboundChannelExecutor` (프레임워크) | `ThreadPoolTaskExecutor` | **O** |
+| `brokerChannelExecutor` (프레임워크) | `ThreadPoolTaskExecutor` | **O** |
+
+→ `ExecutorBeanCondition` 불일치, `spring.task.execution.mode` 도 없어 `ModelCondition` 도 불일치
+→ **자동설정이 만들어지지 않아 `applicationTaskExecutor` 가 없다.**
+
+**여기서 safers 와 갈린다.** safers 는 무자격 `@Async` 3곳이 `new SimpleAsyncTaskExecutor()`(플랫폼 스레드)
+폴백으로 떨어지는 게 문제였다. **aiot 에는 `@Async` 사용처가 0개다.**
+
+```bash
+grep -rn "@Async" --include="*.kt" src/main/kotlin
+# → StompMessageSender 의 @AsyncPublisher 3건만 나온다.
+#   springwolf 문서화 어노테이션이지 org.springframework.scheduling.annotation.Async 가 아니다.
+```
+
+즉 **`@EnableAsync` 와 `taskExecutor`(5/10/500) 는 아무도 쓰지 않는 죽은 코드다.** `applicationTaskExecutor`
+부재가 문제되는 다른 경로(MVC async: `Callable`/`DeferredResult`/`SseEmitter`/`StreamingResponseBody`)도
+검색 결과 0건이라 영향이 없다.
+
+```bash
+grep -rn "SseEmitter\|DeferredResult\|StreamingResponseBody\|Callable<" --include="*.kt" src/main/kotlin
+# → 0건
+```
+
+#### 그래도 `taskExecutor` 를 지우지 않고 가상 스레드로 교체한다
+
+지워도 §2.2 표대로 `Executor` 빈이 5개 남아 자동설정은 여전히 백오프한다. 지우는 것과 남기는 것의 차이는
+"나중에 누가 `@Async` 를 붙였을 때 어디로 가는가" 뿐이다.
+
+| | `taskExecutor` 를 지웠을 때 | 가상 스레드로 교체했을 때 |
+|---|---|---|
+| 새 `@Async` 의 행선지 | `AsyncExecutionInterceptor` 의 `new SimpleAsyncTaskExecutor()` — **플랫폼 스레드, 무제한, 스프링 관리 밖** | 이 빈 — 가상 스레드, graceful shutdown 대상 |
+
+**후자가 낫다.** 비용은 빈 하나이고, `@EnableAsync` 도 함께 유지한다.
+
+> `spring.task.execution.mode: force` 로 자동설정을 살리는 대안은 채택하지 않는다.
+> 명시 빈 쪽이 §2.3 의 `taskScheduler` 처리와 대칭이고, 빈 개수 변화에 영향받지 않는다.
+
+### 2.3 `@Scheduled` — 익명 단일 스레드가 돌고 있다 (이번 작업의 실질 수확)
+
+`TaskSchedulingConfigurations$TaskSchedulerConfiguration` 은
+`@ConditionalOnMissingBean({TaskScheduler.class, ScheduledExecutorService.class})` 이고
+`@Bean(name = "taskScheduler")` 를 만든다 (바이트코드 확인).
+
+**운영 로그로 확정했다 (2026-08-25).** 후보는 2개가 아니라 **4개**다.
+
+```
+INFO  o.s.s.config.TaskSchedulerRouter - More than one TaskScheduler bean exists within the context,
+and none is named 'taskScheduler'. ...
+[heartBeatScheduler, clientInboundChannelExecutor, clientOutboundChannelExecutor, messageBrokerTaskScheduler]
+```
+
+| 빈 | 출처 | 제거 가능? |
+|---|---|---|
+| `heartBeatScheduler` (`AsyncConfig:55`) | 직접 선언, `ThreadPoolTaskScheduler()` poolSize **1** | 불가 — 아래 |
+| `messageBrokerTaskScheduler` | **프레임워크** — `AbstractMessageBrokerConfiguration` | 불가 |
+| `clientInboundChannelExecutor` | **프레임워크** — 동일 | 불가 |
+| `clientOutboundChannelExecutor` | **프레임워크** — 동일 | 불가 |
+
+재현:
+
+```bash
+javap -v -cp <spring-messaging-7.0.5 전개경로> \
+  org.springframework.messaging.simp.config.AbstractMessageBrokerConfiguration | grep messageBrokerTaskScheduler
+#   name=["messageBrokerTaskScheduler","messageBrokerSockJsTaskScheduler"]
+```
+
+**4개 중 3개가 프레임워크 등록이라 제거할 수 없다.** `heartBeatScheduler` 도 지울 수 없다 —
+`SimpleBrokerRegistration.getMessageHandler()` 는 `taskScheduler` 가 명시되지 않으면 하트비트를
+`0,0`(비활성)으로 두고 `messageBrokerTaskScheduler` 를 자동으로 집어오지 않는다. 지우면 STOMP 하트비트가
+조용히 꺼진다.
+
+→ **이름이 `taskScheduler` 인 빈을 두는 것이 유일한 해법이다**(§6.4). 빈을 정리해서 해소하는 경로는 없다.
+
+> **정적 분석과 어긋나는 지점 — 미해결로 남긴다.** `clientInbound/OutboundChannelExecutor` 는
+> `@Bean` 선언 반환 타입이 `java.util.concurrent.Executor` 이고 기본 구현이
+> `TaskExecutorRegistration.getTaskExecutor()` → `ThreadPoolTaskExecutor` 인데,
+> `ThreadPoolTaskExecutor` 는 `TaskScheduler` 를 구현하지 않는다(`AsyncTaskExecutor`,
+> `SchedulingTaskExecutor` 만). 바이트코드만으로는 이 둘이 `TaskScheduler` 후보로 잡히는 이유를
+> 규명하지 못했다. **운영 로그를 사실로 채택한다** — 어느 쪽이든 결론(§6.4)은 같고,
+> 후보가 4개면 "빈을 줄여서 해결" 가능성이 더 낮아질 뿐이다.
+
+이 상태에서 `TaskSchedulerRouter.determineDefaultScheduler()` 폴백을 탄다.
+
+```java
+try { return resolveSchedulerBean(beanFactory, TaskScheduler.class, false); }   // 2개 → NoUnique
+catch (NoUniqueBeanDefinitionException ex) {
+    try { return resolveSchedulerBean(beanFactory, TaskScheduler.class, true); } // "taskScheduler" 없음
+    catch (NoSuchBeanDefinitionException ex2) {
+        logger.info("More than one TaskScheduler bean exists within the context, and "
+                  + "none is named 'taskScheduler'. Mark one of them as primary ...");
+    }
+}
+ScheduledExecutorService localExecutor = Executors.newSingleThreadScheduledExecutor();  // ← 여기
+return new ConcurrentTaskScheduler(localExecutor);
+```
+
+**결과: `@Scheduled` 3개가 스레드 1개에서 직렬로 돈다.**
+
+| 위치 | 주기 | 하는 일 |
+|---|---|---|
+| `FeatureScheduler:40` `checkDisconnect` | cron 매시간 05분 | 전체 Feature 순회 + Influx 질의 + STOMP 발송 |
+| `FeatureScheduler:100` `scheduledBatteryDataUpdate` | **cron 매일 08:00** | 전체 Feature 배터리 조회 (Mobius HTTP fan-out) |
+| `LlmMessageScheduler:17` `generateDailyMessage` | **cron 매일 08:00** | 전체 Site LLM 메시지 생성 (LLM HTTP fan-out) |
+
+**뒤의 둘이 같은 시각(08:00)이다.** 지금은 한 스레드에서 순차 실행되므로 배터리 갱신이 끝나야 LLM 생성이
+시작된다. 둘 다 외부 HTTP fan-out 이라 소요가 길다.
+
+#### 적용 전 확인
+
+두 신호를 구분해서 본다.
+
+| 신호 | 의미 | 시점 | 확인 |
+|---|---|---|---|
+| INFO 로그 | **원인** — 빈이 2개고 이름이 `taskScheduler` 가 아님 | 기동 시 1회 | `grep "More than one TaskScheduler bean" <로그>` |
+| `pool-N-thread-` 스레드명 | **결과** — 익명 스케줄러가 실제로 돌리는 중 | 작업 실행마다 | `grep "pool-[0-9]*-thread-" <로그>` |
+
+- INFO 로그 쪽이 확실하다. 메시지 끝에 `ex.getBeanNamesFound()` 로 실제 빈 이름이 찍힌다.
+  **2026-08-25 운영 로그에서 위 4개로 확인 완료 — 이 절의 전제는 확정됐다.**
+  로거는 `org.springframework.scheduling.config.TaskSchedulerRouter`, `application.yml` 의 `org: INFO` 로 보인다.
+  `defaultScheduler` 가 `SingletonSupplier.of(this::determineDefaultScheduler)` 라 한 번만 평가된다.
+- 스레드명은 보조 확인용이다. `logback-spring.xml` 패턴에 `[%thread]` 가 있으면 매시간 05분
+  `checkDisconnect` 로그에서 제일 자주 나타난다.
+
+**확인 완료(2026-08-25).** 로그 원문을 PR 에 첨부한다.
+
+### 2.4 JDK 25 pinning
+
+safers 의 실측(§3)을 그대로 인용한다. 캐리어 1개로 고정하고 가상 스레드 4개가 각 500ms 대기 —
+직렬화되면 ~2000ms, 병렬이면 ~500ms.
+
+```
+Thread.sleep (일반)              508ms  언마운트 O
+synchronized 내부 sleep          506ms  언마운트 O
+Object.wait(500)               507ms  언마운트 O
+ReentrantLock + Condition      503ms  언마운트 O
+```
+
+JDK 21~23 의 `synchronized` pinning(JEP 491 이전)은 해소됐다. 남는 요인은 JNI 네이티브 프레임인데
+aiot 가 쓰는 pgjdbc·AWS SDK v2·InfluxDB 클라이언트·jjwt 는 모두 순수 Java 라 해당 없다.
+
+**단 aiot 에는 safers 에 없는 것이 하나 있다 — Reactor Netty.** `EdsWebSocketClient` 가 남는 이상
+Netty 이벤트 루프 스레드(플랫폼)는 계속 존재한다. 가상 스레드와 무관하게 동작하며 간섭하지 않는다.
+
+## 3. 의존성 버전 정렬
+
+### 3.1 현행 대조표
+
+| 항목 | aiot (현재) | safers-api | 판정 |
+|---|---|---|---|
+| Gradle | 9.3.1 | **9.7.0** | 올린다 |
+| Kotlin | 2.3.10 | **2.4.10** | 올린다 |
+| Spring Boot | 4.0.3 | **4.1.0** | 올린다 — §3.3 파급 있음 |
+| spring-dependency-management | 1.1.7 | 1.1.7 | 동일 |
+| spotless | 8.1.0 | 8.1.0 | 동일 |
+| kotlin-jdsl | 3.8.0 | **3.9.0** | 올린다 |
+| springdoc | 3.0.1 | 3.0.1 | 동일 |
+| springwolf | 2.0.0 | **2.4.0** | 올린다 |
+| kotlin-logging | 8.0.01 | 8.0.01 | 동일 |
+| logbook | 4.0.2 | 4.0.2 | 동일 |
+| p6spy | 2.0.0 | 2.0.0 | 동일 |
+| jts | 1.20.0 | 1.20.0 | 동일 |
+| aws-s3 | 2.42.3 | 2.42.3 | 동일 |
+| influxdb | 7.3.0 (`-kotlin`) | 7.3.0 (`-java`) | **아티팩트 교체** — §3.5 |
+| kotest | 5.9.1 | **6.2.4** | 올린다 — §3.4 파급 있음 |
+| kotest-extensions-spring | `io.kotest.extensions:1.1.3` | **`io.kotest:6.2.4`** | **groupId 변경** — §3.4 |
+| mockk | 1.14.5 | 1.14.5 | 동일 |
+| jjwt | 0.12.6 (api/impl/jackson) | **없음 — nimbus-jose-jwt 10.3** | **제거**. 별도 설계문서 `2026-08-25-auth-alignment-design.md` 참조 |
+| H2 (test) | 있음 | (Testcontainers) | aiot 고유. 유지 — §3.7 |
+
+### 3.2 원칙
+
+- **safers 에 있는 버전으로만 맞춘다.** safers 보다 최신이 나와 있어도 이번엔 올리지 않는다 —
+  검증된 조합을 가져오는 것이 목적이지 최신화가 목적이 아니다.
+- **aiot 고유 의존성은 손대지 않는다** (jjwt, redis, hibernate-spatial, H2).
+- 버전 정렬과 가상 스레드는 **커밋을 분리한다** (§10). 회귀 시 이분탐색이 가능해야 한다.
+
+### 3.3 Boot 4.0.3 → 4.1.0 파급 — 테스트 슬라이스 분리
+
+safers 의 카탈로그 주석이 남긴 경고를 그대로 옮긴다.
+
+```
+# Boot 4.1 은 테스트 슬라이스를 기술별 스타터로 쪼갰다 — @DataJpaTest 는 starter-test 에 없다
+spring-boot-starter-data-jpa-test = { module = "org.springframework.boot:spring-boot-starter-data-jpa-test" }
+spring-boot-starter-webmvc-test   = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
+```
+
+aiot 현재 사용 현황을 확인했다.
+
+```bash
+grep -rn "@DataJpaTest\|@WebMvcTest\|@SpringBootTest" --include="*.kt" src/test
+# → 0건
+```
+
+**현재는 슬라이스 테스트를 쓰지 않으므로 이번 업그레이드에서 추가 스타터가 필요 없다.**
+다만 `plx-backend:test-controller` 스킬이 `@WebMvcTest` 를 생성하므로, 앞으로 컨트롤러 테스트를
+추가할 때 의존성 누락으로 헤맬 수 있다. **`build.gradle.kts` 에 주석으로 남긴다**(§6.1).
+
+### 3.4 Kotest 5.9.1 → 6.2.4
+
+두 가지가 바뀐다.
+
+**(1) `kotest-extensions-spring` 좌표 변경**
+
+```
+- testImplementation("io.kotest.extensions:kotest-extensions-spring:1.1.3")
++ testImplementation("io.kotest:kotest-extensions-spring:6.2.4")
+```
+
+safers 카탈로그 주석: "Kotest 6 에서 Spring 확장이 코어 저장소로 흡수되며 groupId 가 바뀌었다.
+구 좌표(`io.kotest.extensions`)는 1.3.0 에서 멈춰 있고 Kotest 5.8.1 이 대상이다."
+
+**구 좌표를 그대로 두고 kotest 만 6 으로 올리면 런타임에 `NoSuchMethodError` 가 난다.** 반드시 함께 바꾼다.
+
+**(2) 영향 범위 — 실측**
+
+```bash
+find src/test -name "*.kt" | wc -l        # 40
+grep -rln "io.kotest.extensions.spring" --include="*.kt" src/test | wc -l   # 3
+grep -rln "org.junit.jupiter" --include="*.kt" src/test | wc -l             # 0
+```
+
+| 대상 | 건수 | 조치 |
+|---|---|---|
+| `SpringExtension` 사용 스펙 | 3 (`FireAlarmProcessorTest`, `TemperatureHumidityProcessorTest`, `DisplacementGaugeProcessorTest`) | import 를 `io.kotest.extensions.spring.SpringExtension` 로 유지 — **패키지는 그대로고 groupId 만 바뀐다.** 컴파일 후 실제 실행으로 확인 |
+| `BehaviorSpec` + `shouldBe` / `shouldThrow` 사용 | 나머지 | Kotest 6 에서 시그니처 유지. 컴파일로 확인 |
+| `ProjectConfig` (`AbstractProjectConfig`, `IsolationMode.InstancePerLeaf`) | 1 | **Kotest 6 에서 `AbstractProjectConfig` 확장 방식이 유지되는지 실행으로 확인한다.** 이 파일이 이번 업그레이드에서 가장 깨질 확률이 높다 |
+
+**착수 조건: `./gradlew test` 가 업그레이드 전에 전부 통과하는 상태여야 한다.** 통과 상태를 기록해두고,
+업그레이드 후 같은 결과가 나오는지 비교한다. 전이 깨져 있으면 후를 판정할 수 없다.
+
+### 3.5 `influxdb-client-kotlin` → `influxdb-client-java`
+
+```
+- implementation("com.influxdb:influxdb-client-kotlin:7.3.0")
++ implementation("com.influxdb:influxdb-client-java:7.3.0")
+  implementation("com.influxdb:flux-dsl:7.3.0")   // 유지
+```
+
+**코드 변경 없음.** 확인 결과 aiot 는 코루틴 API(`QueryKotlinApi`, `Flow<*>`)를 전혀 쓰지 않는다.
+
+```bash
+grep -rn "QueryKotlinApi\|influxdb.*Flow" --include="*.kt" src/main/kotlin   # 0건
+```
+
+`InfluxdbConfig` 가 쓰는 `InfluxDBClient` / `QueryApi` / `WriteApi` / `WriteApiBlocking` 은 전부
+`influxdb-client-java` 의 타입이고, `-kotlin` 아티팩트는 이것을 **의존성으로 끌고 오던 것뿐**이다.
+`queryApi.query(...)` 는 원래 블로킹이므로 가상 스레드와 궁합도 좋다.
+
+> `flux-dsl` 은 별도 아티팩트라 그대로 둔다. `com.influxdb.query.dsl.Flux` 는 Reactor 의 `Flux` 가 아니라
+> Flux 쿼리 언어 빌더다 — 이름이 겹칠 뿐 무관하다. **§6 작업 중 import 정리할 때 혼동 주의.**
+
+### 3.6 버전 카탈로그 — 이번엔 도입하지 않는다
+
+safers 는 멀티모듈(`apps/safers`, `apps/safers-collect`)이라 `libs.versions.toml` 이 필수다.
+aiot 는 단일 모듈이고 `build.gradle.kts` 하나에 전부 들어 있어 카탈로그의 주 이득(모듈 간 버전 공유)이 없다.
+
+**단, safers 카탈로그의 주석들(Boot 4.1 슬라이스 분리, Kotest 6 groupId)은 지식이므로 옮긴다** — §6.1.
+
+### 3.7 H2 는 유지한다
+
+safers 는 Testcontainers + PostgreSQL 로 갔지만(`2026-08-07-postgres-testcontainers-design.md`),
+aiot 는 `hibernate-spatial` + JTS 를 쓰고 `siteRepository.findFirstByPointInPolygon` 같은
+**PostGIS 의존 쿼리**가 있다. H2 에서 이미 이 쿼리를 테스트하지 않고 있을 가능성이 높다.
+
+**이번 범위에서 판단하지 않는다.** §11 후속 과제로 넘긴다. 이번엔 H2 를 그대로 두고, 버전 업그레이드로
+기존 테스트가 깨지는지만 본다.
+
+## 4. Executor / Scheduler 판정
+
+### 4.1 판정 기준
+
+스레드 풀은 두 가지를 한 도구로 묶은 것이다.
+
+- **(A) 스레드 공급** — 블로킹 작업에 쓸 스레드를 어디서 얻나
+- **(B) 동시성 제어** — 동시에 몇 개까지 허용하나
+
+가상 스레드는 **(A) 만** 해결한다. (B) 는 그대로 남으므로, 제한이 필요하면 스레드 풀이 아니라
+하류(커넥션 풀, `setConcurrencyLimit`, rate limiter)에 건다. 판정 질문은
+"제한이 필요한가"가 아니라 **"이 풀이 (A)인가 (B)인가"** 다.
+
+(B) 인데 가상 스레드가 필요하면 분리할 수 있다 (Spring Framework 7.0.5 확인):
+
+```kotlin
+SimpleAsyncTaskExecutor("prefix-").apply {
+    setVirtualThreads(true)   // 스레드는 가상
+    setConcurrencyLimit(16)   // 상한은 유지
+}
+```
+
+단 `SimpleAsyncTaskExecutor` 에는 **큐가 없다.** `setConcurrencyLimit` 을 건 경우 상한 초과 시
+넘치는 작업을 쌓는 대신 **제출 스레드를 블로킹시킨다.** 상한을 걸지 않으면(기본
+`UNBOUNDED_CONCURRENCY`) 제출자는 절대 막히지 않는다.
+
+### 4.2 전수 판정
+
+| Executor / Scheduler | 현재 | 유형 | 판정 |
+|---|---|---|---|
+| `taskExecutor` (`AsyncConfig`, `@Primary`) | `ThreadPoolTaskExecutor` 5/10/500 | (A) — **현재 사용처 0** | **가상 스레드 전환, 빈 이름·`@Primary` 유지** (§2.2) |
+| `heartBeatScheduler` (`AsyncConfig`) | `ThreadPoolTaskScheduler()` poolSize 1 | (B) — STOMP 하트비트 전용 | **유지** — §4.3 |
+| `messageBrokerTaskScheduler` | 프레임워크, `availableProcessors` | — | **손댈 수 없음** |
+| (신규) `taskScheduler` | 없음 → 익명 폴백 | (A) | **`SimpleAsyncTaskScheduler` 신규 추가** (§6.4) |
+| `EdsKeepAliveScheduler:19` | `Executors.newSingleThreadScheduledExecutor()` | (B) — keepAlive 직렬 보장 | **유지** — §4.3 |
+| `SensorDataMigrationService:164` | `Executors.newScheduledThreadPool(4)` | (B) — 디바이스별 타이머 | **유지** — §4.3 |
+| `LlmMessageService:47` `Semaphore(concurrencyLimit)` | `kotlinx.coroutines.sync.Semaphore(5)` | (B) — LLM 동시 호출 상한 | **`java.util.concurrent.Semaphore` 로 교체, 상한 유지** (§6.7) |
+
+### 4.3 유지 대상의 근거
+
+**`heartBeatScheduler`** — poolSize 1 이지만 (A) 가 아니다. STOMP 하트비트는 5초 간격
+(`setHeartbeatValue(longArrayOf(5000, 5000))`)의 짧고 정확해야 하는 작업이고, 다른 작업과 섞이면
+밀린다. §6.4 로 `@Scheduled` 가 새 `taskScheduler` 로 옮겨가면 이 빈은 **하트비트 전용이 되어
+오히려 목적이 선명해진다.** 그대로 둔다.
+
+**`EdsKeepAliveScheduler` 의 단일 스레드 스케줄러** — 빈이 아니라 private 필드다.
+`@ConditionalOnMissingBean(ScheduledExecutorService.class)` 판정에 영향을 주지 않는다(§2.3 무관).
+단일 스레드인 것이 의도다 — keepAlive 가 겹쳐 실행되면 `login()` 재진입으로 `apiKey` 가 경합한다.
+**가상 스레드로 바꾸면 이 직렬성이 깨진다. 손대지 않는다.**
+
+**`SensorDataMigrationService` 의 `newScheduledThreadPool(4)`** — `deviceTimers: ConcurrentHashMap<String, ScheduledFuture<*>>`
+로 디바이스별 타이머를 취소·재등록하는 구조다. `ScheduledFuture` 취소 의미가 필요하므로
+`SimpleAsyncTaskScheduler` 로 대체하면 의미가 달라진다. **손대지 않는다.**
+
+## 5. 코루틴 제거 판정 — 호출부 전수
+
+### 5.1 현재 `async` 병렬화는 실제로 병렬이 아니다
+
+```kotlin
+// AiotService.statusSynchronize:89, FeatureScheduler:104 — 같은 형태
+runBlocking {                    // ← 디스패처 미지정: 호출 스레드의 이벤트 루프
+    supervisorScope {
+        features.map { async {   // ← 부모 디스패처 상속 = 같은 단일 스레드
+            ...
+        } }.awaitAll()
+    }
+}
+```
+
+`runBlocking` 은 호출 스레드에서 자체 이벤트 루프를 돌리고, 디스패처를 명시하지 않은 `async` 는
+그 디스패처를 상속한다. **따라서 모든 `async` 블록이 한 스레드에서 돈다.**
+
+동시성은 오직 `WebClient` 서스펜션 지점에서만 생긴다. 그 사이의 JPA 호출
+(`siteRepository.findFirstByPointInPolygon`)과 엔티티 변경은 전부 직렬이다.
+
+**부수 효과 하나는 다행이다** — `@Transactional` 이 붙은 `statusSynchronize` / `scheduledBatteryDataUpdate`
+에서 엔티티 변경이 호출 스레드(= 트랜잭션 스레드)에서 일어나므로 dirty checking 이 동작한다.
+`Dispatchers.IO` 를 붙였다면 조용히 깨졌을 코드다.
+
+**가상 스레드 전환 시 이 함정을 되풀이하면 안 된다** — §6.8 에서 트랜잭션 경계를 명시적으로 다룬다.
+
+### 5.2 전수 판정
+
+| 파일 | 현재 | 전환 후 | 난이도 |
+|---|---|---|---|
+| `EdsClient` (6개 메서드) | `exchangeToMono{}.block()` | `RestClient.retrieve().body()` | 낮음 — §6.6 |
+| `NgrokConfig:53,90` | `.block()` | 동일 | 낮음 |
+| `LlmMessageController:29` | `runBlocking{}` | 직접 호출 | 낮음 |
+| `LlmMessageScheduler:22` | `runBlocking{}` | 직접 호출 | 낮음 |
+| `LlmMessageService` | `suspend` + `coroutineScope`+`async`+`Semaphore`+`withContext(IO)` | 가상 스레드 executor + `j.u.c.Semaphore` | **중** — §6.7 |
+| `AiotService.checkSynchronization:75` | `runBlocking{}` (병렬 없음) | 직접 호출 | 낮음 |
+| `AiotService.statusSynchronize:89` | `runBlocking{supervisorScope{async}}` | 가상 스레드 fan-out + **트랜잭션 재설계** | **높음** — §6.8 |
+| `AiotService` suspend 5개 | `awaitBody` / `.block()` 혼재 | RestClient 동기 | 낮음 |
+| `FeatureScheduler:104` | `runBlocking{supervisorScope{async}}` | §6.8 과 동일 패턴 | **높음** |
+| `SensorDataMigrationService:148` | `runBlocking{}` | 직접 호출 | 낮음 |
+| `EdsWebSocketClient` | Reactor 전량 | **유지** | — §7 |
+| `AiotServiceKoTest` | `runBlocking` 테스트 | 일반 테스트 | 낮음 |
+
+## 6. 변경 내역
+
+### 6.1 `build.gradle.kts`
+
+```kotlin
+plugins {
+    val kotlinVersion = "2.4.10"          // 2.3.10 → 2.4.10
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.spring") version kotlinVersion
+    id("org.springframework.boot") version "4.1.0"   // 4.0.3 → 4.1.0
+    id("io.spring.dependency-management") version "1.1.7"
+    kotlin("plugin.jpa") version kotlinVersion
+    id("com.diffplug.spotless") version "8.1.0"
+}
+```
+
+의존성 변경분만:
+
+```kotlin
+    // kotlin-jdsl 3.8.0 → 3.9.0
+    implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:jpql-render:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-boot4-support:3.9.0")
+
+    // influxdb: -kotlin → -java (코드 변경 없음, 코루틴 API 미사용 — 설계문서 §3.5)
+    implementation("com.influxdb:influxdb-client-java:7.3.0")
+    implementation("com.influxdb:flux-dsl:7.3.0")
+
+    // springwolf 2.0.0 → 2.4.0
+    implementation("io.github.springwolf:springwolf-core:2.4.0")
+    implementation("io.github.springwolf:springwolf-stomp:2.4.0")
+    runtimeOnly("io.github.springwolf:springwolf-ui:2.4.0")
+
+    // 사용처 없음(설계문서 §1.1). EdsWebSocketClient 를 StandardWebSocketClient 로
+    // 전환할 때 webflux 와 함께 제거한다.
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
+    // Kotest 5.9.1 → 6.2.4
+    // Kotest 6 에서 Spring 확장이 코어 저장소로 흡수되며 groupId 가 바뀌었다.
+    // 구 좌표(io.kotest.extensions)는 1.3.0 에서 멈춰 있고 Kotest 5.8.1 이 대상이다.
+    testImplementation("io.kotest:kotest-extensions-spring:6.2.4")
+    testImplementation("io.kotest:kotest-runner-junit5:6.2.4")
+    testImplementation("io.kotest:kotest-assertions-core:6.2.4")
+
+    // Boot 4.1 은 테스트 슬라이스를 기술별 스타터로 쪼갰다 — @DataJpaTest 는 starter-test 에 없다.
+    // 현재 슬라이스 테스트 사용처가 없어 추가하지 않는다. 컨트롤러/JPA 슬라이스 테스트를
+    // 도입할 때 아래를 함께 추가할 것.
+    //   testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    //   testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+```
+
+Gradle wrapper:
+
+```properties
+# gradle/wrapper/gradle-wrapper.properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip
+```
+
+### 6.2 `application-common.yml` — 가상 스레드 활성화
+
+```yaml
+spring:
+  # 대부분의 작업이 블로킹 I/O(Mobius/LLM/EDS HTTP, JDBC, Influx, S3, Redis)다.
+  # @Async/@Scheduled 는 이 플래그만으로 전환되지 않아 AsyncConfig 에서 명시한다
+  # (docs/specs/2026-08-25-virtual-threads-design.md §2.2 §2.3).
+  threads:
+    virtual:
+      enabled: true
+```
+
+### 6.3 `application-common.yml` — HikariCP 명시
+
+**가상 스레드는 DB 처리량을 늘려주지 않는다.** 요청 스레드가 사실상 무제한이 되면서
+커넥션 대기가 유일한 병목이 되므로, 지금까지 톰캣 `threads.max`(기본 200)가 암묵적으로 하던
+유입 제한이 사라진다. **현재 명시 설정이 없어 기본값 10 이다.**
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      # 가상 스레드 도입으로 요청 스레드 상한이 사라진다. 커넥션 풀이 유일한 유입 제한이 되므로
+      # 기본값(10)에 의존하지 않고 명시한다 (설계문서 §6.3).
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      # 무한 대기로 스레드가 쌓이지 않도록 명시한다. 초과분은 빠르게 실패시킨다.
+      connection-timeout: 3000
+```
+
+**값 근거와 검증 방법을 함께 남긴다.**
+
+- 20 은 임의값이 아니라 "현행 기본값 10 의 2배" 라는 보수적 출발점이다. **부하 시험 없이 더 올리지 않는다.**
+- `connection-timeout: 3000` 이 중요하다. 이게 없으면 풀 고갈 시 가상 스레드가 무한정 쌓이고
+  증상이 "느림" 으로만 나타나 원인 파악이 어렵다. 3초 후 `SQLTransientConnectionException` 으로
+  터지면 로그에 남는다.
+- 적용 후 관측: `hikaricp_connections_pending` (actuator/micrometer 미도입이면 p6spy 로그의 지연)
+
+> **인지 사항:** 이 절은 가상 스레드 도입의 부작용을 막는 것이지 성능을 올리는 게 아니다.
+> DB 가 병목이면 풀을 키워도 개선되지 않는다.
+
+### 6.4 `global/config/WebSocketConfig.kt` — `AsyncConfig` 교체
+
+`AsyncConfig` 는 별도 파일이 아니라 `WebSocketConfig.kt` 의 두 번째 클래스다(39~56행).
+
+```kotlin
+@Configuration
+@EnableWebSocketMessageBroker
+class WebSocketConfig(
+    // @Primary 는 파라미터 이름 매칭보다 우선한다. 나중에 taskScheduler 가 @Primary 가 되면
+    // 하트비트가 조용히 갈아타므로 주입 지점을 고정한다 (설계문서 §6.4 주의점 ③).
+    @param:Qualifier("heartBeatScheduler") private val heartBeatScheduler: TaskScheduler,
+    private val myDefaultHandshakeHandler: DefaultHandshakeHandler,
+) : WebSocketMessageBrokerConfigurer {
+    // registerStompEndpoints / configureMessageBroker 는 변경 없음
+}
+
+@EnableAsync
+@Configuration
+class AsyncConfig {
+    // 현재 @Async 사용처는 0개다. 그래도 지우지 않는다 — 지우면 자동설정이 살아나는 게 아니라
+    // (Executor 타입 빈이 heartBeatScheduler/messageBrokerTaskScheduler 로 2개 더 있어 계속 백오프),
+    // 나중에 붙는 @Async 가 AsyncExecutionInterceptor 의 new SimpleAsyncTaskExecutor()
+    // (플랫폼 스레드, 무제한, 스프링 관리 밖) 폴백으로 떨어진다 (설계문서 §2.2).
+    @Bean(name = ["taskExecutor"])
+    @Primary
+    fun taskExecutor(): AsyncTaskExecutor =
+        SimpleAsyncTaskExecutor("app-async-").apply {
+            setVirtualThreads(true)
+            setTaskTerminationTimeout(10_000) // 종료 시 in-flight 대기(상한 있음)
+        }
+
+    // 이름이 정확히 "taskScheduler" 여야 TaskSchedulerRouter 가 익명 단일 스레드 폴백 대신
+    // 이 빈을 고른다. @Primary 를 붙이면 안 된다 — WebSocketConfig 의 하트비트가 갈아탄다.
+    // (설계문서 §2.3)
+    @Bean
+    fun taskScheduler(): TaskScheduler =
+        SimpleAsyncTaskScheduler().apply {
+            setVirtualThreads(true)
+            threadNamePrefix = "app-sched-"
+            // hand-off 된 작업은 종료 시 자동으로 기다려주지 않는다 (아래 주의점 ②).
+            setTaskTerminationTimeout(10_000)
+        }
+
+    // STOMP 브로커 하트비트 전용(5초 간격). 다른 작업과 섞이면 밀리므로 분리 유지 (설계문서 §4.3).
+    @Bean
+    fun heartBeatScheduler(): TaskScheduler =
+        ThreadPoolTaskScheduler().apply {
+            poolSize = 1
+            setThreadNamePrefix("stomp-heartbeat-")
+            initialize()
+        }
+}
+```
+
+#### `SimpleAsyncTaskScheduler` 의 실제 동작 — 작업 종류에 따라 갈린다
+
+"가상 스레드니까 전부 알아서 할당된다"가 아니다. 내부에 실행기가 두 개 있고
+(`new ScheduledThreadPoolExecutor(1, this::newThread)` — 스레드는 1개, 단 `newThread` 가 가상 스레드),
+`@Scheduled` 종류에 따라 경로가 다르다.
+
+| 작업 | 경로 | 본문 실행 위치 | aiot 대상 |
+|---|---|---|---|
+| cron / `fixedRate` | `triggerExecutor` → `scheduledTask()` = `() -> execute(...)` | **매번 새 가상 스레드**로 hand-off | **`@Scheduled` 3개 전부** |
+| `fixedDelay` | `fixedDelayExecutor` → `taskOnSchedulerThread()` | **그 스케줄러 스레드에서 직접** | 없음 |
+
+**aiot 의 `@Scheduled` 3개는 전부 cron 이므로 전량 hand-off 경로다.** §2.3 의 "08:00 두 개가 직렬"
+문제가 정확히 해소된다 — 각자 새 가상 스레드에서 동시에 시작한다.
+
+주의점 셋:
+
+1. **`fixedDelay` 작업을 나중에 추가하면 그것들끼리는 직렬이다.** `fixedDelayExecutor` 는 스레드 1개다.
+   `setTargetTaskExecutor` 는 해법이 아니다 — `doExecute()` 에만 걸리는데 fixedDelay 는
+   `taskOnSchedulerThread()` 로 스케줄러 스레드에서 직접 실행되어 이 분기를 타지 않는다.
+   fixedDelay 가 3개 이상 필요해지면 `ThreadPoolTaskScheduler(poolSize = N)` 를 쓴다.
+2. **종료 시 hand-off 된 작업을 자동으로 기다리지 않는다.** javadoc: "stopping trigger firing and
+   fixed-delay task execution but **not stopping the execution of handed-off tasks**".
+   08:00 배치 중 배포되면 끊긴다. `setTaskTerminationTimeout(10_000)` 으로 대기 시간을 준다.
+   (현재 익명 폴백은 `TaskSchedulerRouter.destroy()` 가 `shutdownNow()` 를 호출해 아예 기다리지 않으므로,
+   이것만으로도 개선이다.)
+3. **`taskScheduler` 에 `@Primary` 를 붙이면 STOMP 하트비트가 조용히 갈아탄다.**
+   `WebSocketConfig` 가 `TaskScheduler` 를 **타입 주입 + 파라미터 이름 매칭**으로 받고 있는데,
+   `@Primary` 는 이름 매칭보다 우선한다. 위 `@Qualifier` 로 고정한다.
+
+#### 08:00 동시 실행이 만드는 새 상황
+
+§2.3 의 두 cron 이 이제 **동시에** 돈다. 각각 외부 HTTP fan-out 이므로 합산 부하가 겹친다.
+
+| | 변경 전 | 변경 후 |
+|---|---|---|
+| `scheduledBatteryDataUpdate` (Mobius) | 순차, 단일 스레드 | 즉시 시작, 가상 스레드 fan-out(§6.8) |
+| `generateDailyMessage` (LLM) | 앞 작업 완료 후 시작 | **동시 시작**, 상한 `Semaphore(5)` 유지(§6.7) |
+
+**LLM 쪽은 `concurrencyLimit` 상한이 있으므로 안전하다.** Mobius 쪽은 §6.8 에서 상한을 새로 건다.
+두 하류 시스템이 다르므로 서로 간섭하지 않는다. **의도된 변경이며, 이것이 이번 작업의 목표 중 하나다.**
+
+### 6.5 `WebClientFactory` → `RestClientFactory` (신규)
+
+`global/config/WebClientFactory.kt` 를 `RestClientFactory.kt` 로 대체한다.
+`WebClientConfig.kt` 의 `webClientBuilder` 빈은 제거한다 (`RestClientFactory` 가 대신한다).
+
+#### 검증: Boot 의 `ClientHttpRequestFactoryBuilder` 는 쓸 수 없다
+
+safers 계열 코드에서 흔히 쓰는 `ClientHttpRequestFactoryBuilder.jdk()` 는
+`org.springframework.boot.http.client` 패키지이고, 이는 **`spring-boot-restclient` 모듈에 들어 있다.**
+aiot 의 런타임 클래스패스에는 없다.
+
+```bash
+./gradlew -q dependencies --configuration runtimeClasspath | grep -i restclient   # 0건
+```
+
+**`spring-web` 에 있는 `JdkClientHttpRequestFactory` 를 직접 쓴다.** 확인:
+
+```bash
+javap -cp <spring-web-7.0.5 전개경로> org.springframework.http.client.JdkClientHttpRequestFactory
+#   public JdkClientHttpRequestFactory(java.net.http.HttpClient)
+#   public void setReadTimeout(java.time.Duration)
+javap -cp <같은 경로> 'org.springframework.web.client.RestClient$Builder' | grep requestFactory
+#   public abstract RestClient$Builder requestFactory(ClientHttpRequestFactory)
+```
+
+> 의존성을 추가해서 Boot 빌더를 쓰는 대안도 있으나 채택하지 않는다 —
+> 모듈 하나를 더 끌어오는 값이 `HttpClient.newBuilder()` 두 줄보다 크지 않다.
+
+```kotlin
+package com.pluxity.aiot.global.config
+
+import org.springframework.http.MediaType
+import org.springframework.http.client.JdkClientHttpRequestFactory
+import org.springframework.stereotype.Component
+import org.springframework.web.client.RestClient
+import java.net.http.HttpClient
+import java.time.Duration
+import java.util.concurrent.Executors
+
+@Component
+class RestClientFactory {
+    fun createClient(
+        baseUrl: String,
+        connectionTimeoutMs: Long = 5000,
+        readTimeoutMs: Long = 30000,
+    ): RestClient {
+        val httpClient =
+            HttpClient
+                .newBuilder()
+                .connectTimeout(Duration.ofMillis(connectionTimeoutMs))
+                // JDK HttpClient 는 지정하지 않으면 자체 플랫폼 스레드 풀을 만든다.
+                // 응답 처리도 가상 스레드에서 하도록 명시한다.
+                .executor(Executors.newVirtualThreadPerTaskExecutor())
+                .build()
+
+        // connect 타임아웃은 HttpClient, read 타임아웃은 팩토리 쪽에 건다.
+        val requestFactory =
+            JdkClientHttpRequestFactory(httpClient).apply {
+                setReadTimeout(Duration.ofMillis(readTimeoutMs))
+            }
+
+        return RestClient
+            .builder()
+            .baseUrl(baseUrl)
+            .requestFactory(requestFactory)
+            .defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }
+            .build()
+    }
+}
+```
+
+**기존 `WebClientFactory` 와의 차이 — 인지 사항**
+
+| | `WebClientFactory` (현재) | `RestClientFactory` |
+|---|---|---|
+| 타임아웃 | connect / response / read 3종 (Reactor Netty) | **connect / read 2종** — `responseTimeout` 에 대응하는 개념이 없다 |
+| `maxInMemorySize(1MB)` | codec 설정 | RestClient 는 `ByteArray`/`String` 응답을 힙에 그대로 올린다 — **상한이 없어진다** |
+| `WriteTimeoutHandler` | 있음 | 없음 — JDK HttpClient 는 write 타임아웃 개념이 없다 |
+
+두 번째가 실질 차이다. `EdsClient.getEventThumbnail()` 이 `ByteArray` 를 받으므로
+**EDS 가 거대한 응답을 주면 힙을 그대로 먹는다.** §6.6 에서 이 경로에만 명시적 크기 검사를 넣는다.
+
+첫 번째와 세 번째는 현 사용 패턴(짧은 JSON 요청/응답)에서 실질 영향이 없다고 판단한다.
+**단 `readTimeout` 이 유일한 방어선이 되므로 30초 기본값을 그대로 유지한다.**
+
+### 6.6 `EdsClient` — RestClient 전환
+
+6개 메서드 전부 같은 형태로 바뀐다. 대표 예:
+
+```kotlin
+@Component
+@ConditionalOnProperty("eds.enabled", havingValue = "true")
+class EdsClient(
+    restClientFactory: RestClientFactory,
+    private val edsProperties: EdsProperties,
+) {
+    private val client: RestClient = restClientFactory.createClient(edsProperties.baseUrl)
+
+    @Volatile
+    private lateinit var apiKey: String
+
+    fun login() {
+        val request = EdsLoginRequest(edsProperties.systemKey, edsProperties.systemToken)
+
+        val response =
+            client
+                .post()
+                .uri("/api/eds/v1/external/users/login")
+                .body(request)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
+                ?: throw CustomException(ErrorCode.EDS_LOGIN_FAILED, "응답 없음")
+
+        if (response.code != 200 || response.result == null) {
+            throw CustomException(ErrorCode.EDS_LOGIN_FAILED, response.message)
+        }
+
+        apiKey = response.result.apiKey
+        log.info { "EDS 로그인 성공" }
+    }
+```
+
+`getCameraList` / `getRealtimeStreamUrl` / `getRecordStreamUrl` / `getWebSocketUrl` 도 동일 패턴이다
+(`.bodyValue()` → `.body()`, `.exchangeToMono{ resp -> resp.bodyToMono(T) }.block()` → `.retrieve().body(T)`).
+
+**썸네일만 형태가 다르다** — 비-2xx 를 예외 없이 null 로 넘기는 계약이므로 `.exchange` 를 쓴다.
+§6.5 에서 사라진 크기 상한을 여기서 복원한다.
+
+```kotlin
+    fun getEventThumbnail(index: Long): ByteArray? =
+        try {
+            client
+                .get()
+                .uri("/api/eds/v1/external/event/thumbnail?index=$index&type=evtImg")
+                .header("api-key", apiKey)
+                .exchange { _, response ->
+                    if (!response.statusCode.is2xxSuccessful) return@exchange null
+                    // WebClient 의 maxInMemorySize(1MB) 가 하던 역할을 명시적으로 복원한다
+                    // (설계문서 §6.5). Content-Length 가 없으면 통과시키되 읽은 뒤 재검사한다.
+                    val declared = response.headers.contentLength
+                    if (declared > MAX_THUMBNAIL_BYTES) {
+                        log.warn { "EDS 썸네일 크기 초과 (index=$index, size=$declared)" }
+                        return@exchange null
+                    }
+                    response.bodyTo(ByteArray::class.java)?.takeIf { it.size <= MAX_THUMBNAIL_BYTES }
+                }
+        } catch (e: Exception) {
+            log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
+            null
+        }
+
+    companion object {
+        private const val MAX_THUMBNAIL_BYTES = 1024L * 1024
+    }
+```
+
+**`apiKey` 에 `@Volatile` 을 붙인다.** `EdsKeepAliveScheduler` 스레드가 쓰고 요청 스레드가 읽는다.
+현재 가시성 보장이 없다 — 기존 결함이며 §6.10 과 같은 부류다.
+
+### 6.7 `LlmMessageService` / `LlmMessageScheduler` / `LlmMessageController`
+
+**Controller / Scheduler** — `runBlocking { }` 을 지우고 직접 호출한다. 그뿐이다.
+
+**Service** — `suspend` 를 전부 제거하고 fan-out 을 가상 스레드로 바꾼다.
+`Semaphore(concurrencyLimit)` 은 (B) 유형이므로 **`java.util.concurrent.Semaphore` 로 교체하고 상한을 유지한다.**
+
+```kotlin
+@Service
+class LlmMessageService(
+    private val queryApi: QueryApi,
+    private val influxdbProperties: InfluxdbProperties,
+    private val llmMessageRepository: LlmMessageRepository,
+    private val siteRepository: SiteRepository,
+    llmProperties: LlmProperties,
+    restClientFactory: RestClientFactory,
+) {
+    private val client: RestClient = restClientFactory.createClient(llmProperties.baseUrl)
+
+    // LLM 하류 보호용 동시 호출 상한. 가상 스레드는 (A) 스레드 공급만 해결하므로
+    // (B) 동시성 제어는 그대로 유지한다 (설계문서 §4.1).
+    private val semaphore = Semaphore(llmProperties.concurrencyLimit)
+
+    fun generateAndSaveMessage() {
+        val sites = siteRepository.findAll()
+        if (sites.isEmpty()) {
+            log.warn { "등록된 사이트가 없습니다." }
+            return
+        }
+
+        val now = LocalDateTime.now()
+        val targetHour = if (now.hour > 0) now.hour - 1 else 23
+        val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
+
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            sites
+                .map { site ->
+                    executor.submit {
+                        semaphore.acquire()
+                        try {
+                            generateMessageForSite(site, yesterday, today, targetHour)
+                        } catch (e: Exception) {
+                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                        } finally {
+                            semaphore.release()
+                        }
+                    }
+                }.forEach { it.get() }   // close() 가 기다려주지만, 예외를 여기서 확인한다
+        }
+
+        log.info { "모든 사이트의 LLM 메시지 생성 완료" }
+    }
+```
+
+`generateMessageForSite` / `getHourlyAverageTemperature` 는 `suspend` 를 떼고
+`withContext(Dispatchers.IO) { }` 래핑을 제거한다. 본문은 그대로 둔다 — 이미 블로킹 코드다.
+
+```kotlin
+        val llmResponse =
+            client
+                .post()
+                .uri("/generate/temperature")
+                .body(llmRequest)
+                .retrieve()
+                .body(LlmResponse::class.java)
+                ?: throw CustomException(ErrorCode.LLM_RESPONSE_EMPTY)
+```
+
+> `ErrorCode.LLM_RESPONSE_EMPTY` 가 없으면 추가한다. 현재 `awaitBody<LlmResponse>()` 는 빈 응답에
+> `WebClientResponseException` 을 던지지만, `RestClient.body()` 는 **null 을 반환한다.**
+> 이 차이를 흘리면 `generatedText` 접근에서 NPE 가 난다. **전환 시 놓치기 쉬운 지점이다.**
+
+**`withContext(Dispatchers.IO) { llmMessageRepository.save(...) }` 제거가 이번 전환의 핵심 이득 중 하나다.**
+지금은 JPA save 가 다른 스레드에서 일어나 트랜잭션 컨텍스트 밖이다. 이 메서드에 `@Transactional` 이
+없어서 우연히 동작할 뿐이며, 상위에 트랜잭션이 붙는 순간 깨진다. 제거하면 이 함정이 사라진다.
+
+### 6.8 `AiotService.statusSynchronize` / `FeatureScheduler.scheduledBatteryDataUpdate` — 트랜잭션 재설계
+
+**이 두 곳이 가장 위험하다.** §5.1 에서 봤듯 현재는 `runBlocking` 의 단일 스레드 덕분에 엔티티 변경이
+트랜잭션 스레드에서 일어나 dirty checking 이 동작한다. **가상 스레드로 진짜 병렬화하면 이게 깨진다.**
+
+```kotlin
+@Transactional                              // ← 트랜잭션은 호출 스레드에 바인딩
+fun statusSynchronize() {
+    features.map { executor.submit {        // ← 다른 스레드
+        feature.updateStatusInfo(...)       // ← 영속성 컨텍스트 밖. flush 안 됨
+    } }
+}
+```
+
+**해법: I/O 와 영속성 변경을 분리한다.** 병렬화가 필요한 것은 HTTP 호출이지 엔티티 변경이 아니다.
+
+```kotlin
+    // 트랜잭션 밖에서 병렬 조회만 수행한다.
+    private fun fetchAllStatuses(features: List<Feature>): Map<String, DeviceStatus> =
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            features
+                .map { feature ->
+                    feature.deviceId to
+                        executor.submit<DeviceStatus?> {
+                            statusSemaphore.acquire()
+                            try {
+                                val location = fetchDeviceLocationData(feature.deviceId) ?: return@submit null
+                                DeviceStatus(location, fetchDeviceBatteryData(feature.deviceId))
+                            } catch (e: Exception) {
+                                log.error(e) { "위치 데이터 가져오기 실패: ${feature.deviceId}" }
+                                null
+                            } finally {
+                                statusSemaphore.release()
+                            }
+                        }
+                }.mapNotNull { (deviceId, future) -> future.get()?.let { deviceId to it } }
+                .toMap()
+        }
+
+    @Transactional
+    fun statusSynchronize() {
+        val features = featureRepository.findAll()
+        log.info { "총 ${features.size}개의 Feature 위치 동기화 시작" }
+
+        // ① 트랜잭션 스레드에서 조회 결과를 받는다 (내부 병렬은 트랜잭션과 무관한 순수 HTTP).
+        val statuses = fetchAllStatuses(features)
+
+        // ② 엔티티 변경은 반드시 트랜잭션 스레드에서. 이 루프를 executor 안으로 옮기면
+        //    dirty checking 이 조용히 깨진다 (설계문서 §6.8).
+        features.forEach { feature ->
+            val status = statuses[feature.deviceId] ?: return@forEach
+            val site = siteRepository.findFirstByPointInPolygon(status.longitude, status.latitude)
+            feature.updateStatusInfo(status.longitude, status.latitude, status.batteryLevel, site)
+        }
+
+        log.info { "위치 동기화 완료" }
+    }
+```
+
+**`statusSemaphore` 를 새로 도입한다.** 현재는 단일 스레드라 Mobius 동시 호출이 사실상 1이었다.
+진짜 병렬이 되면 Feature 개수만큼 동시 호출이 나간다. **하류 보호를 위해 상한이 필요하다.**
+
+```kotlin
+    // 현재는 runBlocking 단일 스레드라 동시 호출이 1이었다. 병렬화하면서 상한을 명시한다
+    // (설계문서 §4.1 — 가상 스레드는 (A)만 해결하고 (B)는 남는다).
+    private val statusSemaphore = Semaphore(mobiusProperties.concurrencyLimit)
+```
+
+> `MobiusProperties` 에 `concurrencyLimit: Int = 10` 을 추가한다. `LlmProperties` 와 같은 형태다.
+> **10 은 보수적 출발점이다.** Mobius 가 견디는 수치를 모르므로, 적용 후 08:00 배치 로그에서
+> 타임아웃/5xx 비율을 확인하고 조정한다.
+
+`FeatureScheduler.scheduledBatteryDataUpdate` 도 **동일한 구조**로 바꾼다 —
+`aiotService.fetchDeviceBatteryData` 병렬 조회 → 트랜잭션 스레드에서 `feature.updateBatteryLevel(...)`.
+
+`AiotService.checkSynchronization` 은 `runBlocking { }` 만 지우면 된다 — 병렬 fan-out 이 없다.
+
+### 6.9 `SensorDataMigrationService` / 나머지
+
+- `SensorDataMigrationService:148` — `runBlocking { aiotService.findByDateRange(...) }` → 직접 호출
+- `NgrokConfig:53,90` — `.block()` → RestClient
+- `AiotService:271,394` — `.block()` → RestClient. `WebClientResponseException` 캐치를
+  **`RestClientResponseException` 으로 교체한다** (`AiotService:296`)
+- `AiotServiceKoTest` — `runBlocking { }` 제거
+
+**`WebClientResponseException` → `RestClientResponseException` 교체를 놓치면 컴파일은 통과하고
+런타임에 catch 가 안 걸린다.** `AiotService:266` 의 주석("`.retrieve()` 여기서 비-2xx면
+`WebClientResponseException` 던짐")도 함께 정정한다.
+
+### 6.10 `EdsWebSocketClient` — 유지하되 기존 결함 두 개를 고친다
+
+**WebFlux 를 그대로 쓴다**(§7). 다만 전환과 무관하게 존재하는 결함을 이번에 잡는다.
+
+**(1) stale api-key 재연결 — 실질 장애 요인**
+
+```kotlin
+disposable = client.execute(buildUri()) { session -> ... }   // ← buildUri() 가 connect() 시점에 1회 평가
+    .repeatWhen { ... }
+    .retryWhen { ... }
+```
+
+`buildUri()` 는 평범한 Kotlin 표현식이라 `execute` 호출 **전에 한 번** 평가된다. `Mono` 에 URI 가
+박히므로 `repeatWhen`/`retryWhen` 의 재구독은 **같은 api-key 를 재사용한다.**
+
+그런데 `EdsClient.keepAlive()` 는 실패 시 `login()` 을 호출해 `apiKey` 를 갈아끼운다(`EdsClient:77`).
+**재로그인 이후 WebSocket 이 끊기면 만료된 api-key 로 최대 2분 백오프로 영원히 재시도한다.**
+로그에는 "재연결 시도 N회" 만 계속 찍히고 원인이 드러나지 않는다.
+
+```kotlin
+        disposable =
+            Mono
+                // 재구독마다 api-key 를 다시 읽는다. defer 없이는 connect() 시점의 키가 박혀
+                // 재로그인 후 재연결이 영구 실패한다 (설계문서 §6.10).
+                .defer { client.execute(buildUri()) { session -> ... } }
+                .doOnSuccess { ... }
+                .repeatWhen { ... }
+                .retryWhen { ... }
+                .subscribe()
+```
+
+**(2) 가시성**
+
+```kotlin
+    @Volatile private var stopped = false
+    @Volatile private var disposable: Disposable? = null
+```
+
+`disconnect()` 는 라이프사이클 스레드에서, 읽기는 Reactor 스레드에서 일어난다.
+
+**(3) `publishOn(Schedulers.boundedElastic())` 은 그대로 둔다**
+
+`publishOn` 은 단일 worker 에 붙어 **메시지를 순차 처리**한다. 즉 현재 EDS 이벤트 처리 순서가
+보장되고 있다. 가상 스레드로 바꾸고 싶은 유혹이 있으나 **순서 보장이 깨진다.**
+`edsFacade.processEvent` 가 순서에 의존하는지 확인되지 않았으므로 **이번엔 손대지 않는다**(§11).
+
+## 7. 남기는 것 — `EdsWebSocketClient` 의 WebFlux
+
+사용자 결정으로 이번 범위에서 제외한다. 판단 근거를 기록해둔다.
+
+`spring-websocket-7.0.x` 에 `StandardWebSocketClient` 가 이미 있고
+(`CompletableFuture<WebSocketSession> execute(WebSocketHandler, WebSocketHttpHeaders, URI)`),
+`spring-boot-starter-websocket` 이 이미 클래스패스에 있으므로 **의존성 추가는 필요 없다.**
+
+문제는 API 교체가 아니라 Reactor 오퍼레이터가 공짜로 해주던 것을 직접 짜야 한다는 점이다.
+
+| 잃는 것 | 직접 구현해야 하는 것 |
+|---|---|
+| `repeatWhen { delayElements(5s) }` | 정상 종료 후 5초 재연결 |
+| `retryWhen(Retry.backoff(MAX, 5s).maxBackoff(2m))` | 지수 백오프 상태 관리 |
+| `Disposable.dispose()` | `WebSocketSession.close()` + "이미 닫히는 중" 상태 처리 |
+| `publishOn(boundedElastic)` | 컨테이너 스레드 밖으로 hand-off (**순차성 유지 필요** — §6.10) |
+
+`WebSocketConnectionManager` 는 start/stop 라이프사이클만 제공하고 **자동 재연결은 없다.**
+재연결 경로는 EDS 서버를 죽였다 살리는 수동 시험이 필요해 검증 비용이 높다.
+
+**서버 측 STOMP(`@EnableWebSocketMessageBroker`)는 `org.springframework.web.socket.*` (서블릿 스택)이라
+WebFlux 와 무관하다. 이번 작업으로 영향받지 않는다.**
+
+## 8. 테스트 관점
+
+### 8.1 착수 전 기록
+
+```bash
+./gradlew test                # 전량 통과 확인 + 결과 저장 (§3.4)
+grep "More than one TaskScheduler bean" <운영로그>    # §2.3 진단 확정
+grep "pool-[0-9]*-thread-" <운영로그>                 # §2.3 보조 확인
+```
+
+### 8.2 신규 테스트
+
+safers 의 `ExecutorPolicyTest` / `AsyncConfigTest` 와 같은 형태로 **빈이 실제로 가상 스레드를 쓰는지**
+런타임 확인한다. 설정 파일을 읽는 테스트가 아니라 스레드를 실제로 띄워 `Thread.isVirtual()` 을 본다.
+
+```kotlin
+// src/test/kotlin/com/pluxity/aiot/global/config/AsyncConfigTest.kt
+class AsyncConfigTest : BehaviorSpec({
+    given("AsyncConfig 의 taskExecutor") {
+        `when`("작업을 제출하면") {
+            then("가상 스레드에서 실행된다") {
+                val executor = AsyncConfig().taskExecutor()
+                val virtual = AtomicBoolean(false)
+                val latch = CountDownLatch(1)
+                executor.execute {
+                    virtual.set(Thread.currentThread().isVirtual)
+                    latch.countDown()
+                }
+                latch.await(5, TimeUnit.SECONDS) shouldBe true
+                virtual.get() shouldBe true
+            }
+        }
+    }
+
+    given("AsyncConfig 의 taskScheduler") {
+        `when`("cron 이 아닌 즉시 실행 작업을 제출하면") {
+            then("가상 스레드에서 실행된다") { /* 위와 동일 형태 */ }
+        }
+    }
+})
+```
+
+**`taskScheduler` 빈 이름 회귀 테스트도 넣는다.** 이 이름이 바뀌면 §2.3 의 익명 폴백으로 조용히 되돌아간다.
+
+```kotlin
+// 이름이 "taskScheduler" 가 아니면 TaskSchedulerRouter 가 익명 단일 스레드로 폴백한다.
+// 조용히 되돌아가는 회귀라 테스트로 고정한다 (설계문서 §2.3).
+context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskScheduler"
+```
+
+### 8.3 회귀 확인 대상
+
+| 항목 | 확인 방법 |
+|---|---|
+| `@Scheduled` 3개가 `app-sched-` 에서 도는가 | 로그 `[%thread]` 확인. `pool-N-thread-` 가 안 나와야 한다 |
+| 08:00 두 cron 이 동시에 시작하는가 | 시작 로그 타임스탬프 비교 |
+| STOMP 하트비트가 살아 있는가 | 클라이언트 연결 유지 확인 + `stomp-heartbeat-` 스레드 존재 |
+| `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
+| EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
+| RestClient null 응답 (§6.7) | LLM 서버 빈 응답 시나리오 |
+| Hikari 풀 (§6.3) | 부하 시 `connection-timeout` 초과 로그 |
+
+### 8.4 테스트로 못 잡는 것
+
+- **§6.8 의 dirty checking** — 단위 테스트로는 트랜잭션 스레드 경계가 재현되지 않는다.
+  실제 DB 를 쓰는 통합 시나리오나 수동 확인이 필요하다.
+- **§6.10 의 stale api-key** — 재로그인 후 연결 끊김이라는 조합이 필요하다. 수동 시험.
+- **Hikari 풀 크기** — 부하가 있어야 드러난다.
+
+## 9. 남는 한계 (인지 사항)
+
+1. **`webflux` / `reactor-netty` 가 남는다.** `EdsWebSocketClient` 하나 때문이다.
+   Netty 이벤트 루프 스레드(플랫폼)가 계속 존재하지만 가상 스레드와 간섭하지 않는다.
+2. **`kotlinx-coroutines-*` 가 사용처 0 인 채로 남는다.** §1.1 의 판단이다.
+3. **`applicationTaskExecutor` 는 여전히 만들어지지 않는다.** `Executor` 타입 빈이 6개 있어
+   자동설정이 계속 백오프한다. 현재 MVC async 사용처가 0이라 무해하지만, `SseEmitter` 등을
+   도입하면 이 사실을 다시 확인해야 한다(§2.2).
+4. **`heartBeatScheduler` 는 플랫폼 스레드로 남는다.** poolSize 1 이고 하는 일이 타이밍 관리라 무해하다.
+5. **RestClient 로 바뀌면서 `responseTimeout` / write 타임아웃이 사라진다.** connect/read 2종만 남고,
+   `readTimeout` 이 유일한 방어선이 된다(§6.5).
+6. **Semaphore 값 2개(LLM 5, Mobius 10)가 추정치다.** 부하 데이터 없이 정한 보수적 출발점이며,
+   08:00 배치 로그로 검증해야 한다.
+
+## 10. 작업 순서 / 커밋 단위
+
+**회귀 시 이분탐색이 가능하도록 커밋을 분리한다.** 각 커밋에서 `./gradlew build` 가 통과해야 한다.
+
+| # | 커밋 | 내용 | 위험도 |
+|---|---|---|---|
+| 1 | `chore: Gradle 9.7.0 / Kotlin 2.4.10 / Spring Boot 4.1.0 업그레이드` | §6.1 중 플러그인·wrapper | 중 |
+| 2 | `chore: kotlin-jdsl·springwolf·influxdb 의존성 버전 정렬` | §3.5, §6.1 | 낮음 |
+| 3 | `test: Kotest 6.2.4 마이그레이션` | §3.4 | **높음** — `ProjectConfig` |
+| 4 | `fix: EdsWebSocketClient 재연결 시 api-key 재평가` | §6.10 | 낮음 — **단독으로도 가치 있음** |
+| 5 | `feat: 가상 스레드 활성화 및 taskExecutor/taskScheduler 명시` | §6.2, §6.4, §8.2 | **높음** — §2.3 해소 |
+| 6 | `chore: HikariCP 풀 크기·타임아웃 명시` | §6.3 | 중 |
+| 7 | `refactor: WebClient → RestClient 전환 (EdsClient, NgrokConfig)` | §6.5, §6.6 | 중 |
+| 8 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
+| 9 | `refactor: AiotService/FeatureScheduler 코루틴 제거 및 트랜잭션 경계 정리` | §6.8 | **최고** |
+| 10 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
+
+**1~3(버전)과 5~10(가상 스레드)은 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
+분리하기 어렵다. **4번은 단독 hotfix 로 먼저 내보내도 된다** — 나머지와 독립적이고 실제 장애를 막는다.
+
+## 11. 후속 과제
+
+| # | 과제 | 조건 |
+|---|---|---|
+| 1 | `EdsWebSocketClient` → `StandardWebSocketClient` 전환, `webflux`/`coroutines` 제거 | 재연결 수동 시험 시간 확보 시 (§7) |
+| 2 | `EdsClient` → `@HttpExchange` 인터페이스 + `RestClientAdapter` | §6.6 안정화 후. `if (response.code != 200) throw` 반복이 `defaultStatusHandler` 로 모인다 |
+| 3 | Semaphore 값 조정 (LLM 5 / Mobius 10) | 08:00 배치 로그 2주 관측 후 (§9-6) |
+| 4 | `publishOn` 순차성 의존 여부 확인 | `edsFacade.processEvent` 가 이벤트 순서에 의존하는지 (§6.10-3) |
+| 5 | H2 → Testcontainers PostgreSQL | PostGIS 의존 쿼리 테스트 필요성 판단 후 (§3.7). safers `2026-08-07-postgres-testcontainers-design.md` 참조 |
+| 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |
+| 7 | 버전 카탈로그 도입 | 멀티모듈화 시점 (§3.6) |
+| 8 | actuator + micrometer 도입 | §6.3 의 `hikaricp_connections_pending` 관측용 |

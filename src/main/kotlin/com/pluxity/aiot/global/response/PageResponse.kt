@@ -36,3 +36,16 @@ fun <T> List<T>.toCursorPageResponse(
         nextCursor = if (hasNext) this.lastOrNull()?.let(getCursor) else null,
         hasNext = hasNext,
     )
+
+fun <T> emptyPageResponse(
+    page: Int,
+    size: Int,
+): PageResponse<T> =
+    PageResponse(
+        content = emptyList(),
+        pageNumber = page,
+        pageSize = size,
+        totalElements = 0,
+        last = true,
+        first = true,
+    )

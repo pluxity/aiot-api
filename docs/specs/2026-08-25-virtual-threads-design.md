@@ -13,9 +13,11 @@
 | 지적 | 판정 | 반영 |
 |---|---|---|
 | 썸네일 크기 검사가 `bodyTo(ByteArray)` **이후**라 상한을 복원하지 못한다 (chunked/과소 신고 시 전량 적재) | **타당** — "복원한다" 는 서술이 틀렸다 | §6.6 을 `response.body` + `readNBytes(상한+1)` 스트림 판정으로 교체, §6.5 서술 정정, §8.3 확인 항목 추가 |
-| `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 6개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
+| `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 7개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| §10 커밋 6 이 `WebClientFactory`/`webClientBuilder` 를 제거하는데 소비자 3곳이 7~9 커밋에 남아 있어 **중간 커밋이 빌드되지 않는다** — "각 커밋에서 빌드 통과" 전제와 모순 | **타당** — 이분탐색을 위해 커밋을 나눠놓고 정작 이분탐색을 불가능하게 만들었다 | 커밋 6 을 "추가" 로 바꾸고 제거를 커밋 10 으로 분리, §6.5 에 존치 규칙 명시 |
+| `EdsClient` 는 6개가 아니라 **7개** 다 — `keepAlive` 가 마이그레이션 목록과 회귀 확인에서 빠졌다. 그 catch 가 `login()` 을 불러 `apiKey` 를 갱신하는 경로다 | **타당** — 문서 5곳에서 6개로 세고 있었다 | 전 지점을 7개로 정정, §6.6 에 메서드 표와 `keepAlive` 주의 추가, §8.3 에 재로그인 경로 확인 항목 추가 |
 | `throwOnHttpError` 를 클라이언트 단위로만 봤다. `AiotService` 는 `fetchDeviceBatteryData`(non-2xx → null), `fetchRemoveSubscription`(로깅 후 진행) 처럼 메서드마다 계약이 달라 `retrieve()` 로 바꾸면 예상된 4xx 가 루프 전체를 끊는다 | **타당** — §6.6 에서 EDS 에 한 검사를 `AiotService` 에는 하지 않았다 | §6.5 에 메서드별 계약 표 추가, 두 메서드는 `.exchange { }` 개별 처리로 명시 |
 | `WebClientConfig` 제거로 전역 `Accept: application/json` 이 사라지는데 대체가 없다 | **타당. 그리고 이건 코드 축약 패스가 만든 회귀다** — 원래 §6.5 코드에 있던 `defaultHeaders` 줄을 축약하며 결정 목록에 옮기지 않았다 | §6.5 구성 결정에 복원 |
 | `NgrokConfig` 의 연산자 타임아웃(2초·5초)이 사라지고 팩토리 기본값 30초가 적용된다 — `@PostConstruct` 라 기동이 블로킹된다 | **타당** | §6.9 에 전용 클라이언트 타임아웃 지정 추가 |
@@ -36,7 +38,7 @@
 | 지점 | 현재 | 실제 효과 |
 |---|---|---|
 | `LlmMessageController:29` | `runBlocking { ... }` | 톰캣 스레드를 그대로 점유. 논블로킹 이득 0 |
-| `EdsClient` 6개 메서드 | `exchangeToMono { }.block()` | Reactor Netty 스택을 지고 동기 호출 |
+| `EdsClient` 7개 메서드 | `exchangeToMono { }.block()` | Reactor Netty 스택을 지고 동기 호출 |
 | `NgrokConfig:53,90` | `.block()` | 같음 |
 | `AiotService:271,394` | `.block()` | 같음 |
 | `AiotService.statusSynchronize` | `runBlocking { supervisorScope { async { } } }` | **디스패처 미지정 → 단일 스레드**. §5.1 |
@@ -544,7 +546,7 @@ runBlocking {                    // ← 디스패처 미지정: 호출 스레드
 
 | 파일 | 현재 | 전환 후 | 난이도 |
 |---|---|---|---|
-| `EdsClient` (6개 메서드) | `exchangeToMono{}.block()` | `RestClient.retrieve().body()` | 낮음 — §6.6 |
+| `EdsClient` (7개 메서드) | `exchangeToMono{}.block()` | `RestClient.retrieve().body()` | 낮음 — §6.6 |
 | `NgrokConfig:53,90` | `.block()` | 동일 | 낮음 |
 | `LlmMessageController:29` | `runBlocking{}` | 직접 호출 | 낮음 |
 | `LlmMessageScheduler:22` | `runBlocking{}` | 직접 호출 | 낮음 |
@@ -836,6 +838,10 @@ class RestClientFactory : DisposableBean {
 - `throwOnHttpError = false` 일 때 `defaultStatusHandler({ true }, { _, _ -> })` 를 건다 —
   모든 상태코드를 "에러 아님" 으로 처리해 `retrieve()` 가 본문을 디코딩하게 둔다.
 
+> **`WebClientFactory` / `WebClientConfig` 는 이 시점에 지우지 않는다.** `LlmMessageService`·
+> `AiotService`·`AiotServiceKoTest` 가 아직 쓰고 있어 컴파일이 깨진다. 두 팩토리를 공존시키고
+> **마지막 소비자가 옮겨간 뒤 제거한다**(§10 커밋 10).
+
 #### 라이프사이클 — 팩토리가 자원을 들고 있어야 한다
 
 `createClient` 는 **`EdsClient`·`NgrokConfig`·`AiotService`·`LlmMessageService` 네 곳에서** 호출된다.
@@ -862,7 +868,7 @@ javap -cp <spring-web-7.0.5 전개경로> 'org.springframework.web.client.RestCl
 
 #### `throwOnHttpError` 는 클라이언트 단위지만 계약은 메서드 단위다
 
-**EDS 는 6개 메서드가 모두 같은 계약이라 클라이언트 옵션 하나로 해결되지만, `AiotService` 는 다르다.**
+**EDS 는 7개 메서드가 모두 같은 계약이라 클라이언트 옵션 하나로 해결되지만, `AiotService` 는 다르다.**
 메서드마다 non-2xx 처리가 갈린다.
 
 | 메서드 | 현재 non-2xx 동작 | 전환 방식 |
@@ -898,7 +904,22 @@ javap -cp <spring-web-7.0.5 전개경로> 'org.springframework.web.client.RestCl
 
 ### 6.6 `EdsClient` — RestClient 전환
 
-6개 메서드 전부 같은 형태로 바뀐다. 대표 예:
+**대상은 7개다.** `client` 호출 지점도 7곳이다.
+
+| 메서드 | 형태 |
+|---|---|
+| `login` | JSON — `retrieve().body(T)` |
+| **`keepAlive`** | JSON — 아래 주의 |
+| `getCameraList` | JSON |
+| `getRealtimeStreamUrl` | JSON |
+| `getRecordStreamUrl` | JSON |
+| `getWebSocketUrl` | JSON |
+| `getEventThumbnail` | `ByteArray` — 형태가 다르다(뒤에서 별도로 다룬다) |
+
+> **`keepAlive` 를 빠뜨리지 말 것.** 앞의 6개와 형태는 같지만 **역할이 다르다** —
+> 이 메서드의 catch 블록이 `login()` 을 호출해 `apiKey` 를 갱신한다.
+> §6.10 의 stale api-key 결함이 트리거되는 지점이 바로 여기이므로,
+> 전환 후 **재로그인 경로가 살아 있는지 반드시 확인한다**(§8.3).
 
 **전환 전에 EDS 의 에러 계약을 확인해야 한다 — 이것을 놓치면 동작이 바뀐다.**
 
@@ -956,7 +977,8 @@ HTTP 200 + `code != 200` 도, HTTP 4xx 도 낼 수 있고 **양쪽 모두 위 �
 **상한 + 1 바이트만 읽어서 초과 여부를 판정한다** — 할당량이 상한에 묶인다.
 
 ```kotlin
-// 6개 메서드가 모두 같은 형태로 바뀐다. login() 대표.
+// JSON 6개(login·keepAlive·getCameraList·getRealtime/RecordStreamUrl·getWebSocketUrl)가
+// 모두 같은 형태로 바뀐다. login() 대표.
 -   .bodyValue(request)
 -   .exchangeToMono { resp -> resp.bodyToMono(object : ParameterizedTypeReference<...>() {}) }
 -   .block()
@@ -1487,7 +1509,8 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 트랜잭션 점유 시간 (§6.8 R2) | 배치 중 `pg_stat_activity` 의 `idle in transaction` 또는 p6spy 로그로 **HTTP 대기 동안 커넥션을 잡고 있지 않은지** 확인 |
 | Mobius 동시 호출 상한 (§6.8 R4) | 08:00 두 cron 이 겹치는 구간에서 Mobius 측 동시 접속 수가 `max(코어,8)×2` 를 넘지 않는지 |
 | **빈 응답 방어 (§6.8)** | Mobius 를 빈 본문 200 으로 응답하는 스텁으로 바꾸고 `checkSynchronization` 실행 → **Feature 가 하나도 지워지지 않아야 한다.** 지워지면 `?: emptyList()` 가 남아 있는 것 |
-| EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
+| EDS API 7개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
+| **`keepAlive` 재로그인 경로 (§6.6)** | keepAlive 를 실패시켜 catch 의 `login()` 이 돌고 `apiKey` 가 갱신되는지 확인. §6.10 과 함께 본다 |
 | **EDS 가 4xx/5xx 를 낼 때 (§6.6)** | 잘못된 api-key 로 호출 → **`EDS_LOGIN_FAILED`/`EDS_API_ERROR` 가 나와야 한다.** 500 이 나오면 `throwOnHttpError` 설정이 빠진 것 |
 | 썸네일 크기 상한 (§6.6) | 1MB 초과 응답을 주는 스텁으로 호출 → `null` 반환 + 경고 로그. **chunked 응답(Content-Length 없음)으로도 확인** |
 | RestClient null 응답 (§6.7) | LLM 서버 빈 응답 시나리오 |
@@ -1537,14 +1560,33 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 3 | `test: Kotest 6.2.4 마이그레이션` | §3.4 | **높음** — `ProjectConfig` |
 | 4 | `fix: EdsWebSocketClient 재연결 시 api-key 재평가` | §6.10 | 낮음 — **단독으로도 가치 있음** |
 | 5 | `feat: 가상 스레드 활성화 및 taskExecutor/taskScheduler 명시` | §6.2, §6.4, §8.2 | **높음** — §2.3 해소 |
-| 6 | `refactor: WebClient → RestClient 전환 (EdsClient, NgrokConfig)` | §6.5, §6.6 | 중 |
+| 6 | `feat: RestClientFactory 추가 및 EdsClient·NgrokConfig 전환` | §6.5, §6.6, §6.9 Ngrok. **`WebClientFactory`/`WebClientConfig` 는 남겨둔다** | 중 |
 | 7 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
 | 8 | `refactor: Mobius 동기화 트랜잭션 경계 분리 및 동시성 상한 공유` | §6.8 — `FeatureQueryService`·`FeatureStatusWriter` 신설, `handleMobiusUrlUpdated`/`checkSynchronization` 의 `@Transactional` 제거 | **최고** |
 | 9 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
+| 10 | `chore: WebClientFactory·WebClientConfig 제거` | 마지막 소비자가 옮겨간 뒤 | 낮음 |
 
 `§6.3`(HikariCP)은 **설정 변경이 없으므로 커밋이 없다.**
 
-**1~3(버전)과 5~9(가상 스레드)는 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
+#### 6번에서 옛 인프라를 지우면 안 되는 이유
+
+`RestClientFactory` 를 **추가**하되 `WebClientFactory` / `WebClientConfig.webClientBuilder` 는
+**10번까지 남긴다.** 6번에서 지우면 아직 옮기지 않은 소비자가 컴파일되지 않는다.
+
+| 소비자 | 의존 | 옮기는 커밋 |
+|---|---|---|
+| `LlmMessageService` | `WebClient.Builder` | 7 |
+| `AiotService` | `WebClientFactory` | 8 |
+| `AiotServiceKoTest` | 위와 동일 | 9 |
+
+**이 순서를 어기면 "각 커밋에서 빌드가 통과한다" 는 전제가 깨지고, 그러면 애초에 커밋을 나눈
+이유(회귀 시 이분탐색)가 사라진다.** 두 팩토리가 잠시 공존하는 비용이 훨씬 싸다.
+
+> `EdsWebSocketClient` 는 `WebClientFactory` 를 쓰지 않는다(`ReactorNettyWebSocketClient` +
+> 자체 `HttpClient.create()`). 따라서 **10번에서 두 클래스를 완전히 제거할 수 있다** —
+> `spring-boot-starter-webflux` 의존성만 §7 사유로 남는다.
+
+**1~3(버전)과 5~10(가상 스레드)은 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
 분리하기 어렵다. **4번은 단독 hotfix 로 먼저 내보내도 된다** — 나머지와 독립적이고 실제 장애를 막는다.
 
 ## 11. 후속 과제

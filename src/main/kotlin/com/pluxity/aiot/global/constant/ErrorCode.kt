@@ -48,6 +48,10 @@ enum class ErrorCode(
     NOT_FOUND_PERMISSION_GROUP(HttpStatus.NOT_FOUND, "ID가 %s인 PermissionGroup을 찾을 수 없습니다."),
     NOT_FOUND_CCTV(HttpStatus.NOT_FOUND, "ID가 %s인 CCTV를 찾을 수 없습니다."),
     NOT_FOUND_LLM_MESSAGE(HttpStatus.NOT_FOUND, "ID가 %s인 LLM 메시지를 찾을 수 없습니다."),
+    NOT_FOUND_SPEAKER_PRESET(HttpStatus.NOT_FOUND, "ID가 %s인 스피커 프리셋을 찾을 수 없습니다."),
+    NOT_FOUND_SPEAKER_BROADCAST(HttpStatus.NOT_FOUND, "ID가 %s인 스피커 송출 이력을 찾을 수 없습니다."),
+    NOT_FOUND_DISPLAY_PRESET(HttpStatus.NOT_FOUND, "ID가 %s인 전광판 프리셋을 찾을 수 없습니다."),
+    NOT_FOUND_DISPLAY_BROADCAST(HttpStatus.NOT_FOUND, "ID가 %s인 전광판 송출 이력을 찾을 수 없습니다."),
 
     EDS_LOGIN_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "EDS 로그인 실패: %s"),
     EDS_API_ERROR(HttpStatus.BAD_GATEWAY, "EDS API 호출 실패: %s"),

@@ -3,15 +3,18 @@
 - 작성일: 2026-08-25
 - 대상 이슈: #22 #23 #24 #25 #26 #27 #28
 - 대상 코드: `speaker/**`, `display/**`, `broadcast/**`
-- 상태: **계약 확정용 스텁**. Controller · DTO 는 확정, Service 는 샘플 응답을 돌려주는 스텁이다.
+- 상태: **계약 확정용 스텁**. Controller · DTO 는 확정, Service 는 비어 있다.
 
 ## 0. 왜 스텁부터인가
 
 프론트(`plug-platform-atlas · apps/a-iot`)가 화면 작업을 시작하려면 요청/응답 계약이 먼저 필요하다.
 반면 **하드웨어 업체 API 스펙이 아직 오지 않아** 송출 구현과 표출/음성 옵션 필드를 확정할 수 없다.
 
-그래서 이번 PR 은 **Swagger 에 노출되는 계약만 확정**한다. Controller 와 DTO 는 실구현에서 그대로 쓰고,
-Service 는 `BroadcastStubSamples` 기반 고정 응답을 돌려준다. 프론트는 dev Swagger UI 를 보고 화면을 만들 수 있다.
+그래서 이번 PR 은 **Swagger 에 노출되는 계약만 확정**한다. Controller 와 DTO 는 실구현에서 그대로 쓴다.
+
+Service 는 **가짜 데이터를 돌려주지 않는다.** 목록은 빈 응답, 단건 조회는 404, 쓰기는 no-op 이다.
+필드별 예시 값은 DTO 의 `@Schema(example = ...)` 로만 제공하며 프론트는 Swagger UI 의 스키마·예시를 보고 화면을 만든다.
+스텁 응답을 실데이터로 오해할 여지를 남기지 않기 위한 선택이다.
 
 ## 1. 이번 범위
 
@@ -118,4 +121,3 @@ SpeakerPresetResponse(id, title, message, @JsonUnwrapped BaseResponse)
 2. 프리셋 CRUD 실구현 → `SpeakerPresetService` / `DisplayPresetService` 스텁 교체
 3. 송출 이력 적재 + 조회 실구현, 업체 API 클라이언트 인터페이스 분리
 4. 업체 스펙 수령 후 옵션 필드와 실제 호출 채우기
-5. `BroadcastStubSamples` 및 각 Service 의 `SAMPLES` 제거

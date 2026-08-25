@@ -1,33 +1,27 @@
 package com.pluxity.aiot.speaker
 
-import com.pluxity.aiot.broadcast.BroadcastStubSamples
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.response.PageResponse
+import com.pluxity.aiot.global.response.emptyPageResponse
 import com.pluxity.aiot.speaker.dto.SpeakerPresetRequest
 import com.pluxity.aiot.speaker.dto.SpeakerPresetResponse
 import com.pluxity.aiot.speaker.dto.SpeakerPresetSearchRequest
 import org.springframework.stereotype.Service
 
 /**
- * TODO 스펙 공유용 스텁. 엔티티/리포지토리 연동은 후속 구현에서 채운다.
+ * TODO 계약 확정용 스텁. 엔티티/리포지토리 연동은 후속 구현에서 채운다.
  */
 @Service
 class SpeakerPresetService {
-    fun findAll(request: SpeakerPresetSearchRequest): PageResponse<SpeakerPresetResponse> {
-        val filtered = SAMPLES.filter { request.title.isNullOrBlank() || it.title.contains(request.title) }
+    fun findAll(request: SpeakerPresetSearchRequest): PageResponse<SpeakerPresetResponse> = emptyPageResponse(request.page, request.size)
 
-        return PageResponse(
-            content = filtered,
-            pageNumber = request.page,
-            pageSize = request.size,
-            totalElements = filtered.size.toLong(),
-            last = true,
-            first = request.page == 1,
-        )
+    fun findById(presetId: Long): SpeakerPresetResponse = throw CustomException(ErrorCode.NOT_FOUND_SPEAKER_PRESET, presetId)
+
+    fun save(request: SpeakerPresetRequest): Long {
+        // TODO 프리셋 생성 구현 필요
+        return 0L
     }
-
-    fun findById(presetId: Long): SpeakerPresetResponse = SAMPLES.first().copy(id = presetId)
-
-    fun save(request: SpeakerPresetRequest): Long = 1L
 
     fun update(
         presetId: Long,
@@ -38,23 +32,5 @@ class SpeakerPresetService {
 
     fun delete(presetId: Long) {
         // TODO 프리셋 삭제 구현 필요
-    }
-
-    companion object {
-        private val SAMPLES =
-            listOf(
-                SpeakerPresetResponse(
-                    id = 1L,
-                    title = "폐장 안내",
-                    message = "잠시 후 공원이 폐장합니다. 이용에 참고해 주시기 바랍니다.",
-                    baseResponse = BroadcastStubSamples.baseResponse,
-                ),
-                SpeakerPresetResponse(
-                    id = 2L,
-                    title = "미아 찾기",
-                    message = "미아를 찾고 있습니다. 안내센터로 방문해 주시기 바랍니다.",
-                    baseResponse = BroadcastStubSamples.baseResponse,
-                ),
-            )
     }
 }

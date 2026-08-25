@@ -16,6 +16,8 @@
 | `retrieve()` 는 4xx/5xx 에서 던지므로 `response.code` 검사에 도달하지 못한다 — EDS 도메인 에러 매핑이 사라지고 500 이 나간다 | **타당** — "썸네일만 형태가 다르다" 고 단정한 것이 틀렸다. 7개 전부 에러 계약이 다르다 | §6.5 에 `throwOnHttpError` 옵션 추가, §6.6 에 계약 설명 + `EdsClient` 생성 변경, §8.3 확인 항목 추가 |
 | `DeviceStatus` 가 레포에도 문서에도 정의돼 있지 않고, 생성 인자(`LocationData`)와 접근 프로퍼티(`longitude`/`latitude`)가 어긋난다 | **타당** — 그대로는 컴파일되지 않는다 | §6.8 에 `private data class DeviceStatus` 정의 추가, 생성부를 평탄한 인자로 교체 |
 | `MobiusProperties` 가 존재하지 않는데 클래스·배선·yml 키 정의 없이 사용한다 | **타당** — 레포에 `MobiusConfig`/`MobiusConfigService` 만 있고 `MobiusProperties` 는 없다 | **설정 클래스를 만들지 않는 방향으로 변경**(사용자 결정). `max(코어,8)×2` 계산식으로 대체해 §6.3 의 "측정 없이 상수를 승격시키지 않는다" 원칙과 맞춤. §9-6·§11-3 갱신 |
+| `MobiusUrlUpdatedEvent` 를 받아도 `client` 가 `val` 이라 옛 URL 로 동기화한다 | **타당.** 기존 결함인데 §6.8 이 핸들러를 재작성하면서 아무 표시 없이 옮겨 적었다 — `EdsWebSocketClient` 결함은 §6.10 에 넣었으면서 구조가 같은 이 건은 지나쳤다 | **이번 범위에서 고치지 않되 알려진 결함으로 명시**(사용자 결정 — Mobius 연계 자체가 바뀔 수 있다). §6.8 에 경고 블록, §11-10 후속 추가 |
+| `featureSyncWriter` 가 정의되지 않았다 — 문서가 정의한 빈은 `FeatureQueryService`·`FeatureStatusWriter` 둘뿐이다 | **타당.** `DeviceStatus`·`MobiusProperties` 에 이어 **세 번째 같은 유형** — 존재하지 않는 이름을 사용부에만 쓴다 | `FeatureStatusWriter.applyPaths` 로 통합. 새 빈을 만들지 않는다 |
 | `AiotService` 의 `createMobiusHeaders()`(`X-M2M-RI`·`X-M2M-Origin`·`Accept: */*`)가 마이그레이션 설계에서 통째로 빠졌다 — oneM2M 필수 헤더라 Mobius 요청이 전부 거부된다 | **타당.** 8차에서 전역 `Accept` 를 복원하면서 **같은 클라이언트 생성부의 `.mutate()` 를 보지 않았다** | §6.5 에 "클라이언트별 헤더" 절 신설, `Accept` 충돌 표 추가, §8.3 확인 항목·§11-9 후속 추가 |
 | §10 커밋 6 이 `WebClientFactory`/`webClientBuilder` 를 제거하는데 소비자 3곳이 7~9 커밋에 남아 있어 **중간 커밋이 빌드되지 않는다** — "각 커밋에서 빌드 통과" 전제와 모순 | **타당** — 이분탐색을 위해 커밋을 나눠놓고 정작 이분탐색을 불가능하게 만들었다 | 커밋 6 을 "추가" 로 바꾸고 제거를 커밋 10 으로 분리, §6.5 에 존치 규칙 명시 |
 | `EdsClient` 는 6개가 아니라 **7개** 다 — `keepAlive` 가 마이그레이션 목록과 회귀 확인에서 빠졌다. 그 catch 가 `login()` 을 불러 `apiKey` 를 갱신하는 경로다 | **타당** — 문서 5곳에서 6개로 세고 있었다 | 전 지점을 7개로 정정, §6.6 에 메서드 표와 `keepAlive` 주의 추가, §8.3 에 재로그인 경로 확인 항목 추가 |
@@ -1115,6 +1117,22 @@ class LlmMessageService(
 
 ### 6.8 Mobius 동기화 — 트랜잭션 경계와 동시성 상한 재설계
 
+> ## ⚠ 이 절은 잠정이다 — 착수 전 확인 필요
+>
+> **Mobius 연계 방식 자체가 바뀔 수 있다**(2026-08-25 확인). 그 경우 아래의 구체 설계
+> (`FeatureQueryService`·`FeatureStatusWriter` 신설, 3단계 분리)는 폐기된다.
+>
+> | 구분 | 연계가 바뀌어도 유효한가 |
+> |---|---|
+> | **R1~R4 요구사항** (아래 표) | **유효.** 어떤 클라이언트를 쓰든 트랜잭션 경계와 동시성 상한 문제는 같다 |
+> | Reactor Netty 암묵적 상한이 사라진다는 사실 | **유효.** JDK HttpClient 를 쓰는 한 동일 |
+> | `@Transactional` 안에서 HTTP 를 도는 현재 구조가 문제라는 진단 | **유효** |
+> | `FeatureQueryService`/`FeatureStatusWriter` 구체 설계 | **현행 코드 전용.** 연계가 바뀌면 폐기 |
+>
+> **§10 커밋 8 은 나머지와 분리해 마지막에 착수한다.** 연계 변경 여부가 정해지기 전에는
+> 시작하지 않는다. 나머지 커밋(버전 정렬·가상 스레드·EDS/LLM RestClient 전환)은
+> 이 절과 독립적이므로 그대로 진행할 수 있다.
+
 **이번 작업에서 가장 위험한 구간이다.** 요구사항이 네 개인데 서로 얽혀 있어, 하나만 보고 고치면
 다른 하나가 깨진다. 먼저 전부 나열한다.
 
@@ -1247,6 +1265,23 @@ fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
 }
 ```
 
+> **알려진 결함 — 이번 범위에서 고치지 않는다.** 위 코드는 **URL 을 바꿔도 실제로 반영되지 않는다.**
+> `client` 가 `val` 이라 생성 시점의 `cachedMobiusUrl` 에 묶여 있고, 이 핸들러는 문자열만 갈아끼운
+> 뒤 **옛 주소로** 동기화를 돈다.
+>
+> ```
+> AiotService:64  private var cachedMobiusUrl = mobiusConfigService.currentUrl
+> AiotService:67      .createClient(cachedMobiusUrl)     ← 생성 시 1회만 읽는다
+> AiotService:409     this.cachedMobiusUrl = event.newUrl ← 바꿔도 client 는 그대로
+> ```
+>
+> `POST /mobius/api-url` → `MobiusConfigService.createUrl()` 이 이벤트를 발행하므로 **노출된 경로다.**
+> 증상은 "URL 을 바꿨는데 반영이 안 됨" 이고 원인 추적이 어렵다.
+>
+> **전환과 무관한 기존 결함이며, 위 잠정 표시대로 Mobius 연계가 바뀔 수 있어 이번에 고치지 않는다.**
+> 고친다면 `client` 를 `@Volatile var` 로 바꾸고 핸들러에서 `createMobiusHeaders()` 와 함께
+> 재생성하면 된다(§6.5). §11-10 후속 과제.
+
 > **원자성이 바뀐다는 점은 인지한다.** 지금은 셋이 한 트랜잭션이라 중간 실패 시 전부 롤백되지만,
 > 분리 후에는 앞 단계가 커밋된 채로 뒤가 실패할 수 있다. 다만 **셋 다 외부 시스템(Mobius) 상태를
 > 로컬에 반영하는 동기화 작업**이라 부분 반영이 치명적이지 않고, 다음 동기화에서 수렴한다.
@@ -1272,8 +1307,8 @@ fun checkSynchronization() {
 ```kotlin
 // AiotService — @Transactional 제거
 fun checkSynchronization() {
-    val uril = fetchMobiusUril()              // 트랜잭션 밖. HTTP 1회
-    featureSyncWriter.applyPaths(uril)        // 별도 빈, @Transactional
+    val uril = fetchMobiusUril()                 // 트랜잭션 밖. HTTP 1회
+    featureStatusWriter.applyPaths(uril)         // 위에서 정의한 빈에 메서드를 추가한다
 }
 
 // 신규 — 기존 fetchAllMobiusSensorPaths 에서 HTTP 부분만 분리
@@ -1308,6 +1343,18 @@ featureRepository.deleteAllByDeviceIdIn(removedIds)  // 로컬 Feature 전량 �
 > 본문 부재에 예외를 던지지만 RestClient 의 `body()` 는 `null` 을 반환한다.
 > §6.6·§6.7 처럼 `?: throw` 로 받거나, 여기처럼 **기본값을 절대 넣지 않는다.**
 > 특히 **결과가 삭제/비활성화로 이어지는 경로**에서는 기본값이 곧 데이터 손실이다.
+
+`applyPaths` 는 **새 빈을 만들지 않고 위의 `FeatureStatusWriter` 에 추가한다.** 쓰기 트랜잭션을
+갖는 Feature 전용 빈이라는 성격이 같고, 빈을 늘릴 이유가 없다.
+
+```kotlin
+@Service
+class FeatureStatusWriter(...) {
+    @Transactional fun applyStatuses(statuses: Map<String, DeviceStatus>)   // 위
+    @Transactional fun applyBatteryLevels(levels: Map<String, Int?>)        // 아래 스케줄러용
+    @Transactional fun applyPaths(uril: List<String>)                       // 여기
+}
+```
 
 `applyPaths` 는 기존 `fetchAllMobiusSensorPaths` 의 **매핑 로직을 그대로 옮기되**, 트랜잭션 안에서
 `featureRepository.findAll()` 을 다시 호출해 영속 엔티티로 작업한다(R3).
@@ -1608,7 +1655,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 5 | `feat: 가상 스레드 활성화 및 taskExecutor/taskScheduler 명시` | §6.2, §6.4, §8.2 | **높음** — §2.3 해소 |
 | 6 | `feat: RestClientFactory 추가 및 EdsClient·NgrokConfig 전환` | §6.5, §6.6, §6.9 Ngrok. **`WebClientFactory`/`WebClientConfig` 는 남겨둔다** | 중 |
 | 7 | `refactor: LlmMessageService 코루틴 제거` | §6.7 | 중 |
-| 8 | `refactor: Mobius 동기화 트랜잭션 경계 분리 및 동시성 상한 공유` | §6.8 — `FeatureQueryService`·`FeatureStatusWriter` 신설, `handleMobiusUrlUpdated`/`checkSynchronization` 의 `@Transactional` 제거 | **최고** |
+| 8 | `refactor: Mobius 동기화 트랜잭션 경계 분리 및 동시성 상한 공유` | §6.8 — **잠정. Mobius 연계 변경 여부 확정 후 착수** | **최고** |
 | 9 | `refactor: 잔여 runBlocking 제거` | §6.9 | 낮음 |
 | 10 | `chore: WebClientFactory·WebClientConfig 제거` | 마지막 소비자가 옮겨간 뒤 | 낮음 |
 
@@ -1632,7 +1679,11 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 > 자체 `HttpClient.create()`). 따라서 **10번에서 두 클래스를 완전히 제거할 수 있다** —
 > `spring-boot-starter-webflux` 의존성만 §7 사유로 남는다.
 
-**1~3(버전)과 5~10(가상 스레드)은 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
+**8번은 나머지와 분리한다.** §6.8 이 잠정이므로 연계 변경 여부가 정해질 때까지 착수하지 않는다.
+8번을 빼도 1~7·9~10 은 성립한다 — 다만 **9번(잔여 `runBlocking` 제거)과 10번(`WebClientFactory` 제거)은
+`AiotService` 를 건드리므로 8번과 순서가 얽힌다.** 8번을 미루면 9·10 도 함께 미룬다.
+
+**1~3(버전)과 5~7(가상 스레드·EDS/LLM 전환)은 별도 PR 로 나눌 수 있으면 나눈다.** 성격이 다르고 회귀 원인이 섞이면
 분리하기 어렵다. **4번은 단독 hotfix 로 먼저 내보내도 된다** — 나머지와 독립적이고 실제 장애를 막는다.
 
 ## 11. 후속 과제
@@ -1647,4 +1698,5 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | 6 | MDC traceId 전파 | safers `2026-08-04-mdc-trace-id-design.md` 참조. 가상 스레드 전환 후가 더 쉽다 |
 | 7 | 버전 카탈로그 도입 | 멀티모듈화 시점 (§3.6) |
 | 8 | actuator + micrometer 도입 | §6.3 의 `hikaricp_connections_pending` 관측용. **풀 설정 변경 여부는 이 지표를 본 뒤 판단한다** |
+| 10 | Mobius URL 변경 시 클라이언트 재생성 | `client` 가 `val` 이라 `MobiusUrlUpdatedEvent` 가 반영되지 않는다(§6.8). **Mobius 연계 재설계와 함께 처리한다** |
 | 9 | `X-M2M-RI` 를 요청마다 고유값으로 | oneM2M 규격상 요청 식별자는 매 요청 고유해야 하나 현재는 클라이언트 생성 시점에 고정된다(§6.5). 전환과 무관한 기존 동작이라 이번 범위 밖 |

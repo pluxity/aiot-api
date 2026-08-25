@@ -8,6 +8,12 @@
 - 함께 읽을 것: `docs/specs/2026-08-25-virtual-threads-design.md` — §3.1 의존성 표에서 jjwt 제거를 다룬다
 - 참조: `safers-api/apps/safers/src/main/kotlin/com/pluxity/safers/auth/**`
 
+### 외부 리뷰 반영 (Codex, 2026-08-25)
+
+| 지적 | 판정 | 반영 |
+|---|---|---|
+| `signOut` 의 `refreshToken?.let` 가드가 남아 `expireCookie` 변경이 무효화된다 | **타당** — 가드가 두 겹인 것을 놓쳤다 | §4.8 에 `signOut` 재구조화 추가, §3-9 판정 갱신, §6.3 확인 항목 추가 |
+
 ## 0. 배경 — 왜 지금인가
 
 aiot 와 safers-api 의 인증 계층은 **같은 코드에서 갈라져 나왔다.** 패키지 경로만 다르고
@@ -168,7 +174,7 @@ if (token != null && jwtProvider.isAccessTokenValid(token)) {
 | 6 | `WhiteListPath` 매칭 | `path.startsWith("/${entry.path}")` | 경로 경계(`/`, `.`) 확인 | **교체** |
 | 7 | 필터 JSON 직렬화 | `com.fasterxml.jackson.databind.ObjectMapper()` — **Jackson 2**, Spring 설정 미적용 | `tools.jackson.databind.json.JsonMapper()` — Jackson 3 | **교체** |
 | 8 | 필터 예외 로깅 | `CustomException` 아니면 **조용히 무시** | `log.error(exception) { ... }` | **추가** |
-| 9 | 쿠키 삭제 | `WebUtils.getCookie(request, name)?.apply { ... }` — **요청에 쿠키가 없으면 아무것도 안 한다** | `ResponseCookie.maxAge(0)` 무조건 발행 | **교체** |
+| 9 | 쿠키 삭제 | `WebUtils.getCookie(...)?.apply { }` + `signOut` 의 `refreshToken?.let` — **가드가 두 겹이라 리프레시 쿠키가 없으면 아무것도 안 지운다** | `ResponseCookie.maxAge(0)` 무조건 발행. **단 바깥 가드는 safers 도 동일하다** | **교체 + 바깥 가드 제거**(§4.8) |
 | 10 | 쿠키 path | 호출부마다 인라인 (`request.contextPath`, `"${contextPath}/"`) | `resolveAccessTokenPath()` / `resolveRefreshTokenPath()` / `resolveExpiryPath()` 단일 소스 | **교체** |
 | 11 | 트랜잭션 | 메서드 4개 전부 쓰기 `@Transactional` | 클래스 `@Transactional(readOnly = true)` + `signUp` 만 쓰기 | **교체** |
 | 12 | `/users/me` 인가 | `HttpMethod.GET permitAll` 이 먼저 → **익명 통과** | `/users/me/**` `authenticated()` 를 GET permitAll **앞에** 선언 | **교체** — 아래 |
@@ -727,6 +733,43 @@ class AuthenticationService(
 요청에 쿠키가 없으면 아무 `Set-Cookie` 도 내려보내지 않는다.** 브라우저에 쿠키가 남아 있는데
 요청에 실려오지 않는 경우(path 불일치 등) 영원히 지워지지 않는다. `ResponseCookie` 방식은 무조건 발행한다.
 
+#### `signOut` 의 바깥 가드도 함께 걷어낸다 — 안 그러면 위 변경이 무의미하다
+
+가드가 **두 겹**이다. `expireCookie` 로 안쪽을 고쳐도 바깥이 남으면 효과가 없다.
+
+```kotlin
+// 현재 — clearAllCookies 가 refreshToken?.let 안에 있다
+fun signOut(request, response) {
+    val refreshToken = jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)
+    refreshToken?.let {
+        refreshTokenRepository.findByToken(it)?.let { token -> refreshTokenRepository.delete(token) }
+        clearAllCookies(request, response)      // ← 리프레시 쿠키가 없으면 아예 호출되지 않는다
+    }
+}
+```
+
+리프레시 쿠키는 path 가 `"${contextPath}/"` 라 액세스 토큰 쿠키(`contextPath`)와 경로가 다르다.
+**브라우저가 리프레시 쿠키만 안 실어 보내는 상황이 실제로 가능하고, 그때 액세스·expiry 쿠키가 그대로 남는다.**
+
+```kotlin
+    fun signOut(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+    ) {
+        // Redis 레코드 삭제만 리프레시 토큰 존재에 의존한다.
+        jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)?.let { token ->
+            refreshTokenRepository.findByToken(token)?.let { refreshTokenRepository.delete(it) }
+        }
+
+        // 쿠키 만료는 조건 없이 항상 수행한다. 지울 쿠키가 없으면 브라우저가 무시할 뿐이고,
+        // 남아 있으면 이것이 유일한 제거 수단이다.
+        clearAllCookies(request, response)
+    }
+```
+
+> **safers-api 도 같은 구조다.** 즉 이 결함은 "safers 에 맞춰 정렬" 로는 고쳐지지 않는다.
+> 정렬 범위를 넘는 수정이며, safers 쪽에도 동일 수정을 제안할 대상이다(§9-8).
+
 `Duration` 전환에 따른 호출부:
 
 ```kotlin
@@ -884,6 +927,7 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | `GET /users/me` 익명 | 쿠키 없이 호출 → **401**(현재는 404) |
 | 로그인/로그아웃 왕복 | `Set-Cookie` 의 `Max-Age` 가 `36000`(10h) 인지 확인. **현재는 36000000** |
 | 로그아웃 후 쿠키 제거 | 응답에 `Max-Age=0` `Set-Cookie` 3개(Access/Refresh/expiry) |
+| **리프레시 쿠키 없이 로그아웃** | `AccessToken` 쿠키만 들고 `/auth/sign-out` 호출 → **여전히 `Set-Cookie` 3개가 나와야 한다.** 현재는 0개(§4.8) |
 | 리프레시 | `/auth/refresh-token` 200 + 새 쿠키 |
 | `/admin/**` | ADMIN 역할 없는 사용자로 403, 있는 사용자로 200 |
 | 기존 토큰 호환 | **배포 전 발급한 쿠키로 요청** → 여전히 통과해야 한다(§5.1) |
@@ -944,3 +988,4 @@ WhiteListPath.matches("/auth/sign-in") shouldBe true
 | 5 | 인증 계층을 공용 모듈로 추출 | 두 프로젝트가 같은 코드를 복제 중. 멀티모듈화 시점에 |
 | 6 | Redis 잔여 `refresh_token` TTL 정리 | §5.3 |
 | 7 | 테스트 yml 의 설정 복제 제거 | `src/test/resources/application.yml` 이 운영 설정을 통째로 복제 중이다. 프로파일 상속이나 `@DynamicPropertySource` 로 정리. §7-6 |
+| 8 | safers-api 에 `signOut` 가드 수정 제안 | §4.8 — 동일 결함이 그쪽에도 있다 |

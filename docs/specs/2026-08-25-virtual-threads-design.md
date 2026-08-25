@@ -8,6 +8,12 @@
 - 참조: `safers-api/docs/specs/2026-08-03-virtual-threads-design.md` — 판정 기준과 결론을 그대로 따르되,
   aiot 의 실제 jar / 빈 구성으로 전부 재확인했다. **결과가 safers 와 다른 지점이 두 곳 있다(§2.2, §4.2).**
 
+### 외부 리뷰 반영 (Codex, 2026-08-25)
+
+| 지적 | 판정 | 반영 |
+|---|---|---|
+| 썸네일 크기 검사가 `bodyTo(ByteArray)` **이후**라 상한을 복원하지 못한다 (chunked/과소 신고 시 전량 적재) | **타당** — "복원한다" 는 서술이 틀렸다 | §6.6 을 `response.body` + `readNBytes(상한+1)` 스트림 판정으로 교체, §6.5 서술 정정, §8.3 확인 항목 추가 |
+
 ## 0. 배경 — 왜 지금인가
 
 이 프로젝트는 **서블릿 MVC + JPA**(`spring-boot-starter-web`, `open-in-view: false`)라는 블로킹 스택인데,
@@ -826,7 +832,8 @@ class RestClientFactory {
 | `WriteTimeoutHandler` | 있음 | 없음 — JDK HttpClient 는 write 타임아웃 개념이 없다 |
 
 두 번째가 실질 차이다. `EdsClient.getEventThumbnail()` 이 `ByteArray` 를 받으므로
-**EDS 가 거대한 응답을 주면 힙을 그대로 먹는다.** §6.6 에서 이 경로에만 명시적 크기 검사를 넣는다.
+**EDS 가 거대한 응답을 주면 힙을 그대로 먹는다.** §6.6 에서 이 경로에 **스트림 단계의** 상한을 넣는다 —
+`Content-Length` 헤더를 보는 사후 검사로는 대체되지 않는다.
 
 첫 번째와 세 번째는 현 사용 패턴(짧은 JSON 요청/응답)에서 실질 영향이 없다고 판단한다.
 **단 `readTimeout` 이 유일한 방어선이 되므로 30초 기본값을 그대로 유지한다.**
@@ -874,6 +881,14 @@ class EdsClient(
 **썸네일만 형태가 다르다** — 비-2xx 를 예외 없이 null 로 넘기는 계약이므로 `.exchange` 를 쓴다.
 §6.5 에서 사라진 크기 상한을 여기서 복원한다.
 
+**상한은 스트림에서 걸어야 한다.** `Content-Length` 헤더를 보고 판단한 뒤 `bodyTo(ByteArray)` 를
+호출하는 방식은 **상한을 복원하지 못한다** — chunked 응답이면 `contentLength` 가 `-1` 이라 검사를
+통과하고, 서버가 실제보다 작게 신고해도 통과한다. 그 뒤 `bodyTo` 가 전량을 힙에 올린 다음에야
+크기를 재는 꼴이라, WebClient 의 `maxInMemorySize` 가 하던 "디코딩 중 중단" 과 의미가 다르다.
+
+`ClientHttpResponse` 는 `HttpInputMessage` 를 상속하므로 `response.body` 로 `InputStream` 을 얻을 수 있다.
+**상한 + 1 바이트만 읽어서 초과 여부를 판정한다** — 할당량이 상한에 묶인다.
+
 ```kotlin
     fun getEventThumbnail(index: Long): ByteArray? =
         try {
@@ -883,14 +898,18 @@ class EdsClient(
                 .header("api-key", apiKey)
                 .exchange { _, response ->
                     if (!response.statusCode.is2xxSuccessful) return@exchange null
-                    // WebClient 의 maxInMemorySize(1MB) 가 하던 역할을 명시적으로 복원한다
-                    // (설계문서 §6.5). Content-Length 가 없으면 통과시키되 읽은 뒤 재검사한다.
-                    val declared = response.headers.contentLength
-                    if (declared > MAX_THUMBNAIL_BYTES) {
-                        log.warn { "EDS 썸네일 크기 초과 (index=$index, size=$declared)" }
-                        return@exchange null
+                    // WebClient 의 maxInMemorySize(1MB) 를 대체한다(설계문서 §6.5).
+                    // Content-Length 로 판단하면 chunked(-1)·과소 신고에서 전량이 힙에 올라가므로
+                    // 스트림에서 상한+1 바이트만 읽어 초과를 판정한다.
+                    response.body.use { input ->
+                        val bytes = input.readNBytes(MAX_THUMBNAIL_BYTES + 1)
+                        if (bytes.size > MAX_THUMBNAIL_BYTES) {
+                            log.warn { "EDS 썸네일 크기 초과 (index=$index, ${MAX_THUMBNAIL_BYTES}바이트 상한)" }
+                            null
+                        } else {
+                            bytes
+                        }
                     }
-                    response.bodyTo(ByteArray::class.java)?.takeIf { it.size <= MAX_THUMBNAIL_BYTES }
                 }
         } catch (e: Exception) {
             log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
@@ -898,9 +917,22 @@ class EdsClient(
         }
 
     companion object {
-        private const val MAX_THUMBNAIL_BYTES = 1024L * 1024
+        // readNBytes(int) 에 넘기므로 Int 다. Long 으로 두면 컴파일되지 않는다.
+        private const val MAX_THUMBNAIL_BYTES = 1024 * 1024
     }
 ```
+
+확인:
+
+```bash
+javap -cp <spring-web-7.0.5 전개경로> org.springframework.http.client.ClientHttpResponse
+#   public interface ClientHttpResponse extends org.springframework.http.HttpInputMessage, java.io.Closeable
+javap -cp <같은 경로> org.springframework.http.HttpInputMessage
+#   public abstract java.io.InputStream getBody() throws java.io.IOException
+```
+
+> **`use` 로 닫는다.** `exchange` 의 콜백은 응답을 자동으로 닫아주지 않는 경로가 있으므로
+> 스트림을 직접 다룰 때는 명시적으로 닫는다.
 
 **`apiKey` 에 `@Volatile` 을 붙인다.** `EdsKeepAliveScheduler` 스레드가 쓰고 요청 스레드가 읽는다.
 현재 가시성 보장이 없다 — 기존 결함이며 §6.10 과 같은 부류다.
@@ -1199,6 +1231,7 @@ context.getBeanNamesForType(TaskScheduler::class.java) shouldContain "taskSchedu
 | STOMP 하트비트가 살아 있는가 | 클라이언트 연결 유지 확인 + `stomp-heartbeat-` 스레드 존재 |
 | `@Transactional` dirty checking (§6.8) | `statusSynchronize` 실행 후 DB 반영 확인. **이번 작업 최대 위험** |
 | EDS API 6개 (§6.6) | `eds.enabled=true` 환경에서 수동 호출 |
+| 썸네일 크기 상한 (§6.6) | 1MB 초과 응답을 주는 스텁으로 호출 → `null` 반환 + 경고 로그. **chunked 응답(Content-Length 없음)으로도 확인** |
 | RestClient null 응답 (§6.7) | LLM 서버 빈 응답 시나리오 |
 | Hikari 풀 (§6.3) | 설정 변경 없음. `SQLTransientConnectionException` 이 새로 나타나는지만 본다 |
 

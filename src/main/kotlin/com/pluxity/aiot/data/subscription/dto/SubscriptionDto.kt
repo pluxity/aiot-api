@@ -42,6 +42,36 @@ data class SubscriptionConResponse(
     val actualFilling: Int? = null,
     @field:JsonProperty("HighThreshold")
     val highThreshold: Int? = null,
+    @field:JsonProperty("FireDetection")
+    val fireDetection: Boolean? = null,
+    @field:JsonProperty("CO2")
+    val co2: Int? = null,
+    @field:JsonProperty("CO")
+    val co: Int? = null,
+    @field:JsonProperty("TVOC")
+    val tvoc: Int? = null,
+    @field:JsonProperty("FireCauseMask")
+    val fireCauseMask: Int? = null,
+    @field:JsonProperty("NH3")
+    val nh3: Int? = null,
+    @field:JsonProperty("H2S")
+    val h2s: Int? = null,
+    @field:JsonProperty("NumberOfVisitors")
+    val numberOfVisitors: Int? = null,
+    @field:JsonProperty("NumberOfLeavers")
+    val numberOfLeavers: Int? = null,
+    @field:JsonProperty("PM2.5")
+    val pm25: Int? = null,
+    @field:JsonProperty("PM10")
+    val pm10: Int? = null,
+    @field:JsonProperty("WindSpeed")
+    val windSpeed: Int? = null,
+    @field:JsonProperty("WindDirection")
+    val windDirection: Int? = null,
+    @field:JsonProperty("UVI")
+    val uvi: Int? = null,
+    @field:JsonProperty("LED Light")
+    val ledLight: Int? = null,
 )
 
 data class SubscriptionRepListResponse(

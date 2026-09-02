@@ -16,10 +16,11 @@ data class ClimateSensorData(
         get() = checkNotNull(time) { "_time is missing in InfluxDB query result" }
 }
 
-data class DisplacementGaugeSensorData(
+data class WasteFillLevelSensorData(
     @Column(name = "_time") val time: Instant? = null,
-    @Column(name = "AngleX") val angleX: Double? = null,
-    @Column(name = "AngleY") val angleY: Double? = null,
+    @Column(name = "ContainerModuleId") val containerModuleId: Double? = null,
+    @Column(name = "ActualFilling") val actualFilling: Double? = null,
+    @Column(name = "HighThreshold") val highThreshold: Double? = null,
 ) {
     val requiredTime: Instant
         get() = checkNotNull(time) { "_time is missing in InfluxDB query result" }
@@ -60,7 +61,7 @@ inline fun <T> List<T>.buildListMetricMap(
 // 공통 메트릭 정의
 object SensorMetrics {
     val CLIMATE = SensorType.TEMPERATURE_HUMIDITY.deviceProfiles.map { it.toMetricDefinition() }
-    val DISPLACEMENT_GAUGE = SensorType.DISPLACEMENT_GAUGE.deviceProfiles.map { it.toMetricDefinition() }
+    val WASTE_FILL_LEVEL = SensorType.WASTE_FILL_LEVEL.deviceProfiles.map { it.toMetricDefinition() }
 }
 
 private fun createDeviceDataResponse(
@@ -80,13 +81,13 @@ private fun createDeviceDataResponse(
 
 fun ClimateSensorData.toDeviceDataResponse(deviceId: String): DataResponse = createDeviceDataResponse(deviceId, requiredTime, toMetricMap())
 
-fun DisplacementGaugeSensorData.toDeviceDataResponse(deviceId: String): DataResponse =
+fun WasteFillLevelSensorData.toDeviceDataResponse(deviceId: String): DataResponse =
     createDeviceDataResponse(deviceId, requiredTime, toMetricMap())
 
 private fun ClimateSensorData.toMetricMap(): Map<String, MetricData> = buildMetricMap(this, SensorMetrics.CLIMATE, climateValueExtractor)
 
-private fun DisplacementGaugeSensorData.toMetricMap(): Map<String, MetricData> =
-    buildMetricMap(this, SensorMetrics.DISPLACEMENT_GAUGE, displacementGaugeValueExtractor)
+private fun WasteFillLevelSensorData.toMetricMap(): Map<String, MetricData> =
+    buildMetricMap(this, SensorMetrics.WASTE_FILL_LEVEL, wasteFillLevelValueExtractor)
 
 val climateValueExtractor: ClimateSensorData.(MetricDefinition) -> Double? = { definition ->
     when (definition.key) {
@@ -97,10 +98,11 @@ val climateValueExtractor: ClimateSensorData.(MetricDefinition) -> Double? = { d
     }
 }
 
-val displacementGaugeValueExtractor: DisplacementGaugeSensorData.(MetricDefinition) -> Double? = { definition ->
+val wasteFillLevelValueExtractor: WasteFillLevelSensorData.(MetricDefinition) -> Double? = { definition ->
     when (definition.key) {
-        DeviceProfileEnum.ANGLE_X.fieldKey -> angleX
-        DeviceProfileEnum.ANGLE_Y.fieldKey -> angleY
+        DeviceProfileEnum.CONTAINER_MODULE_ID.fieldKey -> containerModuleId
+        DeviceProfileEnum.ACTUAL_FILLING.fieldKey -> actualFilling
+        DeviceProfileEnum.HIGH_THRESHOLD.fieldKey -> highThreshold
         else -> null
     }
 }

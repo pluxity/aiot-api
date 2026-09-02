@@ -16,7 +16,7 @@ data class ConnectionStatus(
 data class SensorTypeStatus(
     val temperatureHumidity: Long,
     val fire: Long,
-    val displacement: Long,
+    val wasteFillLevel: Long,
 )
 
 data class SensorStatisticsRaw(
@@ -27,7 +27,7 @@ data class SensorStatisticsRaw(
     val connectedCount: Long,
     val temperatureHumidityCount: Long,
     val fireCount: Long,
-    val displacementCount: Long,
+    val wasteFillLevelCount: Long,
 )
 
 fun SensorStatisticsRaw.toSensorSummary() =
@@ -44,6 +44,6 @@ fun SensorStatisticsRaw.toSensorSummary() =
             SensorTypeStatus(
                 temperatureHumidity = temperatureHumidityCount,
                 fire = fireCount,
-                displacement = displacementCount,
+                wasteFillLevel = wasteFillLevelCount,
             ),
     )

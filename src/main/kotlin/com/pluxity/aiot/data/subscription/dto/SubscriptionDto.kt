@@ -36,10 +36,6 @@ data class SubscriptionConResponse(
     val timestamp: String,
     @field:JsonProperty("Fire Alarm")
     val fireAlarm: Boolean?,
-    @field:JsonProperty("Angle-X")
-    val angleX: Double?,
-    @field:JsonProperty("Angle-Y")
-    val angleY: Double?,
     @field:JsonProperty("ContainerModuleId")
     val containerModuleId: Int? = null,
     @field:JsonProperty("ActualFilling")

@@ -51,7 +51,7 @@ class SiteDataController(
         @Parameter(
             description = "조회 타입",
             required = true,
-            schema = Schema(allowableValues = ["TEMPERATURE_HUMIDITY", "DISPLACEMENT_GAUGE"]),
+            schema = Schema(allowableValues = ["TEMPERATURE_HUMIDITY", "WASTE_FILL_LEVEL"]),
         )
         @RequestParam("sensorType") sensorType: SensorType,
     ): ResponseEntity<DataResponseBody<ListDataResponse>> =

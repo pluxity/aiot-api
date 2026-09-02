@@ -5,16 +5,16 @@ import com.influxdb.query.dsl.Flux
 import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.data.dto.ClimateSensorData
 import com.pluxity.aiot.data.dto.DataResponse
-import com.pluxity.aiot.data.dto.DisplacementGaugeSensorData
 import com.pluxity.aiot.data.dto.ListDataResponse
 import com.pluxity.aiot.data.dto.ListMetaData
 import com.pluxity.aiot.data.dto.ListMetricData
 import com.pluxity.aiot.data.dto.ListQueryInfo
 import com.pluxity.aiot.data.dto.SensorMetrics
+import com.pluxity.aiot.data.dto.WasteFillLevelSensorData
 import com.pluxity.aiot.data.dto.buildListMetricMap
 import com.pluxity.aiot.data.dto.climateValueExtractor
-import com.pluxity.aiot.data.dto.displacementGaugeValueExtractor
 import com.pluxity.aiot.data.dto.toDeviceDataResponse
+import com.pluxity.aiot.data.dto.wasteFillLevelValueExtractor
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.feature.FeatureService
 import com.pluxity.aiot.global.constant.ErrorCode
@@ -50,7 +50,7 @@ class DataService(
         val query = getTimeSeriesQuery(from, to, Restrictions.tag("deviceId").equal(deviceId), sensorType.measureName, interval.unit)
         return when (sensorType) {
             SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, deviceId, interval, timeRange)
-            SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, deviceId, interval, timeRange)
+            SensorType.WASTE_FILL_LEVEL -> this.makeWasteFillLevelData(query, deviceId, interval, timeRange)
             else -> throw CustomException(ErrorCode.NOT_FOUND_DATA)
         }
     }
@@ -69,7 +69,7 @@ class DataService(
             getTimeSeriesQuery(from, to, Restrictions.tag("siteId").equal(siteId.toString()), sensorType.measureName, interval.unit)
         return when (sensorType) {
             SensorType.TEMPERATURE_HUMIDITY -> this.makeClimateData(query, siteId.toString(), interval, timeRange)
-            SensorType.DISPLACEMENT_GAUGE -> this.makeDisplacementGaugeData(query, siteId.toString(), interval, timeRange)
+            SensorType.WASTE_FILL_LEVEL -> this.makeWasteFillLevelData(query, siteId.toString(), interval, timeRange)
             else -> throw CustomException(ErrorCode.NOT_FOUND_DATA)
         }
     }
@@ -95,8 +95,8 @@ class DataService(
                 getClimateData(query).firstOrNull()?.toDeviceDataResponse(deviceId)
                     ?: throw CustomException(ErrorCode.NOT_FOUND_DATA)
             }
-            SensorType.DISPLACEMENT_GAUGE -> {
-                getDisplacementGauge(query).firstOrNull()?.toDeviceDataResponse(deviceId)
+            SensorType.WASTE_FILL_LEVEL -> {
+                getWasteFillLevel(query).firstOrNull()?.toDeviceDataResponse(deviceId)
                     ?: throw CustomException(ErrorCode.NOT_FOUND_DATA)
             }
             else -> throw CustomException(ErrorCode.NOT_FOUND_DATA)
@@ -149,15 +149,15 @@ class DataService(
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
-    private fun makeDisplacementGaugeData(
+    private fun makeWasteFillLevelData(
         query: String,
         targetId: String,
         interval: DataInterval,
         timeRange: Pair<LocalDateTime, LocalDateTime>,
     ): ListDataResponse {
-        val data = getDisplacementGauge(query)
+        val data = getWasteFillLevel(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.DISPLACEMENT_GAUGE, displacementGaugeValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.WASTE_FILL_LEVEL, wasteFillLevelValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -171,7 +171,7 @@ class DataService(
 
     private fun getClimateData(query: String) = queryApi.query(query, influxdbProperties.org, ClimateSensorData::class.java)
 
-    private fun getDisplacementGauge(query: String) = queryApi.query(query, influxdbProperties.org, DisplacementGaugeSensorData::class.java)
+    private fun getWasteFillLevel(query: String) = queryApi.query(query, influxdbProperties.org, WasteFillLevelSensorData::class.java)
 
     private fun createListDataResponse(
         targetId: String,

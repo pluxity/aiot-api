@@ -39,7 +39,7 @@ class DashboardServiceKoTest :
                         connectedCount = 8,
                         temperatureHumidityCount = 4,
                         fireCount = 3,
-                        displacementCount = 1,
+                        wasteFillLevelCount = 1,
                     )
                 val raw2 =
                     createSensorStatisticsRaw(
@@ -50,7 +50,7 @@ class DashboardServiceKoTest :
                         connectedCount = 4,
                         temperatureHumidityCount = 2,
                         fireCount = 1,
-                        displacementCount = 2,
+                        wasteFillLevelCount = 2,
                     )
 
                 every {
@@ -68,7 +68,7 @@ class DashboardServiceKoTest :
                     result[0].connectionStatus.disconnected shouldBe 2
                     result[0].sensorTypeStatus.temperatureHumidity shouldBe 4
                     result[0].sensorTypeStatus.fire shouldBe 3
-                    result[0].sensorTypeStatus.displacement shouldBe 1
+                    result[0].sensorTypeStatus.wasteFillLevel shouldBe 1
                     result[1].siteId shouldBe 2L
                     result[1].siteName shouldBe "Site B"
                 }
@@ -124,7 +124,7 @@ private fun createSensorStatisticsRaw(
     connectedCount: Long,
     temperatureHumidityCount: Long,
     fireCount: Long,
-    displacementCount: Long,
+    wasteFillLevelCount: Long,
 ) = SensorStatisticsRaw(
     siteId = siteId,
     siteName = siteName,
@@ -133,5 +133,5 @@ private fun createSensorStatisticsRaw(
     connectedCount = connectedCount,
     temperatureHumidityCount = temperatureHumidityCount,
     fireCount = fireCount,
-    displacementCount = displacementCount,
+    wasteFillLevelCount = wasteFillLevelCount,
 )

@@ -160,7 +160,7 @@ interface SensorDataProcessor {
                 .sortedByDescending { it.level.priority }
 
         for (condition in loopTargetConditions) {
-            if (isConditionMet(condition, value, fieldKey)) {
+            if (isConditionMet(condition, value)) {
                 isAnyConditionMet = true
 
                 val doubleValue = value.toEventHistoryValue()
@@ -267,15 +267,4 @@ interface SensorDataProcessor {
             else -> false
         }
     }
-
-    /**
-     * 조건 충족 여부를 확인하는 메서드 (fieldKey 포함)
-     * - 일반적으로는 fieldKey를 무시하고 isConditionMet(condition, value)를 호출
-     * - 특수한 센서(예: DisplacementGauge)는 이 메서드를 override하여 fieldKey 기반 처리 가능
-     */
-    fun isConditionMet(
-        condition: EventCondition,
-        value: IncomingValue,
-        fieldKey: String,
-    ): Boolean = isConditionMet(condition, value)
 }

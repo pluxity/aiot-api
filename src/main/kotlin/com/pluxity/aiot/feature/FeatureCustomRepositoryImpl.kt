@@ -67,7 +67,7 @@ class FeatureCustomRepositoryImpl(
                     count(
                         caseWhen(
                             path(Feature::objectId)
-                                .like("${SensorType.DISPLACEMENT_GAUGE.objectId}%"),
+                                .like("${SensorType.WASTE_FILL_LEVEL.objectId}%"),
                         ).then(1),
                     ),
                 ).from(

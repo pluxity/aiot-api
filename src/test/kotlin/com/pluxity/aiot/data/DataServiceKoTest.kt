@@ -2,9 +2,9 @@ package com.pluxity.aiot.data
 
 import com.influxdb.client.QueryApi
 import com.pluxity.aiot.data.dto.ClimateSensorData
-import com.pluxity.aiot.data.dto.DisplacementGaugeSensorData
+import com.pluxity.aiot.data.dto.WasteFillLevelSensorData
 import com.pluxity.aiot.data.dto.dummyClimateSensorData
-import com.pluxity.aiot.data.dto.dummyDisplacementGaugeSensorData
+import com.pluxity.aiot.data.dto.dummyWasteFillLevelSensorData
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.feature.FeatureService
 import com.pluxity.aiot.feature.dto.dummyFeatureResponse
@@ -92,14 +92,14 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
+                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
                     )
-                val displacementData =
+                val wasteFillLevelData =
                     listOf(
-                        dummyDisplacementGaugeSensorData(
+                        dummyWasteFillLevelSensorData(
                             time = LocalDateTime.of(2024, 1, 1, 0, 0).toInstant(ZoneOffset.UTC),
-                            angleX = 12.5,
-                            angleY = 15.2,
+                            actualFilling = 12.5,
+                            highThreshold = 15.2,
                         ),
                     )
 
@@ -108,8 +108,8 @@ class DataServiceKoTest :
                 } returns feature
 
                 every {
-                    queryApi.query(any<String>(), "test-org", DisplacementGaugeSensorData::class.java)
-                } returns displacementData
+                    queryApi.query(any<String>(), "test-org", WasteFillLevelSensorData::class.java)
+                } returns wasteFillLevelData
 
                 val result = dataService.getFeatureTimeSeries(deviceId, interval, from, to)
 
@@ -117,8 +117,8 @@ class DataServiceKoTest :
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
                     result.timestamps.isNotEmpty() shouldBe true
-                    result.metrics["Angle-X"]?.values[0] shouldBe 12.5
-                    result.metrics["Angle-Y"]?.values[0] shouldBe 15.2
+                    result.metrics["ActualFilling"]?.values[0] shouldBe 12.5
+                    result.metrics["HighThreshold"]?.values[0] shouldBe 15.2
                 }
             }
 
@@ -270,14 +270,14 @@ class DataServiceKoTest :
                 val feature =
                     dummyFeatureResponse(
                         deviceId = deviceId,
-                        objectId = SensorType.DISPLACEMENT_GAUGE.objectId,
+                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
                     )
-                val displacementData =
+                val wasteFillLevelData =
                     listOf(
-                        dummyDisplacementGaugeSensorData(
+                        dummyWasteFillLevelSensorData(
                             time = LocalDateTime.now().toInstant(ZoneOffset.UTC),
-                            angleX = 15.2,
-                            angleY = 12.5,
+                            actualFilling = 15.2,
+                            highThreshold = 12.5,
                         ),
                     )
 
@@ -286,16 +286,16 @@ class DataServiceKoTest :
                 } returns feature
 
                 every {
-                    queryApi.query(any<String>(), "test-org", DisplacementGaugeSensorData::class.java)
-                } returns displacementData
+                    queryApi.query(any<String>(), "test-org", WasteFillLevelSensorData::class.java)
+                } returns wasteFillLevelData
 
                 val result = dataService.getFeatureLatestData(deviceId)
 
                 Then("최신 변위계 데이터 반환") {
                     result shouldNotBe null
                     result.meta.targetId shouldBe deviceId
-                    result.metrics["Angle-X"]?.value shouldBe 15.2
-                    result.metrics["Angle-Y"]?.value shouldBe 12.5
+                    result.metrics["ActualFilling"]?.value shouldBe 15.2
+                    result.metrics["HighThreshold"]?.value shouldBe 12.5
                 }
             }
 

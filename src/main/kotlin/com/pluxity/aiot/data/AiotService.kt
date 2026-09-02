@@ -179,7 +179,7 @@ class AiotService(
             .filter { path -> objectIds.any(path::contains) }
             .filter { it.count { char -> char == '/' } == 3 }
             .filterNot { it.contains("3_1.2_0") }
-            .filter { !it.contains("P-TST") || it.contains(SensorType.DISPLACEMENT_GAUGE.objectId) }
+            .filterNot { it.contains("P-TST") }
             .map { path ->
                 val splitPaths = path.split("/")
                 val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]

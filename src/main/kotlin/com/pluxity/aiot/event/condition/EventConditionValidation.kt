@@ -141,20 +141,8 @@ object EventConditionValidators {
         }
     }
 
-    val validateDisplacementGauge: Validator<EventCondition> = { condition ->
-        if (condition.objectId == SensorType.DISPLACEMENT_GAUGE.objectId && condition.conditionType == ConditionType.RANGE) {
-            condition.leftValue?.let { _ ->
-                condition.rightValue?.let { _ ->
-                    ValidationResult.Valid
-                } ?: ValidationResult.Invalid("DisplacementGauge는 centerValue(rightValue)가 필수입니다")
-            } ?: ValidationResult.Invalid("DisplacementGauge는 errorRange(leftValue)가 필수입니다")
-        } else {
-            ValidationResult.Valid
-        }
-    }
-
     val validateGeneralRangeValues: Validator<EventCondition> = { condition ->
-        if (condition.objectId != SensorType.DISPLACEMENT_GAUGE.objectId && condition.conditionType == ConditionType.RANGE) {
+        if (condition.conditionType == ConditionType.RANGE) {
             condition.leftValue?.let { left ->
                 condition.rightValue?.let { right ->
                     if (left <= right) {
@@ -175,7 +163,6 @@ object EventConditionValidators {
             .and(validateBooleanType(condition))
             .and(validateSingleType(condition))
             .and(validateRangeType(condition))
-            .and(validateDisplacementGauge(condition))
             .and(validateGeneralRangeValues(condition))
 }
 

@@ -4,7 +4,10 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.WasteFillLevel
 import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.EventConditionRepository
+import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
@@ -12,11 +15,13 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
@@ -194,28 +199,78 @@ class WasteFillLevelProcessorTest(
             }
         }
 
-        Given("쓰레기 적재 감지기: 단말이 보고한 만재 기준값(HighThreshold)") {
-            When("HighThreshold에 이벤트 조건이 등록되어 있고 기준값을 초과하는 값이 수신됨") {
+        Given("쓰레기 적재 감지기: 이벤트 조건 대상이 아닌 항목") {
+            When("HighThreshold로 이벤트 조건을 등록하려 함") {
+                Then("SensorType의 프로필에 없어 저장이 거부된다") {
+                    val exception =
+                        shouldThrowAny {
+                            EventCondition(
+                                fieldKey = DeviceProfileEnum.HIGH_THRESHOLD.fieldKey,
+                                objectId = SensorType.WASTE_FILL_LEVEL.objectId,
+                                isActivate = true,
+                                level = ConditionLevel.WARNING,
+                                conditionType = ConditionType.SINGLE,
+                                operator = Operator.GE,
+                                thresholdValue = 60.0,
+                                notificationEnabled = true,
+                            )
+                        }
+                    exception.message shouldContain "HighThreshold"
+                }
+            }
+
+            When("ContainerModuleId로 이벤트 조건을 등록하려 함") {
+                Then("마찬가지로 저장이 거부된다") {
+                    shouldThrowAny {
+                        EventCondition(
+                            fieldKey = DeviceProfileEnum.CONTAINER_MODULE_ID.fieldKey,
+                            objectId = SensorType.WASTE_FILL_LEVEL.objectId,
+                            isActivate = true,
+                            level = ConditionLevel.WARNING,
+                            conditionType = ConditionType.SINGLE,
+                            operator = Operator.GE,
+                            thresholdValue = 1.0,
+                            notificationEnabled = true,
+                        )
+                    }
+                }
+            }
+
+            When("HighThreshold가 담긴 데이터가 수신됨") {
                 val deviceId = "WFL_005"
+                val writeApiMock = Mockito.mock(WriteApi::class.java)
+                val localHelper =
+                    WasteFillLevelProcessorTestHelper(
+                        siteRepository,
+                        featureRepository,
+                        eventHistoryRepository,
+                        messageSenderMock,
+                        writeApiMock,
+                        eventConditionRepository,
+                    )
 
                 val setup =
-                    helper.setupDeviceWithCondition(
+                    localHelper.setupDeviceWithCondition(
                         objectId = SensorType.WASTE_FILL_LEVEL.objectId,
                         deviceId = deviceId,
                         eventLevel = ConditionLevel.WARNING,
                         minValue = "60.0",
                         maxValue = null,
                         isBoolean = false,
-                        fieldKey = DeviceProfileEnum.HIGH_THRESHOLD.fieldKey,
+                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
                     )
 
-                val sensorData = helper.createSensorData(actualFilling = 30, highThreshold = 80)
-                val processor = helper.createProcessor()
+                val sensorData = localHelper.createSensorData(actualFilling = 30, highThreshold = 80)
+                localHelper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
 
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
-
-                Then("기준값 자체로는 이벤트가 발생하지 않는다") {
+                Then("이벤트는 발생하지 않지만 값은 InfluxDB에 적재된다") {
                     eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 0
+
+                    val captor = ArgumentCaptor.forClass(WasteFillLevel::class.java)
+                    Mockito
+                        .verify(writeApiMock, Mockito.times(2))
+                        .writeMeasurement(Mockito.eq(WritePrecision.S), captor.capture())
+                    captor.allValues.map { it.fieldKey } shouldBe listOf("ActualFilling", "HighThreshold")
                 }
             }
         }

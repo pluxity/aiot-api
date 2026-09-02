@@ -110,11 +110,39 @@ inline fun <T> List<T>.buildListMetricMap(
 // 공통 메트릭 정의
 object SensorMetrics {
     val CLIMATE = SensorType.TEMPERATURE_HUMIDITY.deviceProfiles.map { it.toMetricDefinition() }
-    val WASTE_FILL_LEVEL = SensorType.WASTE_FILL_LEVEL.deviceProfiles.map { it.toMetricDefinition() }
-    val FOREST_FIRE = SensorType.FOREST_FIRE.deviceProfiles.map { it.toMetricDefinition() }
-    val ODOR_MONITOR = SensorType.ODOR_MONITOR.deviceProfiles.map { it.toMetricDefinition() }
+
+    /**
+     * 조회 대상은 이벤트 조건 대상(deviceProfiles)보다 넓다.
+     * ContainerModuleId와 HighThreshold는 적재/조회만 하고 조건 평가에는 쓰지 않는다.
+     */
+    val WASTE_FILL_LEVEL =
+        (
+            SensorType.WASTE_FILL_LEVEL.deviceProfiles +
+                listOf(DeviceProfileEnum.CONTAINER_MODULE_ID, DeviceProfileEnum.HIGH_THRESHOLD)
+        ).map { it.toMetricDefinition() }
+    val FOREST_FIRE =
+        (
+            SensorType.FOREST_FIRE.deviceProfiles +
+                listOf(
+                    DeviceProfileEnum.TEMPERATURE,
+                    DeviceProfileEnum.HUMIDITY,
+                    DeviceProfileEnum.CO2,
+                    DeviceProfileEnum.CO,
+                    DeviceProfileEnum.TVOC,
+                    DeviceProfileEnum.FIRE_CAUSE_MASK,
+                )
+        ).map { it.toMetricDefinition() }
+    val ODOR_MONITOR =
+        (
+            SensorType.ODOR_MONITOR.deviceProfiles +
+                listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY)
+        ).map { it.toMetricDefinition() }
     val PEOPLE_COUNTER = SensorType.PEOPLE_COUNTER.deviceProfiles.map { it.toMetricDefinition() }
-    val COMPOSITE_AIR_QUALITY = SensorType.COMPOSITE_AIR_QUALITY.deviceProfiles.map { it.toMetricDefinition() }
+    val COMPOSITE_AIR_QUALITY =
+        (
+            SensorType.COMPOSITE_AIR_QUALITY.deviceProfiles +
+                listOf(DeviceProfileEnum.WIND_DIRECTION, DeviceProfileEnum.LED_LIGHT)
+        ).map { it.toMetricDefinition() }
 }
 
 private fun createDeviceDataResponse(

@@ -63,6 +63,9 @@ springwolf: # socket documentation ui
 eds:
   enabled: false
 
+mic:
+  enabled: false
+
 logging:
   level:
     com: DEBUG

@@ -40,6 +40,12 @@ data class SubscriptionConResponse(
     val angleX: Double?,
     @field:JsonProperty("Angle-Y")
     val angleY: Double?,
+    @field:JsonProperty("ContainerModuleId")
+    val containerModuleId: Int? = null,
+    @field:JsonProperty("ActualFilling")
+    val actualFilling: Int? = null,
+    @field:JsonProperty("HighThreshold")
+    val highThreshold: Int? = null,
 )
 
 data class SubscriptionRepListResponse(

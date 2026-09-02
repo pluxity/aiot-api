@@ -46,7 +46,11 @@ enum class SensorType(
         "1.0",
         "waste_fill_level",
         AbbreviationData("wfl", "쓰레기 적재 감지기"),
-        listOf(DeviceProfileEnum.CONTAINER_MODULE_ID, DeviceProfileEnum.ACTUAL_FILLING),
+        listOf(
+            DeviceProfileEnum.CONTAINER_MODULE_ID,
+            DeviceProfileEnum.ACTUAL_FILLING,
+            DeviceProfileEnum.HIGH_THRESHOLD,
+        ),
     ),
     FOREST_FIRE(
         5,
@@ -146,6 +150,7 @@ enum class DeviceProfileEnum(
     WIND_DIRECTION(21, "풍향", "WindDirection", FieldType.Integer, "°"),
     UVI(22, "자외선 지수", "UVI", FieldType.Integer, "Index"),
     LED_LIGHT(23, "LED 램프", "LED Light", FieldType.Integer, ""),
+    HIGH_THRESHOLD(24, "만재 여부 판단 기준값", "HighThreshold", FieldType.Integer, "cm"),
     ;
 
     fun toMetricDefinition() = MetricDefinition(fieldKey, unit)

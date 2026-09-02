@@ -170,6 +170,9 @@ abstract class ProcessorTestHelper(
         fireAlarm: Boolean? = null,
         angleX: Double? = null,
         angleY: Double? = null,
+        containerModuleId: Int? = null,
+        actualFilling: Int? = null,
+        highThreshold: Int? = null,
         timestamp: String = "20250115T103000",
     ): SubscriptionConResponse =
         SubscriptionConResponse(
@@ -180,6 +183,9 @@ abstract class ProcessorTestHelper(
             fireAlarm = fireAlarm,
             angleX = angleX,
             angleY = angleY,
+            containerModuleId = containerModuleId,
+            actualFilling = actualFilling,
+            highThreshold = highThreshold,
         )
 
     /**

@@ -37,20 +37,19 @@ class FireAlarmProcessor(
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
-        data.fireAlarm?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                sensorType = sensorType,
-                fieldKey = FIRE_ALARM,
-                value = IncomingValue.Bool(it),
-                timestamp = data.timestamp,
-                messageSender = messageSender,
-                eventHistoryRepository = eventHistoryRepository,
-                featureRepository = featureRepository,
-                eventConditionRepository = eventConditionRepository,
-            )
-            log.debug { "Fire Alarm processed: $it" }
-        }
+        processEventConditions(
+            deviceId = deviceId,
+            sensorType = sensorType,
+            values =
+                buildList {
+                    data.fireAlarm?.let { add(FIRE_ALARM to IncomingValue.Bool(it)) }
+                },
+            timestamp = data.timestamp,
+            messageSender = messageSender,
+            eventHistoryRepository = eventHistoryRepository,
+            featureRepository = featureRepository,
+            eventConditionRepository = eventConditionRepository,
+        )
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 

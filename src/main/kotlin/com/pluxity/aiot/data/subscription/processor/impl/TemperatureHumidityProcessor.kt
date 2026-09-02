@@ -39,55 +39,27 @@ class TemperatureHumidityProcessor(
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
-        data.temperature?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                sensorType = sensorType,
-                fieldKey = TEMPERATURE,
-                value = IncomingValue.Numeric(it),
-                timestamp = data.timestamp,
-                messageSender = messageSender,
-                eventHistoryRepository = eventHistoryRepository,
-                featureRepository = featureRepository,
-                eventConditionRepository = eventConditionRepository,
-            )
-            log.debug { "Temperature processed: $it°C" }
-        }
-
-        data.humidity?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                sensorType = sensorType,
-                fieldKey = HUMIDITY,
-                value = IncomingValue.Numeric(it),
-                timestamp = data.timestamp,
-                messageSender = messageSender,
-                eventHistoryRepository = eventHistoryRepository,
-                featureRepository = featureRepository,
-                eventConditionRepository = eventConditionRepository,
-            )
-            log.debug { "Humidity processed: $it%" }
-        }
-
-        // 온도와 습도가 모두 존재하면 불쾌 지수 계산
-        if (data.temperature != null && data.humidity != null) {
-            // 불쾌 지수 처리
-            processEventConditions(
-                deviceId,
-                sensorType,
-                DISCOMFORT_INDEX,
-                IncomingValue.Numeric(calculateDiscomfortIndex(data.temperature, data.humidity)),
-                data.timestamp,
-                messageSender,
-                eventHistoryRepository,
-                featureRepository,
-                eventConditionRepository,
-            )
-            log.debug {
-                "Discomfort Index calculated: ${"%.2f".format(calculateDiscomfortIndex(data.temperature, data.humidity))} " +
-                    "(Temp: ${data.temperature}°C, Humidity: ${data.humidity}%)"
-            }
-        }
+        processEventConditions(
+            deviceId = deviceId,
+            sensorType = sensorType,
+            values =
+                buildList {
+                    data.temperature?.let { add(TEMPERATURE to IncomingValue.Numeric(it)) }
+                    data.humidity?.let { add(HUMIDITY to IncomingValue.Numeric(it)) }
+                    // 온도와 습도가 모두 존재하면 불쾌 지수 계산
+                    if (data.temperature != null && data.humidity != null) {
+                        add(
+                            DISCOMFORT_INDEX to
+                                IncomingValue.Numeric(calculateDiscomfortIndex(data.temperature, data.humidity)),
+                        )
+                    }
+                },
+            timestamp = data.timestamp,
+            messageSender = messageSender,
+            eventHistoryRepository = eventHistoryRepository,
+            featureRepository = featureRepository,
+            eventConditionRepository = eventConditionRepository,
+        )
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 

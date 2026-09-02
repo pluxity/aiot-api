@@ -175,4 +175,45 @@ class CompositeAirQualityProcessorTest(
                 }
             }
         }
+
+        Given("복합 대기질 센서: 페이로드 단위 이벤트 판정") {
+            When("PM2.5 조건만 등록된 상태에서 8개 항목이 모두 수신됨") {
+                val deviceId = "CAQ_005"
+                val helper = helperWith(Mockito.mock(WriteApi::class.java))
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = SensorType.COMPOSITE_AIR_QUALITY.objectId,
+                        deviceId = deviceId,
+                        eventLevel = ConditionLevel.WARNING,
+                        minValue = "35.0",
+                        maxValue = null,
+                        isBoolean = false,
+                        fieldKey = DeviceProfileEnum.PM2_5.fieldKey,
+                    )
+
+                val sensorData =
+                    helper.createSensorData(
+                        temperature = 23.5,
+                        humidity = 70.0,
+                        pm25 = 75,
+                        pm10 = 30,
+                        windSpeed = 5,
+                        windDirection = 175,
+                        uvi = 10,
+                        ledLight = 0,
+                    )
+                helper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+
+                Then("조건이 없는 나머지 항목이 경보를 NORMAL로 덮어쓰지 않는다") {
+                    val feature = helper.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "WARNING"
+
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "PM2.5"
+                }
+            }
+        }
     })

@@ -39,20 +39,18 @@ class PeopleCounterProcessor(
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
-        incomingValues(data).forEach { (fieldKey, value) ->
-            processEventConditions(
-                deviceId = deviceId,
-                sensorType = sensorType,
-                fieldKey = fieldKey,
-                value = value,
-                timestamp = data.timestamp,
-                messageSender = messageSender,
-                eventHistoryRepository = eventHistoryRepository,
-                featureRepository = featureRepository,
-                eventConditionRepository = eventConditionRepository,
-            )
-            log.debug { "$fieldKey processed: $value" }
-        }
+        val values = incomingValues(data)
+        processEventConditions(
+            deviceId = deviceId,
+            sensorType = sensorType,
+            values = values,
+            timestamp = data.timestamp,
+            messageSender = messageSender,
+            eventHistoryRepository = eventHistoryRepository,
+            featureRepository = featureRepository,
+            eventConditionRepository = eventConditionRepository,
+        )
+        log.debug { "$values processed" }
         log.info {
             "${SensorType.PEOPLE_COUNTER.description} - DeviceId: $deviceId, " +
                 "Timestamp: ${data.timestamp}, Period: ${data.period}"

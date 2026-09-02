@@ -42,20 +42,19 @@ class WasteFillLevelProcessor(
         // ContainerModuleId(식별 값)와 HighThreshold(단말이 보고하는 만재 기준값)는 적재만 하고
         // 이벤트 판정은 시스템에 등록된 EventCondition 기준으로만 수행한다
 
-        data.actualFilling?.let {
-            processEventConditions(
-                deviceId = deviceId,
-                sensorType = sensorType,
-                fieldKey = ACTUAL_FILLING,
-                value = IncomingValue.Numeric(it.toDouble()),
-                timestamp = data.timestamp,
-                messageSender = messageSender,
-                eventHistoryRepository = eventHistoryRepository,
-                featureRepository = featureRepository,
-                eventConditionRepository = eventConditionRepository,
-            )
-            log.debug { "ActualFilling value: $it" }
-        }
+        processEventConditions(
+            deviceId = deviceId,
+            sensorType = sensorType,
+            values =
+                buildList {
+                    data.actualFilling?.let { add(ACTUAL_FILLING to IncomingValue.Numeric(it.toDouble())) }
+                },
+            timestamp = data.timestamp,
+            messageSender = messageSender,
+            eventHistoryRepository = eventHistoryRepository,
+            featureRepository = featureRepository,
+            eventConditionRepository = eventConditionRepository,
+        )
         log.info {
             "${SensorType.WASTE_FILL_LEVEL.description} - DeviceId: $deviceId, " +
                 "Timestamp: ${data.timestamp}, Period: ${data.period}"

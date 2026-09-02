@@ -4,7 +4,10 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.ForestFireDetection
 import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.EventConditionRepository
+import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
@@ -171,6 +174,51 @@ class ForestFireProcessorTest(
                     Mockito
                         .verify(writeApiMock, Mockito.times(2))
                         .writeMeasurement(Mockito.eq(WritePrecision.S), Mockito.any(ForestFireDetection::class.java))
+                }
+            }
+        }
+
+        Given("산불 감지기: 여러 항목이 동시에 조건을 충족") {
+            When("Temperature는 WARNING, FireDetection은 DANGER 조건을 충족") {
+                val deviceId = "FFA_005"
+                val helper = helperWith(Mockito.mock(WriteApi::class.java))
+
+                // FireDetection(DANGER) 조건 등록 + Temperature(WARNING) 조건 추가
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = SensorType.FOREST_FIRE.objectId,
+                        deviceId = deviceId,
+                        eventLevel = ConditionLevel.DANGER,
+                        minValue = null,
+                        maxValue = null,
+                        isBoolean = true,
+                        fieldKey = DeviceProfileEnum.FOREST_FIRE_DETECTION.fieldKey,
+                    )
+                eventConditionRepository.save(
+                    EventCondition(
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
+                        objectId = SensorType.FOREST_FIRE.objectId,
+                        isActivate = true,
+                        level = ConditionLevel.WARNING,
+                        conditionType = ConditionType.SINGLE,
+                        operator = Operator.GE,
+                        thresholdValue = 30.0,
+                        notificationEnabled = true,
+                    ),
+                )
+
+                val sensorData = helper.createSensorData(fireDetection = true, temperature = 40.0)
+                helper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+
+                Then("우선순위가 높은 DANGER 하나만 이벤트로 기록된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "FireDetection"
+                    eventHistories.first().eventName shouldBe "DANGER_FireDetection"
+
+                    val feature = helper.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "DANGER"
                 }
             }
         }

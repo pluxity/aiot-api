@@ -67,7 +67,7 @@ class EventServiceKoTest :
                         siteId,
                         result,
                         ConditionLevel.CAUTION,
-                        SensorType.DISPLACEMENT_GAUGE,
+                        SensorType.WASTE_FILL_LEVEL,
                         listOf(1L, 2L),
                         20,
                     )
@@ -80,7 +80,7 @@ class EventServiceKoTest :
                         siteId,
                         result,
                         ConditionLevel.CAUTION,
-                        SensorType.DISPLACEMENT_GAUGE,
+                        SensorType.WASTE_FILL_LEVEL,
                         size = 20,
                     )
 
@@ -104,13 +104,13 @@ class EventServiceKoTest :
                         null,
                         null,
                         ConditionLevel.CAUTION,
-                        SensorType.DISPLACEMENT_GAUGE,
+                        SensorType.WASTE_FILL_LEVEL,
                         listOf(1L),
                         20,
                     )
                 } returns eventHistories
 
-                val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.DISPLACEMENT_GAUGE, 20)
+                val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.WASTE_FILL_LEVEL, 20)
 
                 Then("전체 이벤트 목록 반환") {
                     results.content.size shouldBe 1

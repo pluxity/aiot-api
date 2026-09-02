@@ -9,9 +9,9 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.site.SiteRepository
 
 /**
- * DisplacementGaugeProcessor 테스트를 위한 헬퍼 클래스
+ * CompositeAirQualityProcessor 테스트를 위한 헬퍼 클래스
  */
-class DisplacementGaugeProcessorTestHelper(
+class CompositeAirQualityProcessorTestHelper(
     siteRepository: SiteRepository,
     featureRepository: FeatureRepository,
     eventHistoryRepository: EventHistoryRepository,
@@ -26,11 +26,8 @@ class DisplacementGaugeProcessorTestHelper(
         messageSenderMock,
         writeApiMock,
     ) {
-    /**
-     * DisplacementGaugeProcessor 인스턴스 생성
-     */
-    fun createProcessor(): DisplacementGaugeProcessor =
-        DisplacementGaugeProcessor(
+    fun createProcessor(): CompositeAirQualityProcessor =
+        CompositeAirQualityProcessor(
             messageSenderMock,
             eventHistoryRepository,
             featureRepository,

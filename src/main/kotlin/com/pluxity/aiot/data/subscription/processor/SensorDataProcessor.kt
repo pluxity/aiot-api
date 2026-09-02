@@ -131,11 +131,18 @@ interface SensorDataProcessor {
         log.info { "Event triggered and saved: $message" }
     }
 
+    /**
+     * 한 페이로드에 담긴 계측 항목 전체를 하나의 판정 단위로 처리한다.
+     *
+     * 복합 센서는 한 번에 여러 항목을 보고하므로 항목별로 즉시 상태를 반영하면
+     * 조건이 등록되지 않은 뒤쪽 항목이 앞쪽 항목의 경보를 NORMAL로 덮어쓴다.
+     * 따라서 전체 항목의 매칭 결과를 모은 뒤, 가장 높은 우선순위의 조건 하나만 반영하고
+     * 매칭이 하나도 없을 때만 NORMAL로 되돌린다.
+     */
     fun processEventConditions(
         deviceId: String,
         sensorType: SensorType,
-        fieldKey: String,
-        value: IncomingValue,
+        values: List<Pair<String, IncomingValue>>,
         timestamp: String,
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
@@ -147,46 +154,50 @@ interface SensorDataProcessor {
         // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
         val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
 
-        // 조건 충족 여부 플래그
-        var isAnyConditionMet = false
-        val conditions = eventConditionRepository.findAllByObjectIdAndFieldKey(sensorType.objectId, fieldKey)
+        val matched =
+            values.mapNotNull { (fieldKey, value) ->
+                // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
+                val deviceProfile =
+                    sensorType.deviceProfiles.find { it.fieldKey == fieldKey } ?: return@mapNotNull null
 
-        // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
-        val deviceProfile = sensorType.deviceProfiles.find { it.fieldKey == fieldKey } ?: return
-
-        val loopTargetConditions =
-            conditions
-                .filter { it.level != ConditionLevel.NORMAL && it.isActivate }
-                .sortedByDescending { it.level.priority }
-
-        for (condition in loopTargetConditions) {
-            if (isConditionMet(condition, value, fieldKey)) {
-                isAnyConditionMet = true
-
-                val doubleValue = value.toEventHistoryValue()
-
-                processEvent(
-                    deviceId = deviceId,
-                    sensorType = sensorType,
-                    fieldKey = fieldKey,
-                    value = doubleValue,
-                    fieldUnit = deviceProfile.unit,
-                    fieldDescription = deviceProfile.description,
-                    condition = condition,
-                    feature = feature,
-                    parsedDate = parsedDate,
-                    messageSender = messageSender,
-                    eventHistoryRepository = eventHistoryRepository,
-                    featureRepository = featureRepository,
-                )
-                break
+                eventConditionRepository
+                    .findAllByObjectIdAndFieldKey(sensorType.objectId, fieldKey)
+                    .filter { it.level != ConditionLevel.NORMAL && it.isActivate }
+                    .sortedByDescending { it.level.priority }
+                    .firstOrNull { isConditionMet(it, value) }
+                    ?.let { MatchedCondition(fieldKey, value, deviceProfile, it) }
             }
-        }
 
-        if (!isAnyConditionMet) {
-            updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)
-        }
+        val winner =
+            matched.maxByOrNull { it.condition.level.priority }
+                ?: run {
+                    updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)
+                    return
+                }
+
+        processEvent(
+            deviceId = deviceId,
+            sensorType = sensorType,
+            fieldKey = winner.fieldKey,
+            value = winner.value.toEventHistoryValue(),
+            fieldUnit = winner.deviceProfile.unit,
+            fieldDescription = winner.deviceProfile.description,
+            condition = winner.condition,
+            feature = feature,
+            parsedDate = parsedDate,
+            messageSender = messageSender,
+            eventHistoryRepository = eventHistoryRepository,
+            featureRepository = featureRepository,
+        )
     }
+
+    /** 페이로드 내 한 계측 항목이 충족한 조건 */
+    data class MatchedCondition(
+        val fieldKey: String,
+        val value: IncomingValue,
+        val deviceProfile: DeviceProfileEnum,
+        val condition: EventCondition,
+    )
 
     fun getFeatureFromCacheOrDb(
         deviceId: String,
@@ -267,15 +278,4 @@ interface SensorDataProcessor {
             else -> false
         }
     }
-
-    /**
-     * 조건 충족 여부를 확인하는 메서드 (fieldKey 포함)
-     * - 일반적으로는 fieldKey를 무시하고 isConditionMet(condition, value)를 호출
-     * - 특수한 센서(예: DisplacementGauge)는 이 메서드를 override하여 fieldKey 기반 처리 가능
-     */
-    fun isConditionMet(
-        condition: EventCondition,
-        value: IncomingValue,
-        fieldKey: String,
-    ): Boolean = isConditionMet(condition, value)
 }

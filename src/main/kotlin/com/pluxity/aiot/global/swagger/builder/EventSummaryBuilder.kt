@@ -40,14 +40,14 @@ class EventSummaryBuilder {
         listOf(
             mapOf(
                 "eventId" to 1L,
-                "deviceId" to "SNIOT-P-TST-050",
-                "objectId" to SensorType.DISPLACEMENT_GAUGE.objectId,
+                "deviceId" to "SNIOT-P-WFL-001",
+                "objectId" to SensorType.WASTE_FILL_LEVEL.objectId,
                 "occurredAt" to "2025-11-04T10:00:00Z",
                 "minValue" to 0.1,
                 "maxValue" to 9.9,
                 "status" to EventStatus.ACTIVE.name,
                 "eventName" to "string",
-                "fieldKey" to "Angle-X",
+                "fieldKey" to "ActualFilling",
                 "guideMessage" to "Check",
             ),
         )

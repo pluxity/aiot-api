@@ -15,13 +15,15 @@ fun dummyClimateSensorData(
         discomfortIndex = discomfortIndex,
     )
 
-fun dummyDisplacementGaugeSensorData(
+fun dummyWasteFillLevelSensorData(
     time: Instant = Instant.now(),
-    angleX: Double = 10.0,
-    angleY: Double = 20.0,
-): DisplacementGaugeSensorData =
-    DisplacementGaugeSensorData(
+    containerModuleId: Double = 1.0,
+    actualFilling: Double = 20.0,
+    highThreshold: Double = 60.0,
+): WasteFillLevelSensorData =
+    WasteFillLevelSensorData(
         time = time,
-        angleX = angleX,
-        angleY = angleY,
+        containerModuleId = containerModuleId,
+        actualFilling = actualFilling,
+        highThreshold = highThreshold,
     )

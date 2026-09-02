@@ -2,7 +2,7 @@ package com.pluxity.aiot.data.subscription.processor.impl
 
 import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
-import com.pluxity.aiot.data.measure.TemperatureHumidity
+import com.pluxity.aiot.data.measure.WasteFillLevel
 import com.pluxity.aiot.data.subscription.dto.SubscriptionConResponse
 import com.pluxity.aiot.data.subscription.processor.IncomingValue
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component
 private val log = KotlinLogging.logger {}
 
 @Component
-class TemperatureHumidityProcessor(
+class WasteFillLevelProcessor(
     private val messageSender: StompMessageSender,
     private val eventHistoryRepository: EventHistoryRepository,
     private val featureRepository: FeatureRepository,
@@ -26,12 +26,12 @@ class TemperatureHumidityProcessor(
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
-        const val TEMPERATURE = "Temperature"
-        const val HUMIDITY = "Humidity"
-        const val DISCOMFORT_INDEX = "DiscomfortIndex"
+        const val CONTAINER_MODULE_ID = "ContainerModuleId"
+        const val ACTUAL_FILLING = "ActualFilling"
+        const val HIGH_THRESHOLD = "HighThreshold"
     }
 
-    override fun getObjectId(): String = SensorType.TEMPERATURE_HUMIDITY.objectId
+    override fun getObjectId(): String = SensorType.WASTE_FILL_LEVEL.objectId
 
     override fun process(
         deviceId: String,
@@ -39,20 +39,15 @@ class TemperatureHumidityProcessor(
         siteId: Long,
         data: SubscriptionConResponse,
     ) {
+        // ContainerModuleId(식별 값)와 HighThreshold(단말이 보고하는 만재 기준값)는 적재만 하고
+        // 이벤트 판정은 시스템에 등록된 EventCondition 기준으로만 수행한다
+
         processEventConditions(
             deviceId = deviceId,
             sensorType = sensorType,
             values =
                 buildList {
-                    data.temperature?.let { add(TEMPERATURE to IncomingValue.Numeric(it)) }
-                    data.humidity?.let { add(HUMIDITY to IncomingValue.Numeric(it)) }
-                    // 온도와 습도가 모두 존재하면 불쾌 지수 계산
-                    if (data.temperature != null && data.humidity != null) {
-                        add(
-                            DISCOMFORT_INDEX to
-                                IncomingValue.Numeric(calculateDiscomfortIndex(data.temperature, data.humidity)),
-                        )
-                    }
+                    data.actualFilling?.let { add(ACTUAL_FILLING to IncomingValue.Numeric(it.toDouble())) }
                 },
             timestamp = data.timestamp,
             messageSender = messageSender,
@@ -60,6 +55,10 @@ class TemperatureHumidityProcessor(
             featureRepository = featureRepository,
             eventConditionRepository = eventConditionRepository,
         )
+        log.info {
+            "${SensorType.WASTE_FILL_LEVEL.description} - DeviceId: $deviceId, " +
+                "Timestamp: ${data.timestamp}, Period: ${data.period}"
+        }
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }
 
@@ -69,44 +68,38 @@ class TemperatureHumidityProcessor(
         deviceId: String,
         timestamp: String,
     ) {
-        content.temperature?.let {
-            val tempMeasure =
-                TemperatureHumidity(
+        content.containerModuleId?.let {
+            val wasteFillLevel =
+                WasteFillLevel(
                     siteId.toString(),
                     deviceId,
-                    it,
-                    "Temperature",
+                    CONTAINER_MODULE_ID,
+                    it.toDouble(),
                     DateTimeUtils.parseUtc(timestamp),
                 )
-            writeApi.writeMeasurement(WritePrecision.S, tempMeasure)
+            writeApi.writeMeasurement(WritePrecision.S, wasteFillLevel)
         }
-        content.humidity?.let {
-            val humidityMeasure =
-                TemperatureHumidity(
+        content.actualFilling?.let {
+            val wasteFillLevel =
+                WasteFillLevel(
                     siteId.toString(),
                     deviceId,
-                    it,
-                    "Humidity",
+                    ACTUAL_FILLING,
+                    it.toDouble(),
                     DateTimeUtils.parseUtc(timestamp),
                 )
-            writeApi.writeMeasurement(WritePrecision.S, humidityMeasure)
+            writeApi.writeMeasurement(WritePrecision.S, wasteFillLevel)
         }
-        if (content.temperature != null && content.humidity != null) {
-            val discomfortMeasure =
-                TemperatureHumidity(
+        content.highThreshold?.let {
+            val wasteFillLevel =
+                WasteFillLevel(
                     siteId.toString(),
                     deviceId,
-                    calculateDiscomfortIndex(content.temperature, content.humidity),
-                    "DiscomfortIndex",
+                    HIGH_THRESHOLD,
+                    it.toDouble(),
                     DateTimeUtils.parseUtc(timestamp),
                 )
-            writeApi.writeMeasurement(WritePrecision.S, discomfortMeasure)
+            writeApi.writeMeasurement(WritePrecision.S, wasteFillLevel)
         }
     }
-
-    // 불쾌 지수 계산
-    private fun calculateDiscomfortIndex(
-        temperature: Double,
-        humidity: Double,
-    ): Double = 0.81 * temperature + 0.01 * humidity * (0.99 * temperature - 14.3) + 46.3
 }

@@ -25,7 +25,7 @@ class MicWebSocketClient(
     private val micClient: MicClient,
     private val micProperties: MicProperties,
     private val objectMapper: ObjectMapper,
-    private val micFacade: MicFacade,
+    private val micEventService: MicEventService,
 ) {
     @Volatile
     private var disposable: Disposable? = null
@@ -84,7 +84,7 @@ class MicWebSocketClient(
         try {
             val event = objectMapper.readValue(json, MicEventData::class.java)
             log.info { "AI 마이크 이벤트: id=${event.id}, mic=${event.mic?.id}, label=${event.label?.id}" }
-            micFacade.processEvent(event)
+            micEventService.saveEvent(event)
         } catch (e: Exception) {
             log.error(e) { "AI 마이크 메시지 처리 오류: $json" }
         }

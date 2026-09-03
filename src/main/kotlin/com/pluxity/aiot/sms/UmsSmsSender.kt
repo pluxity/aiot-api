@@ -28,9 +28,7 @@ class UmsSmsSender(
     }
 }
 
-/**
- * UMS 미연동 환경에서 사용한다. 실제 발송 없이 요청 내용만 남긴다.
- */
+/** 미연동 환경에서 실제 발송 없이 요청 내용만 남긴다 */
 @Component
 @ConditionalOnProperty("ums.enabled", havingValue = "false", matchIfMissing = true)
 class LoggingSmsSender : SmsSender {

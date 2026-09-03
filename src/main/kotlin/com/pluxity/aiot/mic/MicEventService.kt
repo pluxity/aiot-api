@@ -67,18 +67,14 @@ class MicEventService(
         )
     }
 
-    /** 벤더는 created_at을 UTC ISO-8601로 준다. 다른 시각 컬럼과 맞추기 위해 KST로 변환한다 */
+    /** 벤더는 created_at을 UTC ISO-8601로 준다 */
     private fun parseOccurredAt(createdAt: String?): LocalDateTime {
         if (createdAt == null) return LocalDateTime.now()
         return try {
-            OffsetDateTime.parse(createdAt).atZoneSameInstant(KST).toLocalDateTime()
+            OffsetDateTime.parse(createdAt).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
         } catch (e: Exception) {
             log.warn { "AI 마이크 이벤트 created_at 파싱 실패, 수신 시각으로 대체합니다: $createdAt (${e.message})" }
             LocalDateTime.now()
         }
-    }
-
-    companion object {
-        private val KST = ZoneId.of("Asia/Seoul")
     }
 }

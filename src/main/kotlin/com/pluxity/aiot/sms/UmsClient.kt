@@ -14,8 +14,6 @@ import java.time.format.DateTimeFormatter
 private val log = KotlinLogging.logger {}
 
 /**
- * UMS 문자시스템(MSSQL) 접속 클라이언트.
- *
  * DataSource 타입 빈을 노출하면 Spring Boot의 기본 DataSource 오토컨피그가 물러나 기존 JPA 설정이
  * 깨지므로, 커넥션 풀을 이 컴포넌트가 직접 들고 JdbcTemplate만 내부에서 사용한다.
  */
@@ -37,9 +35,7 @@ class UmsClient(
 
     private val jdbcTemplate = JdbcTemplate(dataSource)
 
-    /**
-     * 전송 요청. 문서 예시대로 7개 인자로 호출하고 반환 행(STAT, CLIDX)을 읽는다.
-     */
+    /** 문서 예시대로 7개 인자로 호출하고 반환 행(STAT, CLIDX)을 읽는다 */
     fun syncSend(
         title: String,
         message: String,
@@ -68,7 +64,6 @@ class UmsClient(
         )
     }
 
-    /** 발신고유번호로 발송 결과를 조회한다 */
     fun findSendResult(clidx: Long): UmsSendResultRow? =
         jdbcTemplate
             .query(

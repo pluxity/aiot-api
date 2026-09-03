@@ -80,6 +80,69 @@ class SmsServiceKoTest :
             }
         }
 
+        Given("제목·내용이 유효하지 않은 요청") {
+            When("내용이 2000자를 초과") {
+                val sender: SmsSender = mockk()
+                val repository: SmsHistoryRepository = mockk()
+
+                val result =
+                    SmsService(sender, repository, umsProperties)
+                        .send("제목", "가".repeat(2001), listOf("01011112222", "01033334444"))
+
+                Then("아무에게도 발송하지 않고 이력도 남기지 않는다") {
+                    result shouldHaveSize 0
+                    verify(exactly = 0) { sender.send(any()) }
+                    verify(exactly = 0) { repository.save(any()) }
+                }
+            }
+
+            When("제목이 50자를 초과") {
+                val sender: SmsSender = mockk()
+                val repository: SmsHistoryRepository = mockk()
+
+                SmsService(sender, repository, umsProperties)
+                    .send("가".repeat(51), "내용", listOf("01011112222"))
+
+                Then("발송을 시작하지 않는다") {
+                    verify(exactly = 0) { sender.send(any()) }
+                }
+            }
+        }
+
+        Given("표기가 섞인 중복 번호") {
+            When("잘못된 표기가 유효한 표기보다 앞에 있음") {
+                val sender: SmsSender = mockk()
+                val repository: SmsHistoryRepository = mockk()
+                every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
+                val saved = mutableListOf<SmsHistory>()
+                every { repository.save(capture(saved)) } answers { saved.last() }
+
+                SmsService(sender, repository, umsProperties)
+                    .send("제목", "내용", listOf("010 1234 5678", "010-1234-5678"))
+
+                Then("유효한 표기를 대표로 골라 발송한다") {
+                    verify(exactly = 1) { sender.send(any()) }
+                    saved.single().targetNumber shouldBe "010-1234-5678"
+                }
+            }
+
+            When("모든 표기가 잘못됨") {
+                val sender: SmsSender = mockk()
+                val repository: SmsHistoryRepository = mockk()
+                every { sender.send(any()) } returns SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류")
+                val saved = mutableListOf<SmsHistory>()
+                every { repository.save(capture(saved)) } answers { saved.last() }
+
+                SmsService(sender, repository, umsProperties)
+                    .send("제목", "내용", listOf("010 1234 5678", "010_1234_5678"))
+
+                Then("첫 표기로 시도하고 실패 이력을 남긴다") {
+                    saved.single().targetNumber shouldBe "010 1234 5678"
+                    saved.single().stat shouldBe UmsSendStat.NOT_SENT
+                }
+            }
+        }
+
         Given("미연동 환경") {
             When("LoggingSmsSender로 발송") {
                 val result = LoggingSmsSender().send(SmsSendRequest("제목", "내용", "01011112222"))

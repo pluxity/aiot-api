@@ -5,10 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 
 interface SmsHistoryRepository : JpaRepository<SmsHistory, Long> {
-    /**
-     * 발신고유번호는 있으나 결과가 아직 확정되지 않은 건을, 가장 오래 조회하지 않은 순서로 가져온다.
-     * 항상 같은 페이지만 보면 확정되지 않는 건에 막혀 뒤쪽 건이 영영 조회되지 않는다.
-     */
+    /** 항상 같은 페이지만 보면 확정되지 않는 건에 막혀 뒤쪽 건이 영영 조회되지 않는다 */
     @Query(
         """
         select h from SmsHistory h

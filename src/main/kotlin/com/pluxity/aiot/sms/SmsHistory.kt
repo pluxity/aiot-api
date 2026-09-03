@@ -9,7 +9,6 @@ import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
-/** 요청 시각은 BaseEntity.createdAt을 그대로 쓴다 */
 @Entity
 @Table(indexes = [Index(columnList = "clidx"), Index(columnList = "created_at")])
 class SmsHistory(
@@ -20,14 +19,11 @@ class SmsHistory(
     var title: String,
     @Column(length = SmsValidator.MAX_MESSAGE_LENGTH, nullable = false)
     var message: String,
-    /** 전송 요청 결과 */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var stat: UmsSendStat,
-    /** 발신고유번호. 요청이 실패하면 null이라 결과 조회 대상에서 빠진다 */
     var clidx: Long? = null,
     var failureReason: String? = null,
-    /** view_sendResult 조회 결과 */
     @Enumerated(EnumType.STRING)
     var resultCode: UmsResultCode? = null,
     @Enumerated(EnumType.STRING)
@@ -35,13 +31,9 @@ class SmsHistory(
     var errorCode: String? = null,
     var messageType: String? = null,
     var completedAt: LocalDateTime? = null,
-    /**
-     * 마지막으로 결과 조회를 시도한 시각.
-     * 결과를 못 받아도 갱신해, 확정되지 않는 건이 뒤쪽 건의 조회를 막지 않도록 순환시킨다.
-     */
+    /** 결과를 못 받아도 갱신해, 확정되지 않는 건이 뒤쪽 건의 조회를 막지 않도록 순환시킨다 */
     var resultCheckedAt: LocalDateTime? = null,
 ) : BaseEntity() {
-    /** 결과가 확정되면 더 이상 폴링하지 않는다 */
     val isResultConfirmed: Boolean
         get() = resultCode != null
 

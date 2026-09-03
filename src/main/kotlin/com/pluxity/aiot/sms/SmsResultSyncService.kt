@@ -9,10 +9,7 @@ import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
-/**
- * sp_syncSend는 요청 접수까지만 하고 실제 발송 결과는 view_sendResult에 나중에 반영되므로,
- * 결과가 확정되지 않은 이력을 주기적으로 조회해 갱신한다.
- */
+/** sp_syncSend는 접수까지만 하므로, 확정되지 않은 이력을 주기적으로 조회해 갱신한다 */
 @Service
 @ConditionalOnProperty("ums.enabled", havingValue = "true")
 class SmsResultSyncService(

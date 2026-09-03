@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "mic")
 data class MicProperties(
     val enabled: Boolean = false,
+    /** 호스트까지만 설정한다. /api/v1 접두사는 MicClient가 붙인다 */
     val baseUrl: String = "",
     val username: String = "",
     val password: String = "",

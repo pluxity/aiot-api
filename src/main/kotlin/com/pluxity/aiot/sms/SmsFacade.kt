@@ -5,18 +5,18 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UmsProperties
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
 /**
- * 외부 DB 호출을 트랜잭션 밖에서 끝내고 이력만 저장한다.
+ * 외부 발송을 트랜잭션 밖에서 끝내고 이력만 [SmsHistoryService]에 넘긴다.
  * 발송 도중 저장이 실패해 이미 나간 문자의 이력까지 롤백되면 안 된다.
  */
-@Service
-class SmsService(
+@Component
+class SmsFacade(
     private val smsSender: SmsSender,
-    private val smsHistoryRepository: SmsHistoryRepository,
+    private val smsHistoryService: SmsHistoryService,
     private val umsProperties: UmsProperties,
 ) {
     /** 한 건이 실패해도 나머지 발송은 계속한다 */
@@ -52,7 +52,7 @@ class SmsService(
                 )
             }
 
-        return smsHistoryRepository.saveAll(histories)
+        return smsHistoryService.saveAll(histories)
     }
 
     /** 표기가 여럿이면 유효한 것을 대표로 골라, 잘못된 표기 때문에 유효한 번호가 빠지지 않게 한다 */

@@ -17,23 +17,23 @@ import io.mockk.verify
 
 private val umsProperties = UmsProperties(enabled = true, senderNumber = "032-000-0000")
 
-class SmsServiceKoTest :
+class SmsFacadeKoTest :
     BehaviorSpec({
 
         Given("문자 발송") {
             When("여러 대상에게 발송하고 모두 성공") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
                 every { sender.send(any()) } returnsMany
                     listOf(
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L),
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 2L),
                     )
                 val saved = slot<List<SmsHistory>>()
-                every { repository.saveAll(capture(saved)) } answers { saved.captured }
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
                 val result =
-                    SmsService(sender, repository, umsProperties)
+                    SmsFacade(sender, historyService, umsProperties)
                         .send("이벤트 알림", "화재 감지", listOf("01011112222", "01033334444"))
 
                 Then("대상 수만큼 이력이 저장된다") {
@@ -47,12 +47,12 @@ class SmsServiceKoTest :
 
             When("표기만 다른 같은 번호가 섞여 있음") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
                 val saved = slot<List<SmsHistory>>()
-                every { repository.saveAll(capture(saved)) } answers { saved.captured }
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
-                SmsService(sender, repository, umsProperties)
+                SmsFacade(sender, historyService, umsProperties)
                     .send("제목", "내용", listOf("010-1111-2222", "01011112222", "010-1111-2222"))
 
                 Then("한 번만 발송하고 원본 표기를 유지한다") {
@@ -64,16 +64,16 @@ class SmsServiceKoTest :
 
             When("일부 대상 발송이 실패") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
                 every { sender.send(any()) } returnsMany
                     listOf(
                         SmsSendResult(UmsSendStat.NO_ACCOUNT, failureReason = "계정없음"),
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 5L),
                     )
                 val saved = slot<List<SmsHistory>>()
-                every { repository.saveAll(capture(saved)) } answers { saved.captured }
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
-                SmsService(sender, repository, umsProperties)
+                SmsFacade(sender, historyService, umsProperties)
                     .send("제목", "내용", listOf("01011112222", "01033334444"))
 
                 Then("실패 건도 사유와 함께 이력으로 남고 나머지 발송은 계속된다") {
@@ -89,27 +89,27 @@ class SmsServiceKoTest :
         Given("제목·내용이 유효하지 않은 요청") {
             When("내용이 2000자를 초과") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
 
                 Then("예외를 던지고 아무에게도 발송하지 않는다") {
                     val exception =
                         shouldThrowExactly<CustomException> {
-                            SmsService(sender, repository, umsProperties)
+                            SmsFacade(sender, historyService, umsProperties)
                                 .send("제목", "가".repeat(2001), listOf("01011112222", "01033334444"))
                         }
                     exception.errorCode shouldBe ErrorCode.SMS_INVALID_CONTENT
                     verify(exactly = 0) { sender.send(any()) }
-                    verify(exactly = 0) { repository.saveAll(any<List<SmsHistory>>()) }
+                    verify(exactly = 0) { historyService.saveAll(any<List<SmsHistory>>()) }
                 }
             }
 
             When("제목이 50자를 초과") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
 
                 Then("발송을 시작하지 않는다") {
                     shouldThrowExactly<CustomException> {
-                        SmsService(sender, repository, umsProperties)
+                        SmsFacade(sender, historyService, umsProperties)
                             .send("가".repeat(51), "내용", listOf("01011112222"))
                     }
                     verify(exactly = 0) { sender.send(any()) }
@@ -120,12 +120,12 @@ class SmsServiceKoTest :
         Given("표기가 섞인 중복 번호") {
             When("잘못된 표기가 유효한 표기보다 앞에 있음") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
                 val saved = slot<List<SmsHistory>>()
-                every { repository.saveAll(capture(saved)) } answers { saved.captured }
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
-                SmsService(sender, repository, umsProperties)
+                SmsFacade(sender, historyService, umsProperties)
                     .send("제목", "내용", listOf("010 1234 5678", "010-1234-5678"))
 
                 Then("유효한 표기를 대표로 골라 발송한다") {
@@ -136,12 +136,12 @@ class SmsServiceKoTest :
 
             When("모든 표기가 잘못됨") {
                 val sender: SmsSender = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val historyService: SmsHistoryService = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류")
                 val saved = slot<List<SmsHistory>>()
-                every { repository.saveAll(capture(saved)) } answers { saved.captured }
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
-                SmsService(sender, repository, umsProperties)
+                SmsFacade(sender, historyService, umsProperties)
                     .send("제목", "내용", listOf("010 1234 5678", "010_1234_5678"))
 
                 Then("첫 표기로 시도하고 실패 이력을 남긴다") {

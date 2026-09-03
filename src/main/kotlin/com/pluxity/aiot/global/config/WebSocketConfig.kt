@@ -1,5 +1,6 @@
 package com.pluxity.aiot.global.config
 
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -17,7 +18,8 @@ import java.util.concurrent.Executor
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig(
-    private val heartBeatScheduler: TaskScheduler,
+    // TaskScheduler 빈이 둘이므로 명시한다. 파라미터 이름 매칭은 @Primary에 밀린다
+    @param:Qualifier("heartBeatScheduler") private val heartBeatScheduler: TaskScheduler,
     private val myDefaultHandshakeHandler: DefaultHandshakeHandler,
 ) : WebSocketMessageBrokerConfigurer {
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
@@ -62,12 +64,16 @@ class AsyncConfig {
     /**
      * TaskScheduler 빈이 있으면 부트의 기본 스케줄러 자동 설정이 물러난다.
      * 이름을 taskScheduler로 두어 @Scheduled 배치가 하트비트와 스레드를 나눠 쓰지 않게 한다.
+     *
+     * @Primary를 붙이면 안 된다. TaskSchedulerRouter는 TaskScheduler 빈이 여럿일 때 이름으로
+     * 이 빈을 찾으므로 @Primary가 없어도 @Scheduled는 정상 동작하는 반면, @Primary가 있으면
+     * WebSocketConfig의 하트비트 주입이 이 빈으로 넘어와 분리가 무너진다.
+     * ThreadPoolTaskScheduler는 Executor이기도 해서 taskExecutor와 @Primary가 충돌하기도 한다.
      */
     @Bean(name = ["taskScheduler"])
-    @Primary
     fun taskScheduler(): TaskScheduler =
         ThreadPoolTaskScheduler().apply {
-            poolSize = 3
+            poolSize = 4 // @Scheduled 배치 수와 맞춘다
             setThreadNamePrefix("scheduled-")
             initialize()
         }

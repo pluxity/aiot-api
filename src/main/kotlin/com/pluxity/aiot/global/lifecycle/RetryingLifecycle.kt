@@ -99,7 +99,11 @@ abstract class RetryingLifecycle(
         } catch (e: Exception) {
             synchronized(lock) {
                 initialized = false
-                if (stopped) return
+                if (stopped) {
+                    // 실패하기 전까지 초기화가 되살린 자원이 있을 수 있다
+                    shutdown()
+                    return
+                }
                 log.error(e) { "$name 연동 초기화 실패, ${retryDelaySeconds}초 후 재시도: ${e.message}" }
                 retryTask =
                     scheduler?.schedule(

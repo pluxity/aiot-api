@@ -91,6 +91,7 @@ class MicClient(
 
     /**
      * 토큰 갱신 스케줄러가 만료를 놓친 경우를 대비해, 401이면 재로그인 후 한 번만 다시 호출한다.
+     * 재로그인과 재시도에서 난 오류도 도메인 예외로 변환해, 일반 500으로 새어 나가지 않게 한다.
      */
     private fun <T> withRetryOnUnauthorized(block: () -> T): T =
         try {
@@ -100,7 +101,20 @@ class MicClient(
                 throw CustomException(ErrorCode.MIC_API_ERROR, e.message ?: "알 수 없는 오류")
             }
             log.warn { "AI 마이크 API 401, 재로그인 후 재시도" }
-            login()
-            block()
+            retryAfterLogin(block)
         }
+
+    private fun <T> retryAfterLogin(block: () -> T): T {
+        try {
+            login()
+        } catch (e: Exception) {
+            throw CustomException(ErrorCode.MIC_LOGIN_FAILED, e.message ?: "알 수 없는 오류")
+        }
+
+        return try {
+            block()
+        } catch (e: Exception) {
+            throw CustomException(ErrorCode.MIC_API_ERROR, e.message ?: "알 수 없는 오류")
+        }
+    }
 }

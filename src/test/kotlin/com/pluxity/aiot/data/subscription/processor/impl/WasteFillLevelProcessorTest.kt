@@ -274,4 +274,55 @@ class WasteFillLevelProcessorTest(
                 }
             }
         }
+
+        Given("쓰레기 적재 감지기: 조건 대상 값이 없는 페이로드") {
+            When("경보 발생 후 ActualFilling이 빠진 페이로드가 수신됨") {
+                val deviceId = "WFL_006"
+                val helper2 =
+                    WasteFillLevelProcessorTestHelper(
+                        siteRepository,
+                        featureRepository,
+                        eventHistoryRepository,
+                        messageSenderMock,
+                        Mockito.mock(WriteApi::class.java),
+                        eventConditionRepository,
+                    )
+
+                val setup =
+                    helper2.setupDeviceWithCondition(
+                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
+                        deviceId = deviceId,
+                        eventLevel = ConditionLevel.WARNING,
+                        minValue = "60.0",
+                        maxValue = null,
+                        isBoolean = false,
+                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
+                    )
+
+                val processor = helper2.createProcessor()
+                processor.process(
+                    deviceId,
+                    setup.sensorType,
+                    setup.siteId,
+                    helper2.createSensorData(actualFilling = 70),
+                )
+
+                // ProjectConfig가 InstancePerLeaf라 Then이 여러 개면 When 본문이 재실행된다.
+                // Feature를 insert하는 컨테이너이므로 검증은 하나의 Then에 모은다
+                Then("판단 근거가 없으므로 경보 상태가 유지된다") {
+                    helper2.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
+
+                    processor.process(
+                        deviceId,
+                        setup.sensorType,
+                        setup.siteId,
+                        helper2.createSensorData(containerModuleId = 1, highThreshold = 80),
+                    )
+
+                    val feature = helper2.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "WARNING"
+                }
+            }
+        }
     })

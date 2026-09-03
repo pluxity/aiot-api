@@ -1,7 +1,9 @@
 package com.pluxity.aiot.sms
 
+import com.pluxity.aiot.sms.dto.SmsSendRequest
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 
@@ -21,63 +23,65 @@ class SmsValidatorKoTest :
                 }
             }
 
+            When("수신번호가 하이픈 제외 12자 (상한)") {
+                Then("통과한다") {
+                    SmsValidator.validate(request(targetNumber = "010-1234-5678-9"), "032-000-0000").shouldBeNull()
+                }
+            }
+
             When("수신번호가 하이픈 제외 12자를 초과") {
                 Then("사유를 반환한다") {
-                    SmsValidator
-                        .validate(request(targetNumber = "010-1234-5678-9"), "032-000-0000")
-                        ?.shouldContain("수신번호")
+                    SmsValidator.validate(request(targetNumber = "010-1234-5678-90"), "032-000-0000").shouldNotBeNull() shouldContain "수신번호"
                 }
             }
 
             When("발신번호가 하이픈 제외 12자를 초과") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(), "032-0000-0000-000")?.shouldContain("발신번호")
+                    SmsValidator.validate(request(), "032-0000-0000-000").shouldNotBeNull() shouldContain "발신번호"
                 }
             }
 
             When("발신번호가 설정되지 않음") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(), "")?.shouldContain("발신번호가 설정되지")
+                    SmsValidator.validate(request(), "").shouldNotBeNull() shouldContain "발신번호가 설정되지"
                 }
             }
 
             When("제목이 50자를 초과") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(title = "가".repeat(51)), "032-000-0000")?.shouldContain("제목")
+                    SmsValidator.validate(request(title = "가".repeat(51)), "032-000-0000").shouldNotBeNull() shouldContain "제목"
                 }
             }
 
             When("내용이 2000자를 초과") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(message = "가".repeat(2001)), "032-000-0000")?.shouldContain("내용")
+                    SmsValidator.validate(request(message = "가".repeat(2001)), "032-000-0000").shouldNotBeNull() shouldContain "내용"
                 }
             }
 
             When("내용이 비어 있음") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(message = "  "), "032-000-0000")?.shouldContain("내용이 비어")
+                    SmsValidator.validate(request(message = "  "), "032-000-0000").shouldNotBeNull() shouldContain "내용이 비어"
                 }
             }
 
             When("숫자가 하나도 없는 값") {
                 Then("숫자 0자로 상한을 통과하지 않고 걸러진다") {
-                    SmsValidator.validate(request(targetNumber = "abc"), "032-000-0000")?.shouldContain("수신번호")
-                    SmsValidator.validate(request(targetNumber = "---"), "032-000-0000")?.shouldContain("수신번호")
-                    SmsValidator.validate(request(), "abc")?.shouldContain("발신번호")
+                    SmsValidator.validate(request(targetNumber = "abc"), "032-000-0000").shouldNotBeNull() shouldContain "수신번호"
+                    SmsValidator.validate(request(targetNumber = "---"), "032-000-0000").shouldNotBeNull() shouldContain "수신번호"
+                    SmsValidator.validate(request(), "abc").shouldNotBeNull() shouldContain "발신번호"
                 }
             }
 
             When("자릿수가 하한 미만") {
                 Then("사유를 반환한다") {
-                    SmsValidator.validate(request(targetNumber = "1234567"), "032-000-0000")?.shouldContain("미만")
+                    SmsValidator.validate(request(targetNumber = "1234567"), "032-000-0000").shouldNotBeNull() shouldContain "미만"
                 }
             }
 
             When("숫자와 하이픈 외 문자가 섞임") {
                 Then("사유를 반환한다") {
-                    SmsValidator
-                        .validate(request(targetNumber = "010 1234 5678"), "032-000-0000")
-                        ?.shouldContain("숫자와 하이픈")
+                    SmsValidator.validate(request(targetNumber = "010 1234 5678"), "032-000-0000").shouldNotBeNull() shouldContain "숫자와 하이픈"
                 }
             }
         }

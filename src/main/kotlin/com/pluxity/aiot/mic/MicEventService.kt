@@ -71,10 +71,14 @@ class MicEventService(
     private fun parseOccurredAt(createdAt: String?): LocalDateTime {
         if (createdAt == null) return LocalDateTime.now()
         return try {
-            OffsetDateTime.parse(createdAt).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+            OffsetDateTime.parse(createdAt).atZoneSameInstant(KST).toLocalDateTime()
         } catch (e: Exception) {
             log.warn { "AI 마이크 이벤트 created_at 파싱 실패, 수신 시각으로 대체합니다: $createdAt (${e.message})" }
             LocalDateTime.now()
         }
+    }
+
+    companion object {
+        private val KST = ZoneId.of("Asia/Seoul")
     }
 }

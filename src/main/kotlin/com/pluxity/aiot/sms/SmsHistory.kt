@@ -1,6 +1,7 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.entity.BaseEntity
+import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -22,7 +23,11 @@ class SmsHistory(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var stat: UmsSendStat,
+    /** 프로시저가 돌려준 원본 상태 코드. 정의되지 않은 값도 남긴다 */
+    var statCode: Int? = null,
     var clidx: Long? = null,
+    /** 드라이버 예외 메시지가 길어 기본 255자를 넘기므로 컬럼을 넓히고 저장 시 잘라 넣는다 */
+    @Column(length = MAX_FAILURE_REASON_LENGTH)
     var failureReason: String? = null,
     @Enumerated(EnumType.STRING)
     var resultCode: UmsResultCode? = null,
@@ -45,5 +50,11 @@ class SmsHistory(
         errorCode = row.errorCode
         messageType = row.messageType
         completedAt = row.completedAt
+    }
+
+    companion object {
+        const val MAX_FAILURE_REASON_LENGTH = 1000
+
+        fun truncateFailureReason(reason: String?): String? = reason?.take(MAX_FAILURE_REASON_LENGTH)
     }
 }

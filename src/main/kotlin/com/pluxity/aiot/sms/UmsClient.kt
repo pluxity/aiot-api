@@ -1,6 +1,8 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsSendResult
+import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -8,6 +10,7 @@ import org.springframework.beans.factory.DisposableBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
+import java.sql.ResultSet
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -30,6 +33,8 @@ class UmsClient(
                 password = umsProperties.password
                 maximumPoolSize = POOL_SIZE
                 poolName = "ums-pool"
+                // UMS가 죽어 있어도 애플리케이션 기동은 막지 않는다
+                initializationFailTimeout = -1
             },
         )
 
@@ -46,7 +51,7 @@ class UmsClient(
             jdbcTemplate
                 .query(
                     "EXEC sp_syncSend ?, ?, ?, ?, ?, ?, ?",
-                    { rs, _ -> rs.getInt("STAT") to rs.getInt("CLIDX") },
+                    { rs, _ -> rs.intOrNull("STAT") to rs.intOrNull("CLIDX") },
                     umsProperties.systemAccount,
                     umsProperties.subCode,
                     title,
@@ -60,7 +65,8 @@ class UmsClient(
         val (stat, clidx) = row
         return SmsSendResult(
             stat = UmsSendStat.fromCode(stat),
-            clidx = clidx.toLong().takeIf { stat == UmsSendStat.SUCCESS.code },
+            statCode = stat,
+            clidx = clidx?.toLong()?.takeIf { stat == UmsSendStat.SUCCESS.code },
         )
     }
 
@@ -70,8 +76,8 @@ class UmsClient(
                 "SELECT RESULT, STATUS, ERRCODE, MSGGB, EDT FROM view_sendResult WHERE CLIDX = ?",
                 { rs, _ ->
                     UmsSendResultRow(
-                        resultCode = rs.getObject("RESULT") as? Int,
-                        statusCode = rs.getObject("STATUS") as? Int,
+                        resultCode = rs.intOrNull("RESULT"),
+                        statusCode = rs.intOrNull("STATUS"),
                         errorCode = rs.getString("ERRCODE"),
                         messageType = rs.getString("MSGGB"),
                         completedAt = rs.getTimestamp("EDT")?.toLocalDateTime(),
@@ -79,6 +85,9 @@ class UmsClient(
                 },
                 clidx,
             ).firstOrNull()
+
+    /** 컬럼이 smallint/numeric으로 오면 Int 캐스팅이 조용히 null이 되므로 Number로 받는다 */
+    private fun ResultSet.intOrNull(column: String): Int? = (getObject(column) as? Number)?.toInt()
 
     override fun destroy() {
         log.info { "UMS 커넥션 풀 종료" }
@@ -90,11 +99,3 @@ class UmsClient(
         private val SEND_DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     }
 }
-
-data class UmsSendResultRow(
-    val resultCode: Int?,
-    val statusCode: Int?,
-    val errorCode: String?,
-    val messageType: String?,
-    val completedAt: LocalDateTime?,
-)

@@ -1,6 +1,8 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsSendRequest
+import com.pluxity.aiot.sms.dto.SmsSendResult
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -34,7 +36,8 @@ class UmsSmsSender(
 class LoggingSmsSender : SmsSender {
     override fun send(request: SmsSendRequest): SmsSendResult {
         log.info {
-            "[UMS 미연동] 문자 발송 생략 - 대상: ${request.targetNumber}, 제목: ${request.title}, 내용: ${request.message}"
+            "[UMS 미연동] 문자 발송 생략 - 대상: ${SmsValidator.maskNumber(request.targetNumber)}, " +
+                "제목: ${request.title}, 내용 ${request.message.length}자"
         }
         return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동")
     }

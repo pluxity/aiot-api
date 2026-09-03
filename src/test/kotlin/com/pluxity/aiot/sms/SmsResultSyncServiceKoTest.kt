@@ -1,6 +1,7 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -27,7 +28,7 @@ class SmsResultSyncServiceKoTest :
         Given("발송 결과 동기화") {
             When("결과가 확정된 건을 조회함") {
                 val client: UmsClient = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val repository: SmsHistoryRepository = mockk(relaxed = true)
                 val pending = history(clidx = 10L)
                 every {
                     repository.findPendingResults(any())
@@ -56,7 +57,7 @@ class SmsResultSyncServiceKoTest :
 
             When("아직 결과가 없는 건") {
                 val client: UmsClient = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val repository: SmsHistoryRepository = mockk(relaxed = true)
                 val pending = history(clidx = 11L)
                 every {
                     repository.findPendingResults(any())
@@ -75,7 +76,7 @@ class SmsResultSyncServiceKoTest :
 
             When("한 건 조회가 예외를 던짐") {
                 val client: UmsClient = mockk()
-                val repository: SmsHistoryRepository = mockk()
+                val repository: SmsHistoryRepository = mockk(relaxed = true)
                 val failing = history(clidx = 12L)
                 val succeeding = history(clidx = 13L)
                 every {
@@ -90,7 +91,8 @@ class SmsResultSyncServiceKoTest :
                 Then("나머지 건은 계속 갱신된다") {
                     updated shouldBe 1
                     failing.resultCode.shouldBeNull()
-                    failing.resultCheckedAt.shouldBeNull()
+                    // 계속 실패하는 건이 큐 앞을 점유하지 않도록 조회 시각은 남긴다
+                    failing.resultCheckedAt.shouldNotBeNull()
                     succeeding.resultCode shouldBe UmsResultCode.FAILURE
                     succeeding.statusCode shouldBe UmsStatusCode.ERROR
                     succeeding.resultCheckedAt.shouldNotBeNull()
@@ -99,10 +101,8 @@ class SmsResultSyncServiceKoTest :
 
             When("대기 중인 건이 없음") {
                 val client: UmsClient = mockk()
-                val repository: SmsHistoryRepository = mockk()
-                every {
-                    repository.findPendingResults(any())
-                } returns emptyList()
+                val repository: SmsHistoryRepository = mockk(relaxed = true)
+                every { repository.findPendingResults(any()) } returns emptyList()
 
                 val updated = SmsResultSyncService(client, repository, umsProperties).syncPendingResults()
 

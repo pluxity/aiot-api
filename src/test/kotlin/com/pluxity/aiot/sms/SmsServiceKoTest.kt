@@ -1,12 +1,18 @@
 package com.pluxity.aiot.sms
 
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsSendRequest
+import com.pluxity.aiot.sms.dto.SmsSendResult
+import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 
 private val umsProperties = UmsProperties(enabled = true, senderNumber = "032-000-0000")
@@ -23,8 +29,8 @@ class SmsServiceKoTest :
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L),
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 2L),
                     )
-                val saved = mutableListOf<SmsHistory>()
-                every { repository.save(capture(saved)) } answers { saved.last() }
+                val saved = slot<List<SmsHistory>>()
+                every { repository.saveAll(capture(saved)) } answers { saved.captured }
 
                 val result =
                     SmsService(sender, repository, umsProperties)
@@ -32,10 +38,10 @@ class SmsServiceKoTest :
 
                 Then("대상 수만큼 이력이 저장된다") {
                     result shouldHaveSize 2
-                    saved.map { it.targetNumber } shouldBe listOf("01011112222", "01033334444")
-                    saved.map { it.clidx } shouldBe listOf(1L, 2L)
-                    saved.all { it.stat == UmsSendStat.SUCCESS } shouldBe true
-                    saved.all { it.senderNumber == "032-000-0000" } shouldBe true
+                    saved.captured.map { it.targetNumber } shouldBe listOf("01011112222", "01033334444")
+                    saved.captured.map { it.clidx } shouldBe listOf(1L, 2L)
+                    saved.captured.all { it.stat == UmsSendStat.SUCCESS } shouldBe true
+                    saved.captured.all { it.senderNumber == "032-000-0000" } shouldBe true
                 }
             }
 
@@ -43,16 +49,16 @@ class SmsServiceKoTest :
                 val sender: SmsSender = mockk()
                 val repository: SmsHistoryRepository = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
-                val saved = mutableListOf<SmsHistory>()
-                every { repository.save(capture(saved)) } answers { saved.last() }
+                val saved = slot<List<SmsHistory>>()
+                every { repository.saveAll(capture(saved)) } answers { saved.captured }
 
                 SmsService(sender, repository, umsProperties)
                     .send("제목", "내용", listOf("010-1111-2222", "01011112222", "010-1111-2222"))
 
                 Then("한 번만 발송하고 원본 표기를 유지한다") {
                     verify(exactly = 1) { sender.send(any()) }
-                    saved shouldHaveSize 1
-                    saved.first().targetNumber shouldBe "010-1111-2222"
+                    saved.captured shouldHaveSize 1
+                    saved.captured.first().targetNumber shouldBe "010-1111-2222"
                 }
             }
 
@@ -64,18 +70,18 @@ class SmsServiceKoTest :
                         SmsSendResult(UmsSendStat.NO_ACCOUNT, failureReason = "계정없음"),
                         SmsSendResult(UmsSendStat.SUCCESS, clidx = 5L),
                     )
-                val saved = mutableListOf<SmsHistory>()
-                every { repository.save(capture(saved)) } answers { saved.last() }
+                val saved = slot<List<SmsHistory>>()
+                every { repository.saveAll(capture(saved)) } answers { saved.captured }
 
                 SmsService(sender, repository, umsProperties)
                     .send("제목", "내용", listOf("01011112222", "01033334444"))
 
                 Then("실패 건도 사유와 함께 이력으로 남고 나머지 발송은 계속된다") {
-                    saved shouldHaveSize 2
-                    saved[0].stat shouldBe UmsSendStat.NO_ACCOUNT
-                    saved[0].failureReason shouldBe "계정없음"
-                    saved[0].clidx.shouldBeNull()
-                    saved[1].stat shouldBe UmsSendStat.SUCCESS
+                    saved.captured shouldHaveSize 2
+                    saved.captured[0].stat shouldBe UmsSendStat.NO_ACCOUNT
+                    saved.captured[0].failureReason shouldBe "계정없음"
+                    saved.captured[0].clidx.shouldBeNull()
+                    saved.captured[1].stat shouldBe UmsSendStat.SUCCESS
                 }
             }
         }
@@ -85,14 +91,15 @@ class SmsServiceKoTest :
                 val sender: SmsSender = mockk()
                 val repository: SmsHistoryRepository = mockk()
 
-                val result =
-                    SmsService(sender, repository, umsProperties)
-                        .send("제목", "가".repeat(2001), listOf("01011112222", "01033334444"))
-
-                Then("아무에게도 발송하지 않고 이력도 남기지 않는다") {
-                    result shouldHaveSize 0
+                Then("예외를 던지고 아무에게도 발송하지 않는다") {
+                    val exception =
+                        shouldThrowExactly<CustomException> {
+                            SmsService(sender, repository, umsProperties)
+                                .send("제목", "가".repeat(2001), listOf("01011112222", "01033334444"))
+                        }
+                    exception.errorCode shouldBe ErrorCode.SMS_INVALID_CONTENT
                     verify(exactly = 0) { sender.send(any()) }
-                    verify(exactly = 0) { repository.save(any()) }
+                    verify(exactly = 0) { repository.saveAll(any<List<SmsHistory>>()) }
                 }
             }
 
@@ -100,10 +107,11 @@ class SmsServiceKoTest :
                 val sender: SmsSender = mockk()
                 val repository: SmsHistoryRepository = mockk()
 
-                SmsService(sender, repository, umsProperties)
-                    .send("가".repeat(51), "내용", listOf("01011112222"))
-
                 Then("발송을 시작하지 않는다") {
+                    shouldThrowExactly<CustomException> {
+                        SmsService(sender, repository, umsProperties)
+                            .send("가".repeat(51), "내용", listOf("01011112222"))
+                    }
                     verify(exactly = 0) { sender.send(any()) }
                 }
             }
@@ -114,15 +122,15 @@ class SmsServiceKoTest :
                 val sender: SmsSender = mockk()
                 val repository: SmsHistoryRepository = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
-                val saved = mutableListOf<SmsHistory>()
-                every { repository.save(capture(saved)) } answers { saved.last() }
+                val saved = slot<List<SmsHistory>>()
+                every { repository.saveAll(capture(saved)) } answers { saved.captured }
 
                 SmsService(sender, repository, umsProperties)
                     .send("제목", "내용", listOf("010 1234 5678", "010-1234-5678"))
 
                 Then("유효한 표기를 대표로 골라 발송한다") {
                     verify(exactly = 1) { sender.send(any()) }
-                    saved.single().targetNumber shouldBe "010-1234-5678"
+                    saved.captured.single().targetNumber shouldBe "010-1234-5678"
                 }
             }
 
@@ -130,15 +138,15 @@ class SmsServiceKoTest :
                 val sender: SmsSender = mockk()
                 val repository: SmsHistoryRepository = mockk()
                 every { sender.send(any()) } returns SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류")
-                val saved = mutableListOf<SmsHistory>()
-                every { repository.save(capture(saved)) } answers { saved.last() }
+                val saved = slot<List<SmsHistory>>()
+                every { repository.saveAll(capture(saved)) } answers { saved.captured }
 
                 SmsService(sender, repository, umsProperties)
                     .send("제목", "내용", listOf("010 1234 5678", "010_1234_5678"))
 
                 Then("첫 표기로 시도하고 실패 이력을 남긴다") {
-                    saved.single().targetNumber shouldBe "010 1234 5678"
-                    saved.single().stat shouldBe UmsSendStat.NOT_SENT
+                    saved.captured.single().targetNumber shouldBe "010 1234 5678"
+                    saved.captured.single().stat shouldBe UmsSendStat.NOT_SENT
                 }
             }
         }

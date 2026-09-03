@@ -1,5 +1,7 @@
 package com.pluxity.aiot.sms
 
+import com.pluxity.aiot.sms.dto.SmsSendRequest
+
 /** UMS 프로시저의 컬럼 제약을 호출 전에 검사한다 */
 object SmsValidator {
     const val MAX_NUMBER_DIGITS = 12
@@ -40,12 +42,19 @@ object SmsValidator {
 
     fun isValidNumber(number: String): Boolean = number.isNotBlank() && numberErrorOrNull(number) == null
 
+    /** 로그에 남길 때 가운데를 가린다 */
+    fun maskNumber(number: String): String {
+        val digits = normalizeNumber(number)
+        if (digits.length < MIN_NUMBER_DIGITS) return "***"
+        return "${digits.take(3)}****${digits.takeLast(4)}"
+    }
+
     fun numberErrorOrNull(number: String): String? {
-        if (!NUMBER_FORMAT.matches(number)) return "숫자와 하이픈만 사용할 수 있습니다 ($number)"
+        if (!NUMBER_FORMAT.matches(number)) return "숫자와 하이픈만 사용할 수 있습니다"
         val digits = normalizeNumber(number).length
         return when {
-            digits < MIN_NUMBER_DIGITS -> "자릿수가 ${MIN_NUMBER_DIGITS}자 미만입니다 ($number)"
-            digits > MAX_NUMBER_DIGITS -> "자릿수가 ${MAX_NUMBER_DIGITS}자를 초과합니다 ($number)"
+            digits < MIN_NUMBER_DIGITS -> "자릿수가 ${MIN_NUMBER_DIGITS}자 미만입니다"
+            digits > MAX_NUMBER_DIGITS -> "자릿수가 ${MAX_NUMBER_DIGITS}자를 초과합니다"
             else -> null
         }
     }

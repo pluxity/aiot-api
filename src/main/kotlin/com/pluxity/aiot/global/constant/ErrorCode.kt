@@ -57,6 +57,8 @@ enum class ErrorCode(
     MIC_LOGIN_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "AI 마이크 로그인 실패: %s"),
     MIC_API_ERROR(HttpStatus.BAD_GATEWAY, "AI 마이크 API 호출 실패: %s"),
 
+    SMS_INVALID_CONTENT(HttpStatus.BAD_REQUEST, "문자 제목·내용이 올바르지 않습니다: %s"),
+
     NOT_FOUND_INVALID_NUMERIC_VALUE(HttpStatus.BAD_REQUEST, "유효한 숫자가 아닙니다."),
     NOT_SUPPORTED_OPERATOR(HttpStatus.BAD_REQUEST, "지원하지 않는 연산자입니다."),
     ;

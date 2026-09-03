@@ -1,7 +1,6 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
-import com.pluxity.aiot.sms.dto.SmsCallOutcome
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import com.zaxxer.hikari.HikariConfig
@@ -40,6 +39,13 @@ class UmsClient(
                 "ums.sender-number" to umsProperties.senderNumber,
             ).filterValues { it.isBlank() }.keys
         require(missing.isEmpty()) { "ums.enabled=true 이면 다음 설정이 필요합니다: ${missing.joinToString()}" }
+
+        // 0을 넣으면 Hikari는 약 24.8일, JDBC 쿼리 타임아웃은 무제한이 되어 방어가 통째로 사라진다
+        require(umsProperties.connectionTimeoutMillis >= MIN_CONNECTION_TIMEOUT_MILLIS) {
+            "ums.connection-timeout-millis는 ${MIN_CONNECTION_TIMEOUT_MILLIS} 이상이어야 합니다"
+        }
+        require(umsProperties.queryTimeoutSeconds > 0) { "ums.query-timeout-seconds는 0보다 커야 합니다" }
+        require(umsProperties.resultPollBatchSize > 0) { "ums.result-poll-batch-size는 0보다 커야 합니다" }
     }
 
     private val dataSource =
@@ -85,17 +91,16 @@ class UmsClient(
                     message,
                     targetNumber,
                 ).firstOrNull()
-                ?: return SmsSendResult(
-                    UmsSendStat.NOT_SENT,
-                    failureReason = "sp_syncSend 응답 없음",
-                    callOutcome = SmsCallOutcome.CALL_FAILED,
-                )
+                ?: return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "sp_syncSend 응답 없음")
 
         val (stat, clidx) = row
+        val accepted = stat == UmsSendStat.SUCCESS.code
         return SmsSendResult(
             stat = UmsSendStat.fromCode(stat),
             statCode = stat,
-            clidx = clidx?.takeIf { stat == UmsSendStat.SUCCESS.code },
+            clidx = clidx?.takeIf { accepted },
+            // CLIDX가 없으면 결과 조회 대상에서 빠지므로, 성공 응답이어도 추적 불가를 남긴다
+            failureReason = "성공 응답에 CLIDX가 없어 결과를 추적할 수 없음".takeIf { accepted && clidx == null },
         )
     }
 
@@ -128,6 +133,9 @@ class UmsClient(
 
     companion object {
         private const val POOL_SIZE = 2
+
+        /** Hikari가 거부하는 하한 */
+        private const val MIN_CONNECTION_TIMEOUT_MILLIS = 250L
         private const val SYNC_SEND_CALL = "{call sp_syncSend(?, ?, ?, ?, ?, ?, ?)}"
         private val SEND_DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     }

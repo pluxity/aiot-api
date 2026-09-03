@@ -1,7 +1,6 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
-import com.pluxity.aiot.sms.dto.SmsCallOutcome
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -19,18 +18,14 @@ class UmsSmsSender(
     override fun send(request: SmsSendRequest): SmsSendResult {
         SmsValidator.validate(request, umsProperties.senderNumber)?.let { reason ->
             log.warn { "문자 발송 요청이 유효하지 않아 호출하지 않습니다: $reason" }
-            return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = reason, callOutcome = SmsCallOutcome.NOT_CALLED)
+            return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = reason)
         }
 
         return try {
             umsClient.syncSend(request.title, request.message, request.targetNumber)
         } catch (e: Exception) {
             log.error(e) { "UMS 전송 요청 실패: ${e.message}" }
-            SmsSendResult(
-                UmsSendStat.NOT_SENT,
-                failureReason = failureReasonOf(e),
-                callOutcome = SmsCallOutcome.CALL_FAILED,
-            )
+            SmsSendResult(UmsSendStat.NOT_SENT, failureReason = failureReasonOf(e))
         }
     }
 
@@ -56,6 +51,6 @@ class LoggingSmsSender : SmsSender {
             "[UMS 미연동] 문자 발송 생략 - 대상: ${SmsValidator.maskNumber(request.targetNumber)}, " +
                 "제목: ${request.title}, 내용 ${request.message.length}자"
         }
-        return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동", callOutcome = SmsCallOutcome.NOT_CALLED)
+        return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동")
     }
 }

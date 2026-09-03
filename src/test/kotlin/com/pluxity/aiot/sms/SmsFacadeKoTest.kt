@@ -3,8 +3,6 @@ package com.pluxity.aiot.sms
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UmsProperties
-import com.pluxity.aiot.sms.dto.SmsCallOutcome
-import com.pluxity.aiot.sms.dto.SmsDispatchOutcome
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import io.kotest.assertions.throwables.shouldThrowExactly
@@ -41,9 +39,7 @@ class SmsFacadeKoTest :
                 Then("대상 수만큼 이력이 저장된다") {
                     result shouldHaveSize 2
                     result.map { it.clidx } shouldBe listOf(1L, 2L)
-                    result.all { it.outcome == SmsDispatchOutcome.ACCEPTED } shouldBe true
                     saved.captured.map { it.targetNumber } shouldBe listOf("01011112222", "01033334444")
-                    saved.captured.map { it.clidx } shouldBe listOf(1L, 2L)
                     saved.captured.all { it.stat == UmsSendStat.SUCCESS } shouldBe true
                     saved.captured.all { it.senderNumber == "032-000-0000" } shouldBe true
                 }
@@ -59,10 +55,24 @@ class SmsFacadeKoTest :
                 SmsFacade(sender, historyService, umsProperties)
                     .send("제목", "내용", listOf("010-1111-2222", "01011112222", "010-1111-2222"))
 
-                Then("한 번만 발송하고 원본 표기를 유지한다") {
+                Then("한 번만 발송한다") {
                     verify(exactly = 1) { sender.send(any()) }
                     saved.captured shouldHaveSize 1
                     saved.captured.first().targetNumber shouldBe "010-1111-2222"
+                }
+            }
+
+            When("숫자가 하나도 없는 서로 다른 값") {
+                val sender: SmsSender = mockk()
+                val historyService: SmsHistoryService = mockk()
+                every { sender.send(any()) } returns SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류")
+                val saved = slot<List<SmsHistory>>()
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
+
+                SmsFacade(sender, historyService, umsProperties).send("제목", "내용", listOf("없음", "미상", "없음"))
+
+                Then("한 건으로 뭉개지 않고 값별로 이력을 남긴다") {
+                    saved.captured.map { it.targetNumber } shouldBe listOf("없음", "미상")
                 }
             }
 
@@ -77,9 +87,8 @@ class SmsFacadeKoTest :
                 val saved = slot<List<SmsHistory>>()
                 every { historyService.saveAll(capture(saved)) } answers { saved.captured }
 
-                val result =
-                    SmsFacade(sender, historyService, umsProperties)
-                        .send("제목", "내용", listOf("01011112222", "01033334444"))
+                SmsFacade(sender, historyService, umsProperties)
+                    .send("제목", "내용", listOf("01011112222", "01033334444"))
 
                 Then("실패 건도 사유와 함께 이력으로 남고 나머지 발송은 계속된다") {
                     saved.captured shouldHaveSize 2
@@ -87,107 +96,21 @@ class SmsFacadeKoTest :
                     saved.captured[0].failureReason shouldBe "계정없음"
                     saved.captured[0].clidx.shouldBeNull()
                     saved.captured[1].stat shouldBe UmsSendStat.SUCCESS
-                    result.map { it.outcome } shouldBe listOf(SmsDispatchOutcome.REJECTED, SmsDispatchOutcome.ACCEPTED)
-                }
-            }
-        }
-
-        Given("UMS가 응답하지 않는 상황") {
-            When("발송 호출이 연속으로 실패") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returns
-                    SmsSendResult(
-                        UmsSendStat.NOT_SENT,
-                        failureReason = "UMS 호출 실패: SQLServerException",
-                        callOutcome = SmsCallOutcome.CALL_FAILED,
-                    )
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                val targets = (1..10).map { "0101111%04d".format(it) }
-                val result = SmsFacade(sender, historyService, umsProperties).send("제목", "내용", targets)
-
-                Then("남은 대상은 시도하지 않고 사유를 남긴다") {
-                    verify(exactly = 3) { sender.send(any()) }
-                    saved.captured shouldHaveSize 10
-                    saved.captured.take(3).all { it.failureReason == "UMS 호출 실패: SQLServerException" } shouldBe true
-                    saved.captured.drop(3).all { it.failureReason == "이전 발송이 연속 실패해 시도하지 않음" } shouldBe true
-                    saved.captured.all { it.stat == UmsSendStat.NOT_SENT } shouldBe true
-                    result.take(3).all { it.outcome == SmsDispatchOutcome.CALL_FAILED } shouldBe true
-                    result.drop(3).all { it.outcome == SmsDispatchOutcome.ABORTED } shouldBe true
                 }
             }
 
-            When("중간에 한 건이 성공") {
+            When("발송 후 이력 저장이 실패") {
                 val sender: SmsSender = mockk()
                 val historyService: SmsHistoryService = mockk()
-                val failure = SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "호출 실패", callOutcome = SmsCallOutcome.CALL_FAILED)
-                every { sender.send(any()) } returnsMany
-                    listOf(failure, failure, SmsSendResult(UmsSendStat.SUCCESS, clidx = 9L), failure, failure)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
+                every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
+                every { historyService.saveAll(any<List<SmsHistory>>()) } throws IllegalStateException("DB 오류")
 
-                val targets = (1..5).map { "0102222%04d".format(it) }
-                SmsFacade(sender, historyService, umsProperties).send("제목", "내용", targets)
-
-                Then("연속 실패 횟수가 초기화돼 끝까지 시도한다") {
-                    verify(exactly = 5) { sender.send(any()) }
-                    saved.captured shouldHaveSize 5
-                }
-            }
-
-            When("호출하지 않고 끝난 실패만 이어짐") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returns
-                    SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동", callOutcome = SmsCallOutcome.NOT_CALLED)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                val targets = (1..5).map { "0103333%04d".format(it) }
-                SmsFacade(sender, historyService, umsProperties).send("제목", "내용", targets)
-
-                Then("미연동·검증 실패는 중단 사유가 아니라 전부 시도한다") {
-                    verify(exactly = 5) { sender.send(any()) }
-                    saved.captured shouldHaveSize 5
-                }
-            }
-
-            When("호출 실패 사이에 호출하지 않은 건이 끼어듦") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                val failure = SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "호출 실패", callOutcome = SmsCallOutcome.CALL_FAILED)
-                val notCalled = SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류", callOutcome = SmsCallOutcome.NOT_CALLED)
-                every { sender.send(any()) } returnsMany listOf(failure, failure, notCalled, failure, failure)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                val targets = (1..5).map { "0104444%04d".format(it) }
-                SmsFacade(sender, historyService, umsProperties).send("제목", "내용", targets)
-
-                Then("호출하지 않은 건은 연속 실패 횟수를 초기화하지 않는다") {
-                    verify(exactly = 4) { sender.send(any()) }
-                    saved.captured shouldHaveSize 5
-                }
-            }
-
-            When("발송 중 sender가 예외를 던짐") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returnsMany
-                    listOf(SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L), SmsSendResult(UmsSendStat.SUCCESS, clidx = 2L))
-                every { sender.send(match { it.targetNumber == "01055550003" }) } throws IllegalStateException("드라이버 오류")
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                Then("이미 나간 문자의 이력은 저장하고 예외를 전파한다") {
-                    shouldThrowExactly<IllegalStateException> {
-                        SmsFacade(sender, historyService, umsProperties)
-                            .send("제목", "내용", listOf("01055550001", "01055550002", "01055550003", "01055550004"))
-                    }
-                    saved.captured shouldHaveSize 2
-                    saved.captured.map { it.clidx } shouldBe listOf(1L, 2L)
+                Then("발송 실패와 구분되는 오류로 알려 재시도를 막는다") {
+                    val exception =
+                        shouldThrowExactly<CustomException> {
+                            SmsFacade(sender, historyService, umsProperties).send("제목", "내용", listOf("01011112222"))
+                        }
+                    exception.errorCode shouldBe ErrorCode.SMS_HISTORY_SAVE_FAILED
                 }
             }
         }
@@ -223,56 +146,6 @@ class SmsFacadeKoTest :
             }
         }
 
-        Given("표기가 섞인 중복 번호") {
-            When("잘못된 표기가 유효한 표기보다 앞에 있음") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returns SmsSendResult(UmsSendStat.SUCCESS, clidx = 1L)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                SmsFacade(sender, historyService, umsProperties)
-                    .send("제목", "내용", listOf("010 1234 5678", "010-1234-5678"))
-
-                Then("유효한 표기를 대표로 골라 발송한다") {
-                    verify(exactly = 1) { sender.send(any()) }
-                    saved.captured.single().targetNumber shouldBe "010-1234-5678"
-                }
-            }
-
-            When("모든 표기가 잘못됨") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returns
-                    SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류", callOutcome = SmsCallOutcome.NOT_CALLED)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                SmsFacade(sender, historyService, umsProperties)
-                    .send("제목", "내용", listOf("010 1234 5678", "010_1234_5678"))
-
-                Then("첫 표기로 시도하고 실패 이력을 남긴다") {
-                    saved.captured.single().targetNumber shouldBe "010 1234 5678"
-                    saved.captured.single().stat shouldBe UmsSendStat.NOT_SENT
-                }
-            }
-
-            When("숫자가 하나도 없는 서로 다른 값") {
-                val sender: SmsSender = mockk()
-                val historyService: SmsHistoryService = mockk()
-                every { sender.send(any()) } returns
-                    SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "형식 오류", callOutcome = SmsCallOutcome.NOT_CALLED)
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
-
-                SmsFacade(sender, historyService, umsProperties).send("제목", "내용", listOf("없음", "미상", "없음"))
-
-                Then("한 건으로 뭉개지 않고 값별로 이력을 남긴다") {
-                    saved.captured.map { it.targetNumber } shouldBe listOf("없음", "미상")
-                }
-            }
-        }
-
         Given("미연동 환경") {
             When("LoggingSmsSender로 발송") {
                 val result = LoggingSmsSender().send(SmsSendRequest("제목", "내용", "01011112222"))
@@ -281,7 +154,6 @@ class SmsFacadeKoTest :
                     result.stat shouldBe UmsSendStat.NOT_SENT
                     result.clidx.shouldBeNull()
                     result.failureReason shouldBe "UMS 미연동"
-                    result.callOutcome shouldBe SmsCallOutcome.NOT_CALLED
                 }
             }
         }

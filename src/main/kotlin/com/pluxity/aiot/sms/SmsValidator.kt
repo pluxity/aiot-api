@@ -41,8 +41,6 @@ object SmsValidator {
 
     fun normalizeNumber(number: String): String = number.filter { it.isDigit() }
 
-    fun isValidNumber(number: String): Boolean = number.isNotBlank() && numberErrorOrNull(number) == null
-
     /** 앞 3자리와 뒤 2자리만 남긴다. 8자리 번호도 가려지는 자리가 남도록 뒤를 4자리에서 줄였다 */
     fun maskNumber(number: String): String {
         val digits = normalizeNumber(number)

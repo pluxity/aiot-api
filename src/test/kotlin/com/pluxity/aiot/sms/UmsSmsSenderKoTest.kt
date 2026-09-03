@@ -1,7 +1,6 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
-import com.pluxity.aiot.sms.dto.SmsCallOutcome
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
@@ -38,7 +37,6 @@ class UmsSmsSenderKoTest :
                 val result = UmsSmsSender(client, umsProperties).send(request())
 
                 Then("이력에는 호스트·포트를 남기지 않고 호출 실패로 표시한다") {
-                    result.callOutcome shouldBe SmsCallOutcome.CALL_FAILED
                     result.stat shouldBe UmsSendStat.NOT_SENT
                     val reason = result.failureReason.shouldNotBeNull()
                     reason shouldBe "UMS 호출 실패: SQLException"
@@ -82,7 +80,6 @@ class UmsSmsSenderKoTest :
 
                 Then("호출하지 않고 사유만 남긴다") {
                     verify(exactly = 0) { client.syncSend(any(), any(), any(), any()) }
-                    result.callOutcome shouldBe SmsCallOutcome.NOT_CALLED
                     result.failureReason.shouldNotBeNull() shouldContain "수신번호"
                 }
             }
@@ -94,7 +91,6 @@ class UmsSmsSenderKoTest :
 
                 Then("호출하지 않는다") {
                     verify(exactly = 0) { client.syncSend(any(), any(), any(), any()) }
-                    result.callOutcome shouldBe SmsCallOutcome.NOT_CALLED
                 }
             }
         }
@@ -120,6 +116,21 @@ class UmsSmsSenderKoTest :
                             UmsClient(umsProperties.copy(senderNumber = ""))
                         }
                     exception.message.shouldNotBeNull() shouldContain "ums.sender-number"
+                }
+            }
+
+            When("타임아웃·배치 크기가 0") {
+                Then("방어가 사라지는 값이라 기동에 실패한다") {
+                    // 0이면 Hikari는 약 24.8일, JDBC 쿼리 타임아웃은 무제한이 된다
+                    shouldThrowExactly<IllegalArgumentException> {
+                        UmsClient(umsProperties.copy(connectionTimeoutMillis = 0))
+                    }.message.shouldNotBeNull() shouldContain "connection-timeout-millis"
+                    shouldThrowExactly<IllegalArgumentException> {
+                        UmsClient(umsProperties.copy(queryTimeoutSeconds = 0))
+                    }.message.shouldNotBeNull() shouldContain "query-timeout-seconds"
+                    shouldThrowExactly<IllegalArgumentException> {
+                        UmsClient(umsProperties.copy(resultPollBatchSize = 0))
+                    }.message.shouldNotBeNull() shouldContain "result-poll-batch-size"
                 }
             }
         }

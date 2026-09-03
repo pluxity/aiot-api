@@ -1,6 +1,5 @@
 package com.pluxity.aiot.sms
 
-import com.pluxity.aiot.sms.dto.SmsDispatchOutcome
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
@@ -163,7 +162,7 @@ class SmsHistoryServiceKoTest(
                 val results = smsFacade.send("제목", "내용", listOf("01011112222"))
 
                 Then("미연동 환경이라 발송은 생략되지만 이력은 남는다") {
-                    results.map { it.outcome } shouldBe listOf(SmsDispatchOutcome.NOT_CALLED)
+                    results.single().stat shouldBe UmsSendStat.NOT_SENT
                     smsHistoryRepository.count() shouldBe 1L
                 }
             }

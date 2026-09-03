@@ -1,8 +1,10 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.PendingSmsResult
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -30,9 +32,8 @@ class SmsResultSyncServiceKoTest :
         Given("발송 결과 동기화") {
             When("결과가 확정된 건을 조회함") {
                 val client: UmsClient = mockk()
-                val historyService: SmsHistoryService = mockk(relaxed = true)
-                val pending = history(clidx = 10L)
-                every { historyService.findPending(any(), any()) } returns listOf(pending)
+                val historyService: SmsHistoryService = mockk()
+                every { historyService.findPending(any(), any()) } returns listOf(PendingSmsResult(1L, 10L))
                 every { client.findSendResult(10L) } returns
                     UmsSendResultRow(
                         resultCode = 903,
@@ -41,57 +42,51 @@ class SmsResultSyncServiceKoTest :
                         messageType = "S",
                         completedAt = LocalDateTime.of(2026, 9, 3, 10, 0),
                     )
+                val applied = slot<Map<Long, UmsSendResultRow?>>()
+                every { historyService.applyResults(capture(applied)) } returns 1
 
-                val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
+                val confirmed = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
-                Then("이력에 결과가 반영된다") {
-                    updated shouldBe 1
-                    pending.resultCode shouldBe UmsResultCode.SUCCESS
-                    pending.statusCode shouldBe UmsStatusCode.COMPLETED
-                    pending.errorCode shouldBe "0"
-                    pending.messageType shouldBe "S"
-                    pending.completedAt shouldBe LocalDateTime.of(2026, 9, 3, 10, 0)
-                    pending.isResultConfirmed shouldBe true
+                Then("조회한 행이 이력 갱신으로 넘어간다") {
+                    confirmed shouldBe 1
+                    applied.captured.keys shouldContainExactly setOf(1L)
+                    applied.captured[1L].shouldNotBeNull().resultCode shouldBe 903
                 }
             }
 
             When("아직 결과가 없는 건") {
                 val client: UmsClient = mockk()
-                val historyService: SmsHistoryService = mockk(relaxed = true)
-                val pending = history(clidx = 11L)
-                every { historyService.findPending(any(), any()) } returns listOf(pending)
+                val historyService: SmsHistoryService = mockk()
+                every { historyService.findPending(any(), any()) } returns listOf(PendingSmsResult(2L, 11L))
                 every { client.findSendResult(11L) } returns null
+                val applied = slot<Map<Long, UmsSendResultRow?>>()
+                every { historyService.applyResults(capture(applied)) } returns 0
 
-                val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
+                val confirmed = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
-                Then("결과는 비어 있지만 조회 시각은 남겨 다음 주기에 뒤로 밀린다") {
-                    updated shouldBe 0
-                    pending.resultCode.shouldBeNull()
-                    pending.isResultConfirmed shouldBe false
-                    pending.resultCheckedAt.shouldNotBeNull()
+                Then("결과는 비어 있지만 조회 대상으로는 넘겨 시각을 남긴다") {
+                    confirmed shouldBe 0
+                    applied.captured.keys shouldContainExactly setOf(2L)
+                    applied.captured[2L].shouldBeNull()
                 }
             }
 
             When("한 건 조회가 예외를 던짐") {
                 val client: UmsClient = mockk()
-                val historyService: SmsHistoryService = mockk(relaxed = true)
-                val failing = history(clidx = 12L)
-                val succeeding = history(clidx = 13L)
-                every { historyService.findPending(any(), any()) } returns listOf(failing, succeeding)
+                val historyService: SmsHistoryService = mockk()
+                every { historyService.findPending(any(), any()) } returns
+                    listOf(PendingSmsResult(3L, 12L), PendingSmsResult(4L, 13L))
                 every { client.findSendResult(12L) } throws IllegalStateException("연결 실패")
-                every { client.findSendResult(13L) } returns
-                    UmsSendResultRow(905, 335, "1", "L", null)
+                every { client.findSendResult(13L) } returns UmsSendResultRow(905, 335, "1", "L", null)
+                val applied = slot<Map<Long, UmsSendResultRow?>>()
+                every { historyService.applyResults(capture(applied)) } returns 1
 
-                val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
+                SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
-                Then("나머지 건은 계속 갱신된다") {
-                    updated shouldBe 1
-                    failing.resultCode.shouldBeNull()
-                    // 계속 실패하는 건이 큐 앞을 점유하지 않도록 조회 시각은 남긴다
-                    failing.resultCheckedAt.shouldNotBeNull()
-                    succeeding.resultCode shouldBe UmsResultCode.FAILURE
-                    succeeding.statusCode shouldBe UmsStatusCode.ERROR
-                    succeeding.resultCheckedAt.shouldNotBeNull()
+                Then("실패 건도 조회 시각을 남기고 나머지 건은 계속 갱신된다") {
+                    applied.captured.keys shouldContainExactly setOf(3L, 4L)
+                    applied.captured[3L].shouldBeNull()
+                    applied.captured[4L].shouldNotBeNull().resultCode shouldBe 905
                 }
             }
 
@@ -100,10 +95,10 @@ class SmsResultSyncServiceKoTest :
                 val historyService: SmsHistoryService = mockk(relaxed = true)
                 every { historyService.findPending(any(), any()) } returns emptyList()
 
-                val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
+                val confirmed = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
                 Then("조회를 시도하지 않는다") {
-                    updated shouldBe 0
+                    confirmed shouldBe 0
                     verify(exactly = 0) { client.findSendResult(any()) }
                 }
             }
@@ -112,19 +107,66 @@ class SmsResultSyncServiceKoTest :
         Given("UMS가 응답하지 않는 상황") {
             When("결과 조회가 연속으로 실패") {
                 val client: UmsClient = mockk()
-                val historyService: SmsHistoryService = mockk(relaxed = true)
-                val pendings = (1L..10L).map { history(clidx = it) }
-                every { historyService.findPending(any(), any()) } returns pendings
+                val historyService: SmsHistoryService = mockk()
+                every { historyService.findPending(any(), any()) } returns (1L..10L).map { PendingSmsResult(it, it) }
                 every { client.findSendResult(any()) } throws IllegalStateException("응답 없음")
-
-                val saved = slot<List<SmsHistory>>()
-                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
+                val applied = slot<Map<Long, UmsSendResultRow?>>()
+                every { historyService.applyResults(capture(applied)) } returns 0
 
                 SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
                 Then("남은 건까지 순차 대기하지 않고 이번 주기를 중단한다") {
                     verify(exactly = 3) { client.findSendResult(any()) }
-                    saved.captured shouldHaveSize 3
+                    applied.captured.keys shouldHaveSize 3
+                }
+            }
+        }
+
+        Given("이력에 결과를 반영") {
+            When("정의된 RESULT를 받음") {
+                val target = history(clidx = 1L)
+
+                Then("확정으로 표시되고 원본 코드도 남는다") {
+                    target.markResultChecked(UmsSendResultRow(903, 333, "0", "S", null)) shouldBe true
+                    target.resultCode shouldBe 903
+                    target.result shouldBe UmsResultCode.SUCCESS
+                    target.statusCode shouldBe 333
+                    target.status shouldBe UmsStatusCode.COMPLETED
+                    target.isResultConfirmed shouldBe true
+                }
+            }
+
+            When("정의되지 않은 RESULT를 받음") {
+                val target = history(clidx = 1L)
+
+                Then("원본 코드를 남겨 확정으로 처리하고 재조회 대상에서 빠진다") {
+                    target.markResultChecked(UmsSendResultRow(907, 999, null, null, null)) shouldBe true
+                    target.resultCode shouldBe 907
+                    target.result.shouldBeNull()
+                    target.statusCode shouldBe 999
+                    target.status.shouldBeNull()
+                    target.isResultConfirmed shouldBe true
+                }
+            }
+
+            When("행은 있으나 RESULT가 비어 있음") {
+                val target = history(clidx = 1L)
+
+                Then("아직 처리 중으로 보고 다음 주기 대상으로 남는다") {
+                    target.markResultChecked(UmsSendResultRow(null, 333, null, "S", null)) shouldBe false
+                    target.resultCode.shouldBeNull()
+                    target.isResultConfirmed shouldBe false
+                    target.resultCheckedAt.shouldNotBeNull()
+                }
+            }
+
+            When("조회 자체를 못 함") {
+                val target = history(clidx = 1L)
+
+                Then("조회 시각만 남긴다") {
+                    target.markResultChecked(null) shouldBe false
+                    target.resultCode.shouldBeNull()
+                    target.resultCheckedAt.shouldNotBeNull()
                 }
             }
         }

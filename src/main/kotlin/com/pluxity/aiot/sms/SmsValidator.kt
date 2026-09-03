@@ -13,18 +13,19 @@ object SmsValidator {
 
     private val NUMBER_FORMAT = Regex("^\\d[\\d-]*\\d$")
 
+    private const val MASK_HEAD = 3
+    private const val MASK_TAIL = 2
+
     fun validate(
         request: SmsSendRequest,
         senderNumber: String,
-    ): String? =
-        when {
-            senderNumber.isBlank() -> "발신번호가 설정되지 않았습니다"
-            numberErrorOrNull(senderNumber) != null -> "발신번호가 올바르지 않습니다: ${numberErrorOrNull(senderNumber)}"
-            request.targetNumber.isBlank() -> "수신번호가 비어 있습니다"
-            numberErrorOrNull(request.targetNumber) != null ->
-                "수신번호가 올바르지 않습니다: ${numberErrorOrNull(request.targetNumber)}"
-            else -> validateContent(request.title, request.message)
-        }
+    ): String? {
+        if (senderNumber.isBlank()) return "발신번호가 설정되지 않았습니다"
+        numberErrorOrNull(senderNumber)?.let { return "발신번호가 올바르지 않습니다: $it" }
+        if (request.targetNumber.isBlank()) return "수신번호가 비어 있습니다"
+        numberErrorOrNull(request.targetNumber)?.let { return "수신번호가 올바르지 않습니다: $it" }
+        return validateContent(request.title, request.message)
+    }
 
     fun validateContent(
         title: String,
@@ -42,11 +43,11 @@ object SmsValidator {
 
     fun isValidNumber(number: String): Boolean = number.isNotBlank() && numberErrorOrNull(number) == null
 
-    /** 로그에 남길 때 가운데를 가린다 */
+    /** 앞 3자리와 뒤 2자리만 남긴다. 8자리 번호도 가려지는 자리가 남도록 뒤를 4자리에서 줄였다 */
     fun maskNumber(number: String): String {
         val digits = normalizeNumber(number)
         if (digits.length < MIN_NUMBER_DIGITS) return "***"
-        return "${digits.take(3)}****${digits.takeLast(4)}"
+        return digits.take(MASK_HEAD) + "*".repeat(digits.length - MASK_HEAD - MASK_TAIL) + digits.takeLast(MASK_TAIL)
     }
 
     fun numberErrorOrNull(number: String): String? {

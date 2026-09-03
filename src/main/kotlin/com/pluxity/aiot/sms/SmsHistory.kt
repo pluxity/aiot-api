@@ -30,10 +30,17 @@ class SmsHistory(
     /** 드라이버 예외 메시지가 길어 기본 255자를 넘기므로 컬럼을 넓히고 저장 시 잘라 넣는다 */
     @Column(length = MAX_FAILURE_REASON_LENGTH)
     var failureReason: String? = null,
+    /**
+     * 뷰가 돌려준 원본 RESULT. 정의되지 않은 값도 남기며, 결과 조회 대상 여부의 기준이다.
+     * 이 값이 null이면 아직 결과가 나오지 않은 것으로 보고 다음 주기에 다시 조회한다.
+     */
+    var resultCode: Int? = null,
     @Enumerated(EnumType.STRING)
-    var resultCode: UmsResultCode? = null,
+    var result: UmsResultCode? = null,
+    /** 뷰가 돌려준 원본 STATUS */
+    var statusCode: Int? = null,
     @Enumerated(EnumType.STRING)
-    var statusCode: UmsStatusCode? = null,
+    var status: UmsStatusCode? = null,
     var errorCode: String? = null,
     var messageType: String? = null,
     var completedAt: LocalDateTime? = null,
@@ -43,14 +50,18 @@ class SmsHistory(
     val isResultConfirmed: Boolean
         get() = resultCode != null
 
-    fun markResultChecked(row: UmsSendResultRow?) {
+    /** 확정됐으면 true. RESULT가 비어 있으면 시각만 남기고 다음 주기 대상으로 둔다 */
+    fun markResultChecked(row: UmsSendResultRow?): Boolean {
         resultCheckedAt = LocalDateTime.now()
-        row ?: return
-        resultCode = UmsResultCode.fromCode(row.resultCode)
-        statusCode = UmsStatusCode.fromCode(row.statusCode)
+        row ?: return false
+        resultCode = row.resultCode
+        result = UmsResultCode.fromCode(row.resultCode)
+        statusCode = row.statusCode
+        status = UmsStatusCode.fromCode(row.statusCode)
         errorCode = row.errorCode
         messageType = row.messageType
         completedAt = row.completedAt
+        return isResultConfirmed
     }
 
     companion object {

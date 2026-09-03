@@ -25,8 +25,14 @@ class UmsSmsSender(
             umsClient.syncSend(request.title, request.message, request.targetNumber)
         } catch (e: Exception) {
             log.error(e) { "UMS 전송 요청 실패: ${e.message}" }
-            SmsSendResult(UmsSendStat.NOT_SENT, failureReason = e.message)
+            SmsSendResult(UmsSendStat.NOT_SENT, failureReason = failureReasonOf(e), callFailed = true)
         }
+    }
+
+    /** 드라이버 예외 메시지에는 접속 호스트·포트가 들어 있어 이력에 남기지 않고 로그로만 남긴다 */
+    private fun failureReasonOf(e: Exception): String {
+        val root = generateSequence(e as Throwable) { it.cause.takeIf { cause -> cause !== it } }.last()
+        return "UMS 호출 실패: ${root.javaClass.simpleName}"
     }
 }
 

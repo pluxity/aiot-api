@@ -25,6 +25,12 @@ private val log = KotlinLogging.logger {}
 class UmsClient(
     private val umsProperties: UmsProperties,
 ) : DisposableBean {
+    // Hikari가 던지는 메시지는 어느 설정이 비었는지 알려주지 않아 먼저 검사한다
+    init {
+        require(umsProperties.url.isNotBlank()) { "ums.enabled=true 이면 ums.url이 필요합니다" }
+        require(umsProperties.username.isNotBlank()) { "ums.enabled=true 이면 ums.username이 필요합니다" }
+    }
+
     private val dataSource =
         HikariDataSource(
             HikariConfig().apply {
@@ -45,7 +51,10 @@ class UmsClient(
             queryTimeout = umsProperties.queryTimeoutSeconds
         }
 
-    /** 문서 예시대로 7개 인자로 호출하고 반환 행(STAT, CLIDX)을 읽는다 */
+    /**
+     * 문서 예시대로 7개 인자로 호출하고 반환 행(STAT, CLIDX)을 읽는다.
+     * JDBC 이스케이프 구문을 쓰면 드라이버가 RPC로 호출해 문자열 파싱 차이를 타지 않는다.
+     */
     fun syncSend(
         title: String,
         message: String,
@@ -55,8 +64,8 @@ class UmsClient(
         val row =
             jdbcTemplate
                 .query(
-                    "EXEC sp_syncSend ?, ?, ?, ?, ?, ?, ?",
-                    { rs, _ -> rs.intOrNull("STAT") to rs.intOrNull("CLIDX") },
+                    SYNC_SEND_CALL,
+                    { rs, _ -> rs.intOrNull("STAT") to rs.longOrNull("CLIDX") },
                     umsProperties.systemAccount,
                     umsProperties.subCode,
                     title,
@@ -71,7 +80,7 @@ class UmsClient(
         return SmsSendResult(
             stat = UmsSendStat.fromCode(stat),
             statCode = stat,
-            clidx = clidx?.toLong()?.takeIf { stat == UmsSendStat.SUCCESS.code },
+            clidx = clidx?.takeIf { stat == UmsSendStat.SUCCESS.code },
         )
     }
 
@@ -94,6 +103,9 @@ class UmsClient(
     /** 컬럼이 smallint/numeric으로 오면 Int 캐스팅이 조용히 null이 되므로 Number로 받는다 */
     private fun ResultSet.intOrNull(column: String): Int? = (getObject(column) as? Number)?.toInt()
 
+    /** CLIDX가 bigint면 Int로 좁힐 때 상위 비트가 조용히 잘려 결과 조회가 영영 매칭되지 않는다 */
+    private fun ResultSet.longOrNull(column: String): Long? = (getObject(column) as? Number)?.toLong()
+
     override fun destroy() {
         log.info { "UMS 커넥션 풀 종료" }
         dataSource.close()
@@ -101,6 +113,7 @@ class UmsClient(
 
     companion object {
         private const val POOL_SIZE = 2
+        private const val SYNC_SEND_CALL = "{call sp_syncSend(?, ?, ?, ?, ?, ?, ?)}"
         private val SEND_DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     }
 }

@@ -95,6 +95,24 @@ class SmsValidatorKoTest :
             }
         }
 
+        Given("로그용 번호 마스킹") {
+            When("자릿수가 다른 번호") {
+                Then("앞 3자리와 뒤 2자리만 남는다") {
+                    SmsValidator.maskNumber("010-1234-5678") shouldBe "010******78"
+                    SmsValidator.maskNumber("032-000-0000") shouldBe "032*****00"
+                    // 하한인 8자리도 가려지는 자리가 남아야 한다
+                    SmsValidator.maskNumber("12345678") shouldBe "123***78"
+                }
+            }
+
+            When("자릿수가 하한 미만") {
+                Then("전부 가린다") {
+                    SmsValidator.maskNumber("1234567") shouldBe "***"
+                    SmsValidator.maskNumber("abc") shouldBe "***"
+                }
+            }
+        }
+
         Given("UMS 응답 코드 매핑") {
             When("프로시저가 반환한 stat 코드") {
                 Then("정의된 값으로 매핑된다") {

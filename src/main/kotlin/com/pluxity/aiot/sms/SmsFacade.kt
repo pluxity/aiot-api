@@ -30,7 +30,10 @@ class SmsFacade(
      * 트랜잭션 안에서 부르면 안 된다. 수신자 수에 비례하는 외부 DB 왕복이 일어나는 동안
      * 바깥 트랜잭션이 커넥션을 붙잡고, [SmsHistoryService.saveAll]의 REQUIRES_NEW가
      * 같은 풀에서 두 번째 커넥션을 잡아 동시 호출 몇 건만으로 풀이 마른다.
-     * 이벤트 처리 중 발송해야 하면 `@TransactionalEventListener(phase = AFTER_COMMIT)`으로 옮긴다.
+     *
+     * 동기 `@TransactionalEventListener(AFTER_COMMIT)`도 안 된다. 커밋은 끝났어도 커넥션 반납은
+     * 그 뒤(cleanupAfterCompletion)라 여전히 붙잡고 있고, 아래 검사도 통과하지 못한다.
+     * 이벤트 처리 중 발송해야 하면 `@Async`를 함께 걸어 다른 스레드로 넘긴다.
      */
     fun send(
         title: String,
@@ -38,7 +41,8 @@ class SmsFacade(
         targetNumbers: List<String>,
     ): List<SmsDispatchResult> {
         check(!TransactionSynchronizationManager.isActualTransactionActive()) {
-            "SmsFacade.send()는 트랜잭션 밖에서 호출해야 합니다"
+            "SmsFacade.send()는 트랜잭션 밖에서 호출해야 합니다. " +
+                "이벤트 처리 중이라면 @TransactionalEventListener(AFTER_COMMIT)에 @Async를 함께 거세요"
         }
         SmsValidator.validateContent(title, message)?.let { reason ->
             throw CustomException(ErrorCode.SMS_INVALID_CONTENT, reason)

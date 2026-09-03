@@ -14,6 +14,7 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientException
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 
@@ -93,12 +94,15 @@ class MicClient(
     /**
      * 토큰 갱신 스케줄러가 만료를 놓친 경우를 대비해, 401이면 재로그인 후 한 번만 다시 호출한다.
      * 재로그인과 재시도에서 난 오류도 도메인 예외로 변환해, 일반 500으로 새어 나가지 않게 한다.
+     *
+     * 연결 거부·DNS 실패·타임아웃은 WebClientRequestException이라 응답 예외의 하위 타입이 아니다.
+     * 상위 타입으로 받지 않으면 업체 서버가 죽은 가장 흔한 상황에서만 502가 아닌 500이 나간다.
      */
     private fun <T> withRetryOnUnauthorized(block: () -> T): T =
         try {
             block()
-        } catch (e: WebClientResponseException) {
-            if (e.statusCode != HttpStatus.UNAUTHORIZED) {
+        } catch (e: WebClientException) {
+            if (e !is WebClientResponseException || e.statusCode != HttpStatus.UNAUTHORIZED) {
                 throw CustomException(ErrorCode.MIC_API_ERROR, e.message)
             }
             log.warn { "AI 마이크 API 401, 재로그인 후 재시도" }

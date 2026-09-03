@@ -10,9 +10,12 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalDateTime
 
@@ -130,6 +133,27 @@ class SmsHistoryServiceKoTest(
                             transaction.execute { smsFacade.send("제목", "내용", listOf("01011112222")) }
                         }
                     exception.message.shouldNotBeNull() shouldContain "트랜잭션 밖에서"
+                    smsHistoryRepository.count() shouldBe 0L
+                }
+            }
+
+            When("동기 AFTER_COMMIT 콜백에서 호출") {
+                smsHistoryRepository.deleteAll()
+                // @TransactionalEventListener(AFTER_COMMIT)이 내부적으로 쓰는 경로와 같다
+                var thrown: Throwable? = null
+                transaction.execute {
+                    TransactionSynchronizationManager.registerSynchronization(
+                        object : TransactionSynchronization {
+                            override fun afterCommit() {
+                                thrown = runCatching { smsFacade.send("제목", "내용", listOf("01011112222")) }.exceptionOrNull()
+                            }
+                        },
+                    )
+                    null
+                }
+
+                Then("커밋 후에도 커넥션이 남아 있으므로 거부한다") {
+                    thrown.shouldBeInstanceOf<IllegalStateException>()
                     smsHistoryRepository.count() shouldBe 0L
                 }
             }

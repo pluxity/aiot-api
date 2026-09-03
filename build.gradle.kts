@@ -82,6 +82,8 @@ tasks.jar {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // 실행 환경과 무관하게 시각 검증이 같은 결과를 내도록 고정한다
+    systemProperty("user.timezone", "Asia/Seoul")
 }
 
 spotless {

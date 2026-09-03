@@ -92,6 +92,6 @@ class MicWebSocketClient(
 
     companion object {
         private val HTTP_SCHEME_REGEX = Regex("^http")
-        private const val WS_EVENTS_PATH = "/ws/events"
+        private const val WS_EVENTS_PATH = "${MicClient.API_PREFIX}/ws/events"
     }
 }

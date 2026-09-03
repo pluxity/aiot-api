@@ -70,6 +70,30 @@ class FeatureCustomRepositoryImpl(
                                 .like("${SensorType.WASTE_FILL_LEVEL.objectId}%"),
                         ).then(1),
                     ),
+                    count(
+                        caseWhen(
+                            path(Feature::objectId)
+                                .like("${SensorType.FOREST_FIRE.objectId}%"),
+                        ).then(1),
+                    ),
+                    count(
+                        caseWhen(
+                            path(Feature::objectId)
+                                .like("${SensorType.ODOR_MONITOR.objectId}%"),
+                        ).then(1),
+                    ),
+                    count(
+                        caseWhen(
+                            path(Feature::objectId)
+                                .like("${SensorType.PEOPLE_COUNTER.objectId}%"),
+                        ).then(1),
+                    ),
+                    count(
+                        caseWhen(
+                            path(Feature::objectId)
+                                .like("${SensorType.COMPOSITE_AIR_QUALITY.objectId}%"),
+                        ).then(1),
+                    ),
                 ).from(
                     entity(Feature::class),
                     join(Feature::site),

@@ -17,6 +17,10 @@ data class SensorTypeStatus(
     val temperatureHumidity: Long,
     val fire: Long,
     val wasteFillLevel: Long,
+    val forestFire: Long,
+    val odorMonitor: Long,
+    val peopleCounter: Long,
+    val compositeAirQuality: Long,
 )
 
 data class SensorStatisticsRaw(
@@ -28,6 +32,10 @@ data class SensorStatisticsRaw(
     val temperatureHumidityCount: Long,
     val fireCount: Long,
     val wasteFillLevelCount: Long,
+    val forestFireCount: Long,
+    val odorMonitorCount: Long,
+    val peopleCounterCount: Long,
+    val compositeAirQualityCount: Long,
 )
 
 fun SensorStatisticsRaw.toSensorSummary() =
@@ -45,5 +53,9 @@ fun SensorStatisticsRaw.toSensorSummary() =
                 temperatureHumidity = temperatureHumidityCount,
                 fire = fireCount,
                 wasteFillLevel = wasteFillLevelCount,
+                forestFire = forestFireCount,
+                odorMonitor = odorMonitorCount,
+                peopleCounter = peopleCounterCount,
+                compositeAirQuality = compositeAirQualityCount,
             ),
     )

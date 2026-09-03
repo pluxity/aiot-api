@@ -38,6 +38,14 @@ eds:
   system-token: "${EDS_SYSTEM_TOKEN:}"
   keep-alive-timeout: ${EDS_KEEP_ALIVE_TIMEOUT:900}
 
+mic:
+  enabled: ${MIC_ENABLED:false}
+  base-url: ${MIC_BASE_URL:}
+  username: ${MIC_USERNAME:}
+  password: "${MIC_PASSWORD:}"
+  token-ttl-fallback: ${MIC_TOKEN_TTL_FALLBACK:3600}
+  list-page-size: ${MIC_LIST_PAGE_SIZE:100}
+
 file:
   storage-strategy: ${FILE_STORAGE_STRATEGY:s3}
   local:

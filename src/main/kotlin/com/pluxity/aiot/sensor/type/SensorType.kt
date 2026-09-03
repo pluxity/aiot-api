@@ -37,11 +37,7 @@ enum class SensorType(
         "1.0",
         "waste_fill_level",
         AbbreviationData("wfl", "쓰레기 적재 감지기"),
-        listOf(
-            DeviceProfileEnum.CONTAINER_MODULE_ID,
-            DeviceProfileEnum.ACTUAL_FILLING,
-            DeviceProfileEnum.HIGH_THRESHOLD,
-        ),
+        listOf(DeviceProfileEnum.ACTUAL_FILLING),
     ),
     FOREST_FIRE(
         4,
@@ -50,15 +46,7 @@ enum class SensorType(
         "1.0",
         "forest_fire_detection",
         AbbreviationData("ffa", "산불 감지기"),
-        listOf(
-            DeviceProfileEnum.FOREST_FIRE_DETECTION,
-            DeviceProfileEnum.TEMPERATURE,
-            DeviceProfileEnum.HUMIDITY,
-            DeviceProfileEnum.CO2,
-            DeviceProfileEnum.CO,
-            DeviceProfileEnum.TVOC,
-            DeviceProfileEnum.FIRE_CAUSE_MASK,
-        ),
+        listOf(DeviceProfileEnum.FOREST_FIRE_DETECTION),
     ),
     ODOR_MONITOR(
         5,
@@ -67,12 +55,7 @@ enum class SensorType(
         "1.0",
         "odor_monitor",
         AbbreviationData("bos", "화장실 악취 감지기"),
-        listOf(
-            DeviceProfileEnum.TEMPERATURE,
-            DeviceProfileEnum.HUMIDITY,
-            DeviceProfileEnum.NH3,
-            DeviceProfileEnum.H2S,
-        ),
+        listOf(DeviceProfileEnum.NH3, DeviceProfileEnum.H2S),
     ),
     PEOPLE_COUNTER(
         6,
@@ -96,9 +79,7 @@ enum class SensorType(
             DeviceProfileEnum.PM2_5,
             DeviceProfileEnum.PM10,
             DeviceProfileEnum.WIND_SPEED,
-            DeviceProfileEnum.WIND_DIRECTION,
             DeviceProfileEnum.UVI,
-            DeviceProfileEnum.LED_LIGHT,
         ),
     ),
     ;

@@ -13,8 +13,9 @@ import java.time.LocalDateTime
 @Entity
 @Table(indexes = [Index(columnList = "clidx"), Index(columnList = "created_at")])
 class SmsHistory(
-    @Column(nullable = false)
+    @Column(length = MAX_NUMBER_LENGTH, nullable = false)
     var targetNumber: String,
+    @Column(length = MAX_NUMBER_LENGTH)
     var senderNumber: String? = null,
     @Column(nullable = false)
     var title: String,
@@ -55,6 +56,11 @@ class SmsHistory(
     companion object {
         const val MAX_FAILURE_REASON_LENGTH = 1000
 
+        /** 검증을 통과하지 못한 값도 이력에는 남으므로, 저장 전에 컬럼 길이로 자른다 */
+        const val MAX_NUMBER_LENGTH = 40
+
         fun truncateFailureReason(reason: String?): String? = reason?.take(MAX_FAILURE_REASON_LENGTH)
+
+        fun truncateNumber(number: String): String = number.take(MAX_NUMBER_LENGTH)
     }
 }

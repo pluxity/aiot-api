@@ -35,10 +35,15 @@ class UmsClient(
                 poolName = "ums-pool"
                 // UMS가 죽어 있어도 애플리케이션 기동은 막지 않는다
                 initializationFailTimeout = -1
+                connectionTimeout = umsProperties.connectionTimeoutMillis
             },
         )
 
-    private val jdbcTemplate = JdbcTemplate(dataSource)
+    // 타임아웃이 없으면 응답 없는 호스트에서 한 건이 스케줄러 스레드를 무한정 잡는다
+    private val jdbcTemplate =
+        JdbcTemplate(dataSource).apply {
+            queryTimeout = umsProperties.queryTimeoutSeconds
+        }
 
     /** 문서 예시대로 7개 인자로 호출하고 반환 행(STAT, CLIDX)을 읽는다 */
     fun syncSend(

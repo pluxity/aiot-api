@@ -56,6 +56,9 @@ ums:
   sender-number: ${UMS_SENDER_NUMBER:}
   result-poll-interval-seconds: ${UMS_RESULT_POLL_INTERVAL_SECONDS:60}
   result-poll-batch-size: ${UMS_RESULT_POLL_BATCH_SIZE:100}
+  result-poll-cutoff-hours: ${UMS_RESULT_POLL_CUTOFF_HOURS:24}
+  connection-timeout-millis: ${UMS_CONNECTION_TIMEOUT_MILLIS:5000}
+  query-timeout-seconds: ${UMS_QUERY_TIMEOUT_SECONDS:10}
 
 file:
   storage-strategy: ${FILE_STORAGE_STRATEGY:s3}

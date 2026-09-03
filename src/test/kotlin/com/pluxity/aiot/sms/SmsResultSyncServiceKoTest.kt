@@ -3,11 +3,13 @@ package com.pluxity.aiot.sms
 import com.pluxity.aiot.global.properties.UmsProperties
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import java.time.LocalDateTime
 
@@ -30,7 +32,7 @@ class SmsResultSyncServiceKoTest :
                 val client: UmsClient = mockk()
                 val historyService: SmsHistoryService = mockk(relaxed = true)
                 val pending = history(clidx = 10L)
-                every { historyService.findPending(any()) } returns listOf(pending)
+                every { historyService.findPending(any(), any()) } returns listOf(pending)
                 every { client.findSendResult(10L) } returns
                     UmsSendResultRow(
                         resultCode = 903,
@@ -57,7 +59,7 @@ class SmsResultSyncServiceKoTest :
                 val client: UmsClient = mockk()
                 val historyService: SmsHistoryService = mockk(relaxed = true)
                 val pending = history(clidx = 11L)
-                every { historyService.findPending(any()) } returns listOf(pending)
+                every { historyService.findPending(any(), any()) } returns listOf(pending)
                 every { client.findSendResult(11L) } returns null
 
                 val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
@@ -75,7 +77,7 @@ class SmsResultSyncServiceKoTest :
                 val historyService: SmsHistoryService = mockk(relaxed = true)
                 val failing = history(clidx = 12L)
                 val succeeding = history(clidx = 13L)
-                every { historyService.findPending(any()) } returns listOf(failing, succeeding)
+                every { historyService.findPending(any(), any()) } returns listOf(failing, succeeding)
                 every { client.findSendResult(12L) } throws IllegalStateException("연결 실패")
                 every { client.findSendResult(13L) } returns
                     UmsSendResultRow(905, 335, "1", "L", null)
@@ -96,13 +98,33 @@ class SmsResultSyncServiceKoTest :
             When("대기 중인 건이 없음") {
                 val client: UmsClient = mockk()
                 val historyService: SmsHistoryService = mockk(relaxed = true)
-                every { historyService.findPending(any()) } returns emptyList()
+                every { historyService.findPending(any(), any()) } returns emptyList()
 
                 val updated = SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
 
                 Then("조회를 시도하지 않는다") {
                     updated shouldBe 0
                     verify(exactly = 0) { client.findSendResult(any()) }
+                }
+            }
+        }
+
+        Given("UMS가 응답하지 않는 상황") {
+            When("결과 조회가 연속으로 실패") {
+                val client: UmsClient = mockk()
+                val historyService: SmsHistoryService = mockk(relaxed = true)
+                val pendings = (1L..10L).map { history(clidx = it) }
+                every { historyService.findPending(any(), any()) } returns pendings
+                every { client.findSendResult(any()) } throws IllegalStateException("응답 없음")
+
+                val saved = slot<List<SmsHistory>>()
+                every { historyService.saveAll(capture(saved)) } answers { saved.captured }
+
+                SmsResultSyncService(client, historyService, umsProperties).syncPendingResults()
+
+                Then("남은 건까지 순차 대기하지 않고 이번 주기를 중단한다") {
+                    verify(exactly = 3) { client.findSendResult(any()) }
+                    saved.captured shouldHaveSize 3
                 }
             }
         }

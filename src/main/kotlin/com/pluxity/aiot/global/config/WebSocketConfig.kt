@@ -52,5 +52,23 @@ class AsyncConfig {
     }
 
     @Bean
-    fun heartBeatScheduler(): TaskScheduler = ThreadPoolTaskScheduler()
+    fun heartBeatScheduler(): TaskScheduler =
+        ThreadPoolTaskScheduler().apply {
+            poolSize = 1
+            setThreadNamePrefix("stomp-heartbeat-")
+            initialize()
+        }
+
+    /**
+     * TaskScheduler 빈이 있으면 부트의 기본 스케줄러 자동 설정이 물러난다.
+     * 이름을 taskScheduler로 두어 @Scheduled 배치가 하트비트와 스레드를 나눠 쓰지 않게 한다.
+     */
+    @Bean(name = ["taskScheduler"])
+    @Primary
+    fun taskScheduler(): TaskScheduler =
+        ThreadPoolTaskScheduler().apply {
+            poolSize = 3
+            setThreadNamePrefix("scheduled-")
+            initialize()
+        }
 }

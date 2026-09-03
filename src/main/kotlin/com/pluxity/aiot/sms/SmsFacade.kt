@@ -41,7 +41,7 @@ class SmsFacade(
                 }
 
                 SmsHistory(
-                    targetNumber = targetNumber,
+                    targetNumber = SmsHistory.truncateNumber(targetNumber),
                     senderNumber = umsProperties.senderNumber.takeIf { it.isNotBlank() },
                     title = title,
                     message = message,

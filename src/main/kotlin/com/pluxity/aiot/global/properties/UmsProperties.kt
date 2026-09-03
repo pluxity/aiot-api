@@ -16,6 +16,10 @@ data class UmsProperties(
     val subCode: String = "",
     /** @send_number */
     val senderNumber: String = "",
+    val connectionTimeoutMillis: Long = 5_000,
+    val queryTimeoutSeconds: Int = 10,
+    /** 이 시간이 지나도 확정되지 않은 건은 결과 조회를 포기한다 */
+    val resultPollCutoffHours: Long = 24,
     val resultPollIntervalSeconds: Long = 60,
     val resultPollBatchSize: Int = 100,
 )

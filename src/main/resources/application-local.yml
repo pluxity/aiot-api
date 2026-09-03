@@ -66,6 +66,9 @@ eds:
 mic:
   enabled: false
 
+ums:
+  enabled: false
+
 logging:
   level:
     com: DEBUG

@@ -1,6 +1,7 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsCallOutcome
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -18,21 +19,31 @@ class UmsSmsSender(
     override fun send(request: SmsSendRequest): SmsSendResult {
         SmsValidator.validate(request, umsProperties.senderNumber)?.let { reason ->
             log.warn { "문자 발송 요청이 유효하지 않아 호출하지 않습니다: $reason" }
-            return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = reason)
+            return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = reason, callOutcome = SmsCallOutcome.NOT_CALLED)
         }
 
         return try {
             umsClient.syncSend(request.title, request.message, request.targetNumber)
         } catch (e: Exception) {
             log.error(e) { "UMS 전송 요청 실패: ${e.message}" }
-            SmsSendResult(UmsSendStat.NOT_SENT, failureReason = failureReasonOf(e), callFailed = true)
+            SmsSendResult(
+                UmsSendStat.NOT_SENT,
+                failureReason = failureReasonOf(e),
+                callOutcome = SmsCallOutcome.CALL_FAILED,
+            )
         }
     }
 
     /** 드라이버 예외 메시지에는 접속 호스트·포트가 들어 있어 이력에 남기지 않고 로그로만 남긴다 */
     private fun failureReasonOf(e: Exception): String {
-        val root = generateSequence(e as Throwable) { it.cause.takeIf { cause -> cause !== it } }.last()
-        return "UMS 호출 실패: ${root.javaClass.simpleName}"
+        // cause 사이클에 걸려도 멈추도록 깊이를 제한한다
+        val root = generateSequence(e as Throwable) { it.cause }.take(MAX_CAUSE_DEPTH).last()
+        val name = root.javaClass.simpleName.ifBlank { root.javaClass.name }
+        return "UMS 호출 실패: $name"
+    }
+
+    companion object {
+        private const val MAX_CAUSE_DEPTH = 20
     }
 }
 
@@ -45,6 +56,6 @@ class LoggingSmsSender : SmsSender {
             "[UMS 미연동] 문자 발송 생략 - 대상: ${SmsValidator.maskNumber(request.targetNumber)}, " +
                 "제목: ${request.title}, 내용 ${request.message.length}자"
         }
-        return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동")
+        return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "UMS 미연동", callOutcome = SmsCallOutcome.NOT_CALLED)
     }
 }

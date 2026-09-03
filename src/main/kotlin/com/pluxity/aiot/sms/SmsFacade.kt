@@ -3,11 +3,14 @@ package com.pluxity.aiot.sms
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsCallOutcome
+import com.pluxity.aiot.sms.dto.SmsDispatchOutcome
 import com.pluxity.aiot.sms.dto.SmsDispatchResult
 import com.pluxity.aiot.sms.dto.SmsSendRequest
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 private val log = KotlinLogging.logger {}
 
@@ -24,32 +27,59 @@ class SmsFacade(
     /**
      * 한 건이 실패해도 나머지 발송은 계속한다.
      *
-     * 호출자는 이 메서드를 트랜잭션 안에서 부르면 안 된다. 수신자 수에 비례하는 외부 DB 왕복이
-     * 일어나므로 바깥 트랜잭션이 그동안 애플리케이션 DB 커넥션을 붙잡는다.
-     * 이력은 [SmsHistoryService.saveAll]이 별도 트랜잭션으로 남긴다.
+     * 트랜잭션 안에서 부르면 안 된다. 수신자 수에 비례하는 외부 DB 왕복이 일어나는 동안
+     * 바깥 트랜잭션이 커넥션을 붙잡고, [SmsHistoryService.saveAll]의 REQUIRES_NEW가
+     * 같은 풀에서 두 번째 커넥션을 잡아 동시 호출 몇 건만으로 풀이 마른다.
+     * 이벤트 처리 중 발송해야 하면 `@TransactionalEventListener(phase = AFTER_COMMIT)`으로 옮긴다.
      */
     fun send(
         title: String,
         message: String,
         targetNumbers: List<String>,
     ): List<SmsDispatchResult> {
+        check(!TransactionSynchronizationManager.isActualTransactionActive()) {
+            "SmsFacade.send()는 트랜잭션 밖에서 호출해야 합니다"
+        }
         SmsValidator.validateContent(title, message)?.let { reason ->
             throw CustomException(ErrorCode.SMS_INVALID_CONTENT, reason)
         }
 
-        val histories = mutableListOf<SmsHistory>()
+        val dispatched = mutableListOf<Dispatched>()
+        return try {
+            dispatch(title, message, targetNumbers, dispatched)
+            persist(dispatched)
+        } catch (e: Exception) {
+            // 이미 나간 문자의 이력은 남겨야 하므로, 중간에 끊겨도 모아둔 만큼은 저장한다
+            runCatching { persist(dispatched) }
+                .onFailure { log.error(it) { "중단된 발송의 이력 저장 실패" } }
+            throw e
+        }
+    }
+
+    private fun dispatch(
+        title: String,
+        message: String,
+        targetNumbers: List<String>,
+        dispatched: MutableList<Dispatched>,
+    ) {
         var consecutiveFailures = 0
         var aborted = false
 
         for (targetNumber in distinctRecipients(targetNumbers)) {
             // UMS가 응답하지 않으면 수신자 수만큼 타임아웃을 누적해 호출 스레드가 오래 묶인다
             if (aborted) {
-                histories += history(title, message, targetNumber, SmsSendResult(UmsSendStat.NOT_SENT, failureReason = ABORT_REASON))
+                val skipped = SmsSendResult(UmsSendStat.NOT_SENT, failureReason = ABORT_REASON)
+                dispatched += Dispatched(history(title, message, targetNumber, skipped), SmsDispatchOutcome.ABORTED)
                 continue
             }
 
             val result = smsSender.send(SmsSendRequest(title, message, targetNumber))
-            consecutiveFailures = if (result.callFailed) consecutiveFailures + 1 else 0
+            // 호출하지 않고 끝난 건은 UMS 상태를 말해주지 않으므로 카운터를 건드리지 않는다
+            when (result.callOutcome) {
+                SmsCallOutcome.CALL_FAILED -> consecutiveFailures++
+                SmsCallOutcome.CALLED -> consecutiveFailures = 0
+                SmsCallOutcome.NOT_CALLED -> Unit
+            }
 
             if (result.stat != UmsSendStat.SUCCESS) {
                 log.warn {
@@ -57,24 +87,44 @@ class SmsFacade(
                         "상태: ${result.stat.description}, 사유: ${result.failureReason}"
                 }
             }
-            histories += history(title, message, targetNumber, result)
+            dispatched += Dispatched(history(title, message, targetNumber, result), outcomeOf(result))
 
             if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                 log.warn { "발송 호출이 연속 ${consecutiveFailures}회 실패해 남은 대상은 시도하지 않습니다" }
                 aborted = true
             }
         }
+    }
 
-        return smsHistoryService.saveAll(histories).map {
+    private fun persist(dispatched: List<Dispatched>): List<SmsDispatchResult> {
+        if (dispatched.isEmpty()) return emptyList()
+        // saveAll이 채워 준 id를 쓰려고 저장된 엔티티 쪽을 읽는다. outcome은 엔티티에 없는 값이다
+        val saved = smsHistoryService.saveAll(dispatched.map { it.history })
+        return saved.zip(dispatched) { history, (_, outcome) ->
             SmsDispatchResult(
-                historyId = it.id,
-                targetNumber = it.targetNumber,
-                stat = it.stat,
-                clidx = it.clidx,
-                failureReason = it.failureReason,
+                historyId = history.id,
+                targetNumber = history.targetNumber,
+                outcome = outcome,
+                stat = history.stat,
+                clidx = history.clidx,
+                failureReason = history.failureReason,
             )
         }
     }
+
+    /** 이력과 판정을 함께 들고 다녀 길이가 어긋날 수 없게 한다. outcome은 저장되지 않는 값이다 */
+    private data class Dispatched(
+        val history: SmsHistory,
+        val outcome: SmsDispatchOutcome,
+    )
+
+    private fun outcomeOf(result: SmsSendResult): SmsDispatchOutcome =
+        when (result.callOutcome) {
+            SmsCallOutcome.NOT_CALLED -> SmsDispatchOutcome.NOT_CALLED
+            SmsCallOutcome.CALL_FAILED -> SmsDispatchOutcome.CALL_FAILED
+            SmsCallOutcome.CALLED ->
+                if (result.stat == UmsSendStat.SUCCESS) SmsDispatchOutcome.ACCEPTED else SmsDispatchOutcome.REJECTED
+        }
 
     private fun history(
         title: String,

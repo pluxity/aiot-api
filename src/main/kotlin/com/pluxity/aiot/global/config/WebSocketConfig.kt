@@ -73,7 +73,7 @@ class AsyncConfig {
     @Bean(name = ["taskScheduler"])
     fun taskScheduler(): TaskScheduler =
         ThreadPoolTaskScheduler().apply {
-            poolSize = 4 // @Scheduled 배치 수와 맞춘다
+            poolSize = 4 // @Scheduled 배치 수(ums 연동 시 4개)와 맞춘다
             setThreadNamePrefix("scheduled-")
             initialize()
         }

@@ -1,6 +1,7 @@
 package com.pluxity.aiot.sms
 
 import com.pluxity.aiot.global.properties.UmsProperties
+import com.pluxity.aiot.sms.dto.SmsCallOutcome
 import com.pluxity.aiot.sms.dto.SmsSendResult
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import com.zaxxer.hikari.HikariConfig
@@ -25,10 +26,20 @@ private val log = KotlinLogging.logger {}
 class UmsClient(
     private val umsProperties: UmsProperties,
 ) : DisposableBean {
-    // Hikari가 던지는 메시지는 어느 설정이 비었는지 알려주지 않아 먼저 검사한다
+    /**
+     * Hikari가 던지는 메시지는 어느 설정이 비었는지 알려주지 않는다.
+     * 발신번호·계정이 비면 기동은 되지만 모든 발송이 조용히 no-op이 되므로 함께 검사한다.
+     */
     init {
-        require(umsProperties.url.isNotBlank()) { "ums.enabled=true 이면 ums.url이 필요합니다" }
-        require(umsProperties.username.isNotBlank()) { "ums.enabled=true 이면 ums.username이 필요합니다" }
+        val missing =
+            mapOf(
+                "ums.url" to umsProperties.url,
+                "ums.username" to umsProperties.username,
+                "ums.system-account" to umsProperties.systemAccount,
+                "ums.sub-code" to umsProperties.subCode,
+                "ums.sender-number" to umsProperties.senderNumber,
+            ).filterValues { it.isBlank() }.keys
+        require(missing.isEmpty()) { "ums.enabled=true 이면 다음 설정이 필요합니다: ${missing.joinToString()}" }
     }
 
     private val dataSource =
@@ -74,7 +85,11 @@ class UmsClient(
                     message,
                     targetNumber,
                 ).firstOrNull()
-                ?: return SmsSendResult(UmsSendStat.NOT_SENT, failureReason = "sp_syncSend 응답 없음")
+                ?: return SmsSendResult(
+                    UmsSendStat.NOT_SENT,
+                    failureReason = "sp_syncSend 응답 없음",
+                    callOutcome = SmsCallOutcome.CALL_FAILED,
+                )
 
         val (stat, clidx) = row
         return SmsSendResult(

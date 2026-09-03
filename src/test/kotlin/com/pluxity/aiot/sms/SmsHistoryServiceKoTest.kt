@@ -1,5 +1,6 @@
 package com.pluxity.aiot.sms
 
+import com.pluxity.aiot.sms.dto.SmsDispatchOutcome
 import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
@@ -8,6 +9,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.PlatformTransactionManager
@@ -34,16 +36,19 @@ private fun history(
 class SmsHistoryServiceKoTest(
     private val smsHistoryService: SmsHistoryService,
     private val smsHistoryRepository: SmsHistoryRepository,
+    private val smsFacade: SmsFacade,
     transactionManager: PlatformTransactionManager,
 ) : BehaviorSpec({
         extension(SpringExtension)
 
         val transaction = TransactionTemplate(transactionManager)
 
+        // beforeEach는 컨테이너 바디가 만든 데이터까지 지우므로, 정리는 각 When 바디 첫 줄에서 한다
         afterEach { smsHistoryRepository.deleteAll() }
 
         Given("바깥 트랜잭션 안에서 이력을 저장") {
             When("저장 뒤 바깥 트랜잭션이 롤백됨") {
+                smsHistoryRepository.deleteAll()
                 shouldThrowExactly<IllegalStateException> {
                     transaction.execute {
                         smsHistoryService.saveAll(listOf(history("01011112222"), history("01033334444")))
@@ -61,6 +66,7 @@ class SmsHistoryServiceKoTest(
 
         Given("결과 조회 대상") {
             When("확정되지 않은 건과 확정된 건이 섞여 있음") {
+                smsHistoryRepository.deleteAll()
                 val pending = smsHistoryRepository.save(history("01011112222", clidx = 100L))
                 val noClidx = smsHistoryRepository.save(history("01022223333"))
                 val done = smsHistoryRepository.save(history("01033334444", clidx = 200L))
@@ -80,6 +86,7 @@ class SmsHistoryServiceKoTest(
             }
 
             When("정의되지 않은 RESULT를 받은 건") {
+                smsHistoryRepository.deleteAll()
                 val target = smsHistoryRepository.save(history("01044445555", clidx = 300L))
                 smsHistoryService.applyResults(mapOf(target.requiredId to UmsSendResultRow(907, null, null, null, null)))
 
@@ -95,6 +102,7 @@ class SmsHistoryServiceKoTest(
             }
 
             When("행은 왔지만 RESULT가 비어 있는 건") {
+                smsHistoryRepository.deleteAll()
                 val target = smsHistoryRepository.save(history("01055556666", clidx = 400L))
                 val confirmed =
                     smsHistoryService.applyResults(mapOf(target.requiredId to UmsSendResultRow(null, 333, null, "S", null)))
@@ -109,6 +117,30 @@ class SmsHistoryServiceKoTest(
                         .get()
                         .resultCheckedAt
                         .shouldNotBeNull()
+                }
+            }
+        }
+
+        Given("트랜잭션 안에서 발송을 시도") {
+            When("바깥 트랜잭션이 열려 있는 채로 send를 호출") {
+                smsHistoryRepository.deleteAll()
+                Then("커넥션을 붙잡지 않도록 즉시 거부한다") {
+                    val exception =
+                        shouldThrowExactly<IllegalStateException> {
+                            transaction.execute { smsFacade.send("제목", "내용", listOf("01011112222")) }
+                        }
+                    exception.message.shouldNotBeNull() shouldContain "트랜잭션 밖에서"
+                    smsHistoryRepository.count() shouldBe 0L
+                }
+            }
+
+            When("트랜잭션 밖에서 호출") {
+                smsHistoryRepository.deleteAll()
+                val results = smsFacade.send("제목", "내용", listOf("01011112222"))
+
+                Then("미연동 환경이라 발송은 생략되지만 이력은 남는다") {
+                    results.map { it.outcome } shouldBe listOf(SmsDispatchOutcome.NOT_CALLED)
+                    smsHistoryRepository.count() shouldBe 1L
                 }
             }
         }

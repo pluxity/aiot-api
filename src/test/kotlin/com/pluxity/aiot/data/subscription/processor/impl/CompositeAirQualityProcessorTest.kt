@@ -4,7 +4,10 @@ import com.influxdb.client.WriteApi
 import com.influxdb.client.domain.WritePrecision
 import com.pluxity.aiot.data.measure.CompositeAirQuality
 import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.event.condition.ConditionType
+import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.EventConditionRepository
+import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
@@ -213,6 +216,51 @@ class CompositeAirQualityProcessorTest(
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories.first().fieldKey shouldBe "PM2.5"
+                }
+            }
+        }
+
+        Given("복합 대기질 센서: 여러 항목이 동시에 조건을 충족") {
+            When("Temperature는 WARNING, PM2.5는 DANGER 조건을 충족") {
+                val deviceId = "CAQ_006"
+                val helper = helperWith(Mockito.mock(WriteApi::class.java))
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = SensorType.COMPOSITE_AIR_QUALITY.objectId,
+                        deviceId = deviceId,
+                        eventLevel = ConditionLevel.DANGER,
+                        minValue = "35.0",
+                        maxValue = null,
+                        isBoolean = false,
+                        fieldKey = DeviceProfileEnum.PM2_5.fieldKey,
+                    )
+                eventConditionRepository.save(
+                    EventCondition(
+                        fieldKey = DeviceProfileEnum.TEMPERATURE.fieldKey,
+                        objectId = SensorType.COMPOSITE_AIR_QUALITY.objectId,
+                        isActivate = true,
+                        level = ConditionLevel.WARNING,
+                        conditionType = ConditionType.SINGLE,
+                        operator = Operator.GE,
+                        thresholdValue = 30.0,
+                        notificationEnabled = true,
+                    ),
+                )
+
+                // Temperature가 먼저 평가되지만 우선순위는 PM2.5가 높다
+                val sensorData = helper.createSensorData(temperature = 40.0, pm25 = 75)
+                helper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+
+                Then("우선순위가 높은 DANGER 하나만 이벤트로 기록된다") {
+                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
+                    eventHistories shouldHaveSize 1
+                    eventHistories.first().fieldKey shouldBe "PM2.5"
+                    eventHistories.first().eventName shouldBe "DANGER_PM2.5"
+
+                    val feature = helper.featureRepository.findByDeviceId(deviceId)
+                    feature.shouldNotBeNull()
+                    feature.eventStatus shouldBe "DANGER"
                 }
             }
         }

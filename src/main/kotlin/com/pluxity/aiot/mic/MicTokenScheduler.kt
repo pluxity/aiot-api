@@ -1,6 +1,5 @@
-package com.pluxity.aiot.eds
+package com.pluxity.aiot.mic
 
-import com.pluxity.aiot.global.properties.EdsProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -10,27 +9,30 @@ import java.util.concurrent.TimeUnit
 
 private val log = KotlinLogging.logger {}
 
+/**
+ * 벤더에 토큰 갱신 엔드포인트가 없어, 만료 전에 재로그인해 토큰을 새로 받는다.
+ * 재로그인은 accessToken을 갱신하므로 단일 스레드로 직렬화한다.
+ */
 @Component
-@ConditionalOnProperty("eds.enabled", havingValue = "true")
-class EdsKeepAliveScheduler(
-    private val edsClient: EdsClient,
-    private val edsProperties: EdsProperties,
+@ConditionalOnProperty("mic.enabled", havingValue = "true")
+class MicTokenScheduler(
+    private val micClient: MicClient,
 ) {
     @Volatile
     private var scheduler: ScheduledExecutorService? = null
 
     fun start() {
         stop()
-        val intervalSeconds = edsProperties.keepAliveTimeout / 2
-        log.info { "EDS keepAlive 스케줄러 시작 (간격: ${intervalSeconds}초)" }
+        val intervalSeconds = (micClient.getTokenTtlSeconds() / 2).coerceAtLeast(MIN_INTERVAL_SECONDS)
+        log.info { "AI 마이크 토큰 갱신 스케줄러 시작 (간격: ${intervalSeconds}초)" }
         scheduler =
             newScheduler().apply {
                 scheduleAtFixedRate(
                     {
                         try {
-                            edsClient.keepAlive()
+                            micClient.login()
                         } catch (e: Exception) {
-                            log.error { "EDS keepAlive 스케줄러 실행 중 오류: ${e.message}" }
+                            log.error { "AI 마이크 토큰 갱신 실패: ${e.message}" }
                         }
                     },
                     intervalSeconds,
@@ -48,6 +50,10 @@ class EdsKeepAliveScheduler(
 
     private fun newScheduler(): ScheduledExecutorService =
         Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "eds-keepalive").apply { isDaemon = true }
+            Thread(runnable, "mic-token-refresh").apply { isDaemon = true }
         }
+
+    companion object {
+        private const val MIN_INTERVAL_SECONDS = 60L
+    }
 }

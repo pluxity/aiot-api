@@ -178,7 +178,7 @@ class DataService(
     ): ListDataResponse {
         val data = getClimateData(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.CLIMATE, climateValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.CLIMATE_SERIES, climateValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -190,7 +190,7 @@ class DataService(
     ): ListDataResponse {
         val data = getWasteFillLevel(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.WASTE_FILL_LEVEL, wasteFillLevelValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.WASTE_FILL_LEVEL_SERIES, wasteFillLevelValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -202,7 +202,7 @@ class DataService(
     ): ListDataResponse {
         val data = getForestFire(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.FOREST_FIRE, forestFireValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.FOREST_FIRE_SERIES, forestFireValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -214,7 +214,7 @@ class DataService(
     ): ListDataResponse {
         val data = getOdorMonitor(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.ODOR_MONITOR, odorMonitorValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.ODOR_MONITOR_SERIES, odorMonitorValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -226,7 +226,7 @@ class DataService(
     ): ListDataResponse {
         val data = getPeopleCounter(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.PEOPLE_COUNTER, peopleCounterValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.PEOPLE_COUNTER_SERIES, peopleCounterValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 
@@ -238,7 +238,7 @@ class DataService(
     ): ListDataResponse {
         val data = getCompositeAirQuality(query)
         val bucketList = data.map { convertUtcToKstString(interval, it.requiredTime) }
-        val metrics = data.buildListMetricMap(SensorMetrics.COMPOSITE_AIR_QUALITY, compositeAirQualityValueExtractor)
+        val metrics = data.buildListMetricMap(SensorMetrics.COMPOSITE_AIR_QUALITY_SERIES, compositeAirQualityValueExtractor)
         return createListDataResponse(targetId, interval, timeRange, metrics, bucketList)
     }
 

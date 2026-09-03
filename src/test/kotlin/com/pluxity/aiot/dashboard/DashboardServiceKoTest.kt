@@ -125,6 +125,10 @@ private fun createSensorStatisticsRaw(
     temperatureHumidityCount: Long,
     fireCount: Long,
     wasteFillLevelCount: Long,
+    forestFireCount: Long = 0,
+    odorMonitorCount: Long = 0,
+    peopleCounterCount: Long = 0,
+    compositeAirQualityCount: Long = 0,
 ) = SensorStatisticsRaw(
     siteId = siteId,
     siteName = siteName,
@@ -134,4 +138,8 @@ private fun createSensorStatisticsRaw(
     temperatureHumidityCount = temperatureHumidityCount,
     fireCount = fireCount,
     wasteFillLevelCount = wasteFillLevelCount,
+    forestFireCount = forestFireCount,
+    odorMonitorCount = odorMonitorCount,
+    peopleCounterCount = peopleCounterCount,
+    compositeAirQualityCount = compositeAirQualityCount,
 )

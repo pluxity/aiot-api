@@ -110,11 +110,62 @@ inline fun <T> List<T>.buildListMetricMap(
 // 공통 메트릭 정의
 object SensorMetrics {
     val CLIMATE = SensorType.TEMPERATURE_HUMIDITY.deviceProfiles.map { it.toMetricDefinition() }
-    val WASTE_FILL_LEVEL = SensorType.WASTE_FILL_LEVEL.deviceProfiles.map { it.toMetricDefinition() }
-    val FOREST_FIRE = SensorType.FOREST_FIRE.deviceProfiles.map { it.toMetricDefinition() }
-    val ODOR_MONITOR = SensorType.ODOR_MONITOR.deviceProfiles.map { it.toMetricDefinition() }
+
+    /**
+     * 조회 대상은 이벤트 조건 대상(deviceProfiles)보다 넓다.
+     * ContainerModuleId와 HighThreshold는 적재/조회만 하고 조건 평가에는 쓰지 않는다.
+     */
+    val WASTE_FILL_LEVEL =
+        (
+            SensorType.WASTE_FILL_LEVEL.deviceProfiles +
+                listOf(DeviceProfileEnum.CONTAINER_MODULE_ID, DeviceProfileEnum.HIGH_THRESHOLD)
+        ).map { it.toMetricDefinition() }
+    val FOREST_FIRE =
+        (
+            SensorType.FOREST_FIRE.deviceProfiles +
+                listOf(
+                    DeviceProfileEnum.TEMPERATURE,
+                    DeviceProfileEnum.HUMIDITY,
+                    DeviceProfileEnum.CO2,
+                    DeviceProfileEnum.CO,
+                    DeviceProfileEnum.TVOC,
+                    DeviceProfileEnum.FIRE_CAUSE_MASK,
+                )
+        ).map { it.toMetricDefinition() }
+    val ODOR_MONITOR =
+        (
+            SensorType.ODOR_MONITOR.deviceProfiles +
+                listOf(DeviceProfileEnum.TEMPERATURE, DeviceProfileEnum.HUMIDITY)
+        ).map { it.toMetricDefinition() }
     val PEOPLE_COUNTER = SensorType.PEOPLE_COUNTER.deviceProfiles.map { it.toMetricDefinition() }
-    val COMPOSITE_AIR_QUALITY = SensorType.COMPOSITE_AIR_QUALITY.deviceProfiles.map { it.toMetricDefinition() }
+    val COMPOSITE_AIR_QUALITY =
+        (
+            SensorType.COMPOSITE_AIR_QUALITY.deviceProfiles +
+                listOf(DeviceProfileEnum.WIND_DIRECTION, DeviceProfileEnum.LED_LIGHT)
+        ).map { it.toMetricDefinition() }
+
+    /**
+     * 시계열 조회는 버킷마다 mean을 적용하므로, 평균이 값의 의미를 잃는 항목은 제외한다.
+     * Boolean(FireDetection), 비트 마스크(FireCauseMask), 식별 값(ContainerModuleId),
+     * 방위각(WindDirection), 상태값(LED Light)이 여기 해당한다. 현재 값은 최신값 조회로 확인한다.
+     */
+    private val NOT_AVERAGEABLE =
+        setOf(
+            DeviceProfileEnum.CONTAINER_MODULE_ID.fieldKey,
+            DeviceProfileEnum.FOREST_FIRE_DETECTION.fieldKey,
+            DeviceProfileEnum.FIRE_CAUSE_MASK.fieldKey,
+            DeviceProfileEnum.WIND_DIRECTION.fieldKey,
+            DeviceProfileEnum.LED_LIGHT.fieldKey,
+        )
+
+    val CLIMATE_SERIES = CLIMATE.averageable()
+    val WASTE_FILL_LEVEL_SERIES = WASTE_FILL_LEVEL.averageable()
+    val FOREST_FIRE_SERIES = FOREST_FIRE.averageable()
+    val ODOR_MONITOR_SERIES = ODOR_MONITOR.averageable()
+    val PEOPLE_COUNTER_SERIES = PEOPLE_COUNTER.averageable()
+    val COMPOSITE_AIR_QUALITY_SERIES = COMPOSITE_AIR_QUALITY.averageable()
+
+    private fun List<MetricDefinition>.averageable() = filterNot { it.key in NOT_AVERAGEABLE }
 }
 
 private fun createDeviceDataResponse(

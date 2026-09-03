@@ -154,12 +154,15 @@ interface SensorDataProcessor {
         // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
         val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
 
-        val matched =
+        // 조건 대상 항목이 하나도 오지 않았다면 판단 근거가 없으므로 상태를 그대로 둔다
+        val evaluable =
             values.mapNotNull { (fieldKey, value) ->
-                // sensorType.deviceProfiles에서 해당 fieldKey의 프로필 찾기
-                val deviceProfile =
-                    sensorType.deviceProfiles.find { it.fieldKey == fieldKey } ?: return@mapNotNull null
+                sensorType.deviceProfiles.find { it.fieldKey == fieldKey }?.let { Triple(fieldKey, value, it) }
+            }
+        if (evaluable.isEmpty()) return
 
+        val matched =
+            evaluable.mapNotNull { (fieldKey, value, deviceProfile) ->
                 eventConditionRepository
                     .findAllByObjectIdAndFieldKey(sensorType.objectId, fieldKey)
                     .filter { it.level != ConditionLevel.NORMAL && it.isActivate }

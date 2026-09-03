@@ -143,6 +143,29 @@ object SensorMetrics {
             SensorType.COMPOSITE_AIR_QUALITY.deviceProfiles +
                 listOf(DeviceProfileEnum.WIND_DIRECTION, DeviceProfileEnum.LED_LIGHT)
         ).map { it.toMetricDefinition() }
+
+    /**
+     * 시계열 조회는 버킷마다 mean을 적용하므로, 평균이 값의 의미를 잃는 항목은 제외한다.
+     * Boolean(FireDetection), 비트 마스크(FireCauseMask), 식별 값(ContainerModuleId),
+     * 방위각(WindDirection), 상태값(LED Light)이 여기 해당한다. 현재 값은 최신값 조회로 확인한다.
+     */
+    private val NOT_AVERAGEABLE =
+        setOf(
+            DeviceProfileEnum.CONTAINER_MODULE_ID.fieldKey,
+            DeviceProfileEnum.FOREST_FIRE_DETECTION.fieldKey,
+            DeviceProfileEnum.FIRE_CAUSE_MASK.fieldKey,
+            DeviceProfileEnum.WIND_DIRECTION.fieldKey,
+            DeviceProfileEnum.LED_LIGHT.fieldKey,
+        )
+
+    val CLIMATE_SERIES = CLIMATE.averageable()
+    val WASTE_FILL_LEVEL_SERIES = WASTE_FILL_LEVEL.averageable()
+    val FOREST_FIRE_SERIES = FOREST_FIRE.averageable()
+    val ODOR_MONITOR_SERIES = ODOR_MONITOR.averageable()
+    val PEOPLE_COUNTER_SERIES = PEOPLE_COUNTER.averageable()
+    val COMPOSITE_AIR_QUALITY_SERIES = COMPOSITE_AIR_QUALITY.averageable()
+
+    private fun List<MetricDefinition>.averageable() = filterNot { it.key in NOT_AVERAGEABLE }
 }
 
 private fun createDeviceDataResponse(

@@ -3,6 +3,7 @@ package com.pluxity.aiot.global.lifecycle
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.SmartLifecycle
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
@@ -23,10 +24,8 @@ abstract class RetryingLifecycle(
     private val initialRetryDelaySeconds: Long = DEFAULT_INITIAL_RETRY_DELAY_SECONDS,
     private val maxRetryDelaySeconds: Long = DEFAULT_MAX_RETRY_DELAY_SECONDS,
 ) : SmartLifecycle {
-    private val scheduler =
-        Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "$name-lifecycle-retry").apply { isDaemon = true }
-        }
+    @Volatile
+    private var scheduler: ScheduledExecutorService? = null
 
     private val lock = Any()
 
@@ -65,6 +64,10 @@ abstract class RetryingLifecycle(
         synchronized(lock) {
             stopped = false
             active = true
+            scheduler =
+                Executors.newSingleThreadScheduledExecutor { runnable ->
+                    Thread(runnable, "$name-lifecycle-retry").apply { isDaemon = true }
+                }
         }
         log.info { "$name 연동 시작..." }
         attempt(initialRetryDelaySeconds)
@@ -78,6 +81,8 @@ abstract class RetryingLifecycle(
             initialized = false
             retryTask?.cancel(false)
             retryTask = null
+            scheduler?.shutdownNow()
+            scheduler = null
             shutdown()
         }
     }
@@ -97,7 +102,7 @@ abstract class RetryingLifecycle(
                 if (stopped) return
                 log.error(e) { "$name 연동 초기화 실패, ${retryDelaySeconds}초 후 재시도: ${e.message}" }
                 retryTask =
-                    scheduler.schedule(
+                    scheduler?.schedule(
                         { attempt((retryDelaySeconds * 2).coerceAtMost(maxRetryDelaySeconds)) },
                         retryDelaySeconds,
                         TimeUnit.SECONDS,

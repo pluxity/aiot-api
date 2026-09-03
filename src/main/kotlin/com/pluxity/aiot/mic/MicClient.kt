@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.bodyToMono
 
 private val log = KotlinLogging.logger {}
 
@@ -41,10 +42,10 @@ class MicClient(
         val result =
             client
                 .post()
-                .uri("/auth/token")
+                .uri("$API_PREFIX/auth/token")
                 .bodyValue(MicLoginRequest(micProperties.username, micProperties.password))
                 .retrieve()
-                .bodyToMono(MicLoginResult::class.java)
+                .bodyToMono<MicLoginResult>()
                 .block()
                 ?: throw CustomException(ErrorCode.MIC_LOGIN_FAILED, "응답 없음")
 
@@ -78,7 +79,7 @@ class MicClient(
                 .get()
                 .uri {
                     it
-                        .path("/mics")
+                        .path("$API_PREFIX/mics")
                         .queryParam("page", page)
                         .queryParam("size", size)
                         .build()
@@ -98,7 +99,7 @@ class MicClient(
             block()
         } catch (e: WebClientResponseException) {
             if (e.statusCode != HttpStatus.UNAUTHORIZED) {
-                throw CustomException(ErrorCode.MIC_API_ERROR, e.message ?: "알 수 없는 오류")
+                throw CustomException(ErrorCode.MIC_API_ERROR, e.message)
             }
             log.warn { "AI 마이크 API 401, 재로그인 후 재시도" }
             retryAfterLogin(block)
@@ -116,5 +117,10 @@ class MicClient(
         } catch (e: Exception) {
             throw CustomException(ErrorCode.MIC_API_ERROR, e.message ?: "알 수 없는 오류")
         }
+    }
+
+    companion object {
+        /** 업체 API는 모든 엔드포인트가 이 접두사 아래에 있다. baseUrl에는 호스트만 설정한다 */
+        const val API_PREFIX = "/api/v1"
     }
 }

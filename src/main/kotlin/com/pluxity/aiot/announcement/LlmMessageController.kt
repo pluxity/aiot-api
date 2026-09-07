@@ -5,7 +5,6 @@ import com.pluxity.aiot.global.annotation.ResponseCreated
 import com.pluxity.aiot.global.response.DataResponseBody
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Parameter
-import kotlinx.coroutines.runBlocking
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -25,9 +24,7 @@ class LlmMessageController(
     @ResponseCreated
     fun generateMessage(): ResponseEntity<Void> {
         log.info { "LLM 메시지 생성 요청" }
-        runBlocking {
-            llmMessageService.generateAndSaveMessage()
-        }
+        llmMessageService.generateAndSaveMessage()
         return ResponseEntity.noContent().build()
     }
 

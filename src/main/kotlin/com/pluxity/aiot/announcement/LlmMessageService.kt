@@ -7,6 +7,7 @@ import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.announcement.dto.LlmMessageResponse
 import com.pluxity.aiot.announcement.dto.LlmRequest
 import com.pluxity.aiot.announcement.dto.LlmResponse
+import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.InfluxdbProperties
@@ -16,23 +17,17 @@ import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.awaitBody
+import org.springframework.web.client.RestClient
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 
 private val log = KotlinLogging.logger {}
 
@@ -43,12 +38,14 @@ class LlmMessageService(
     private val llmMessageRepository: LlmMessageRepository,
     private val siteRepository: SiteRepository,
     llmProperties: LlmProperties,
-    webClientBuilder: WebClient.Builder,
+    restClientFactory: RestClientFactory,
 ) {
-    private val webClient: WebClient = webClientBuilder.baseUrl(llmProperties.baseUrl).build()
-    private val semaphore: Semaphore = Semaphore(llmProperties.concurrencyLimit)
+    private val client: RestClient = restClientFactory.createClient(llmProperties.baseUrl)
 
-    suspend fun generateAndSaveMessage() {
+    /** 가상 스레드는 스레드를 공급할 뿐 동시 호출 상한을 대신하지 않는다. LLM 쪽 상한은 그대로 둔다. */
+    private val semaphore = Semaphore(llmProperties.concurrencyLimit)
+
+    fun generateAndSaveMessage() {
         // 1. 모든 사이트 조회
         val sites = siteRepository.findAll()
 
@@ -66,25 +63,27 @@ class LlmMessageService(
         val yesterday = today.minusDays(1)
 
         // 3. 각 사이트별로 병렬로 메시지 생성
-        coroutineScope {
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             sites
                 .map { site ->
-                    async {
-                        semaphore.withPermit {
-                            try {
-                                generateMessageForSite(site, yesterday, today, targetHour)
-                            } catch (e: Exception) {
-                                log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
-                            }
+                    executor.submit {
+                        semaphore.acquire()
+                        try {
+                            generateMessageForSite(site, yesterday, today, targetHour)
+                        } catch (e: Exception) {
+                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                        } finally {
+                            semaphore.release()
                         }
                     }
-                }.awaitAll()
+                    // close()는 완료를 기다려주지만 실패를 알려주지 않는다
+                }.forEach { it.get() }
         }
 
         log.info { "모든 사이트의 LLM 메시지 생성 완료" }
     }
 
-    private suspend fun generateMessageForSite(
+    private fun generateMessageForSite(
         site: Site,
         yesterday: LocalDate,
         today: LocalDate,
@@ -109,13 +108,15 @@ class LlmMessageService(
             )
 
         // 3. 외부 LLM API 호출
+        // WebClient의 awaitBody는 빈 응답에 예외를 던졌지만 RestClient는 null을 돌려준다
         val llmResponse =
-            webClient
+            client
                 .post()
                 .uri("/generate/temperature")
-                .bodyValue(llmRequest)
+                .body(llmRequest)
                 .retrieve()
-                .awaitBody<LlmResponse>()
+                .body(LlmResponse::class.java)
+                ?: throw CustomException(ErrorCode.LLM_RESPONSE_EMPTY)
 
         val generatedMessage = llmResponse.generatedText
         log.info { "[${site.name}] 생성된 LLM 메시지: $generatedMessage" }
@@ -130,59 +131,56 @@ class LlmMessageService(
                 message = generatedMessage,
             )
 
-        withContext(Dispatchers.IO) {
-            llmMessageRepository.save(llmMessage)
-        }
+        llmMessageRepository.save(llmMessage)
         log.info { "[${site.name}] LLM 메시지 저장 완료: ID=${llmMessage.id}" }
     }
 
-    private suspend fun getHourlyAverageTemperature(
+    private fun getHourlyAverageTemperature(
         date: LocalDate,
         hour: Int,
         siteId: Long,
-    ): Double =
-        withContext(Dispatchers.IO) {
-            // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
-            val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
-            val endOfHour =
-                date
-                    .atTime(hour, 0)
-                    .plusHours(1)
-                    .atZone(ZoneId.of("Asia/Seoul"))
-                    .toInstant()
+    ): Double {
+        // 해당 날짜의 특정 시간대 (hour:00 ~ hour+1:00)
+        val startOfHour = date.atTime(hour, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant()
+        val endOfHour =
+            date
+                .atTime(hour, 0)
+                .plusHours(1)
+                .atZone(ZoneId.of("Asia/Seoul"))
+                .toInstant()
 
-            // 온습도계 센서 타입 조회
-            val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
-            val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
+        // 온습도계 센서 타입 조회
+        val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
+        val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
 
-            // InfluxDB 쿼리 생성 (facilityId로 필터링)
-            val query =
-                Flux
-                    .from(influxdbProperties.bucket)
-                    .range(startOfHour, endOfHour)
-                    .filter(
-                        Restrictions.and(
-                            Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
-                            Restrictions.field().equal(temperatureField),
-                            Restrictions.tag("facilityId").equal(siteId.toString()),
-                        ),
-                    ).mean("_value")
-                    .toString()
+        // InfluxDB 쿼리 생성 (facilityId로 필터링)
+        val query =
+            Flux
+                .from(influxdbProperties.bucket)
+                .range(startOfHour, endOfHour)
+                .filter(
+                    Restrictions.and(
+                        Restrictions.measurement().equal(temperatureHumiditySensor.measureName),
+                        Restrictions.field().equal(temperatureField),
+                        Restrictions.tag("facilityId").equal(siteId.toString()),
+                    ),
+                ).mean("_value")
+                .toString()
 
-            log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
+        log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
 
-            // 쿼리 실행
-            val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
+        // 쿼리 실행
+        val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
 
-            // 평균 온도 추출
-            val avgTemp =
-                results
-                    .firstOrNull()
-                    ?.value
-                    ?: 0.0
+        // 평균 온도 추출
+        val avgTemp =
+            results
+                .firstOrNull()
+                ?.value
+                ?: 0.0
 
-            String.format("%.1f", avgTemp).toDouble()
-        }
+        return String.format("%.1f", avgTemp).toDouble()
+    }
 
     @Transactional(readOnly = true)
     fun findAll(

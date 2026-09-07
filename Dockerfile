@@ -21,6 +21,9 @@ RUN ./gradlew clean build -x test --no-daemon
 # Stage 2: Runtime image
 FROM eclipse-temurin:25-jdk-alpine
 
+# Application timestamps are stored as local time, so the container must run in KST
+ENV TZ=Asia/Seoul
+
 # Set the working directory inside the container
 WORKDIR /app
 

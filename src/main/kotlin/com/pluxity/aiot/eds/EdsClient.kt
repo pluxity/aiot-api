@@ -8,7 +8,7 @@ import com.pluxity.aiot.eds.dto.EdsRecordStreamRequest
 import com.pluxity.aiot.eds.dto.EdsResponse
 import com.pluxity.aiot.eds.dto.EdsStreamResult
 import com.pluxity.aiot.eds.dto.EdsWebSocketUrlResult
-import com.pluxity.aiot.global.config.WebClientFactory
+import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.EdsProperties
@@ -16,18 +16,24 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.client.RestClient
 
 private val log = KotlinLogging.logger {}
 
 @Component
 @ConditionalOnProperty("eds.enabled", havingValue = "true")
 class EdsClient(
-    webClientFactory: WebClientFactory,
+    restClientFactory: RestClientFactory,
     private val edsProperties: EdsProperties,
 ) {
-    private val client: WebClient = webClientFactory.createClient(edsProperties.baseUrl)
+    /**
+     * EDS는 HTTP 상태가 아니라 응답 본문의 code로 성패를 판정한다.
+     * 상태코드에 예외를 던지면 아래 code 검사에 닿지 못해 도메인 에러 매핑이 사라진다.
+     */
+    private val client: RestClient = restClientFactory.createClient(edsProperties.baseUrl, throwOnHttpError = false)
+
+    /** keepAlive 스케줄러 스레드가 쓰고 요청 스레드가 읽는다. */
+    @Volatile
     private lateinit var apiKey: String
 
     fun getApiKey(): String = apiKey
@@ -43,10 +49,9 @@ class EdsClient(
             client
                 .post()
                 .uri("/api/eds/v1/external/users/login")
-                .bodyValue(request)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
-                }.block()
+                .body(request)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<EdsLoginResult>>() {})
                 ?: throw CustomException(ErrorCode.EDS_LOGIN_FAILED, "응답 없음")
 
         if (response.code != 200 || response.result == null) {
@@ -64,9 +69,8 @@ class EdsClient(
                     .post()
                     .uri("/api/eds/v1/external/users/keepalive")
                     .header("api-key", apiKey)
-                    .exchangeToMono { resp ->
-                        resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<Void>>() {})
-                    }.block()
+                    .retrieve()
+                    .body(object : ParameterizedTypeReference<EdsResponse<Void>>() {})
                     ?: throw CustomException(ErrorCode.EDS_API_ERROR, "keepAlive 응답 없음")
 
             if (response.code != 200) {
@@ -85,9 +89,8 @@ class EdsClient(
                 .post()
                 .uri("/api/eds/v1/external/camera/list")
                 .header("api-key", apiKey)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<List<EdsCameraInfo>>>() {})
-                }.block()
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<List<EdsCameraInfo>>>() {})
                 ?: throw CustomException(ErrorCode.EDS_API_ERROR, "카메라 목록 응답 없음")
 
         if (response.code != 200) {
@@ -105,10 +108,9 @@ class EdsClient(
                 .post()
                 .uri("/api/eds/v1/external/camera/stream/realtime")
                 .header("api-key", apiKey)
-                .bodyValue(request)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
-                }.block()
+                .body(request)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
                 ?: throw CustomException(ErrorCode.EDS_API_ERROR, "실시간 스트림 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
@@ -124,10 +126,9 @@ class EdsClient(
                 .post()
                 .uri("/api/eds/v1/external/camera/stream/record")
                 .header("api-key", apiKey)
-                .bodyValue(request)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
-                }.block()
+                .body(request)
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<EdsStreamResult>>() {})
                 ?: throw CustomException(ErrorCode.EDS_API_ERROR, "녹화 스트림 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
@@ -137,20 +138,31 @@ class EdsClient(
         return response.result
     }
 
+    /**
+     * WebClient의 maxInMemorySize가 하던 상한을 스트림 단계에서 되살린다.
+     * Content-Length는 chunked면 -1이고 서버가 과소 신고할 수도 있어 판단 근거가 못 된다.
+     */
     fun getEventThumbnail(index: Long): ByteArray? =
         try {
             client
                 .get()
                 .uri("/api/eds/v1/external/event/thumbnail?index=$index&type=evtImg")
                 .header("api-key", apiKey)
-                .exchangeToMono { resp ->
-                    if (resp.statusCode().is2xxSuccessful) {
-                        resp.bodyToMono<ByteArray>()
+                .exchange { _, response ->
+                    if (!response.statusCode.is2xxSuccessful) {
+                        null
                     } else {
-                        reactor.core.publisher.Mono
-                            .empty()
+                        response.body.use { input ->
+                            val bytes = input.readNBytes(MAX_THUMBNAIL_BYTES + 1)
+                            if (bytes.size > MAX_THUMBNAIL_BYTES) {
+                                log.warn { "EDS 썸네일이 상한을 넘어 버린다 (index=$index)" }
+                                null
+                            } else {
+                                bytes
+                            }
+                        }
                     }
-                }.block()
+                }
         } catch (e: Exception) {
             log.warn { "EDS 이벤트 썸네일 조회 실패 (index=$index): ${e.message}" }
             null
@@ -162,9 +174,8 @@ class EdsClient(
                 .get()
                 .uri("/api/eds/v1/external/websocket/url?external_flag=2")
                 .header("api-key", apiKey)
-                .exchangeToMono { resp ->
-                    resp.bodyToMono(object : ParameterizedTypeReference<EdsResponse<EdsWebSocketUrlResult>>() {})
-                }.block()
+                .retrieve()
+                .body(object : ParameterizedTypeReference<EdsResponse<EdsWebSocketUrlResult>>() {})
                 ?: throw CustomException(ErrorCode.EDS_API_ERROR, "웹소켓 URL 응답 없음")
 
         if (response.code != 200 || response.result == null) {
@@ -172,5 +183,10 @@ class EdsClient(
         }
 
         return response.result.wsUrl
+    }
+
+    companion object {
+        /** readNBytes가 Int를 받는다 */
+        private const val MAX_THUMBNAIL_BYTES = 1024 * 1024
     }
 }

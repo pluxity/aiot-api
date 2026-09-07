@@ -4,28 +4,29 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.client.RestClient
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.time.Duration
 
 private val log = KotlinLogging.logger {}
 
 @Component
 @Profile("local")
 class NgrokConfig(
-    webClientFactory: WebClientFactory,
+    restClientFactory: RestClientFactory,
 ) {
     private var ngrokUrl: String = "http://localhost:8080" // 기본값으로 초기화
 
     // getter 메서드 추가
     fun getNgrokUrl(): String = ngrokUrl
 
-    private val client: WebClient =
-        webClientFactory
-            .createClient("http://localhost:4040")
-            .mutate()
-            .build()
+    // 로컬 편의 기능이라 ngrok이 안 떠 있으면 빨리 포기해야 한다
+    private val client: RestClient =
+        restClientFactory.createClient(
+            baseUrl = "http://localhost:4040",
+            connectionTimeoutMs = 2000,
+            readTimeoutMs = 5000,
+        )
 
     @PostConstruct
     fun initNgrokUrl() {
@@ -49,8 +50,8 @@ class NgrokConfig(
                 .uri("/api/tunnels")
                 .retrieve()
                 .toBodilessEntity()
-                .timeout(Duration.ofSeconds(2))
-                .block() != null
+                .statusCode
+                .is2xxSuccessful
         } catch (_: Exception) {
             false
         }
@@ -85,9 +86,7 @@ class NgrokConfig(
                     .get()
                     .uri("/api/tunnels")
                     .retrieve()
-                    .bodyToMono(String::class.java)
-                    .timeout(Duration.ofSeconds(5))
-                    .block() ?: throw RuntimeException("Empty response from Ngrok API")
+                    .body(String::class.java) ?: throw RuntimeException("Empty response from Ngrok API")
 
             if (!jsonResponse.contains("\"public_url\":\"")) {
                 throw RuntimeException("Invalid response from Ngrok API")

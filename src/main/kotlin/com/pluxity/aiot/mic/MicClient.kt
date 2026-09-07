@@ -1,6 +1,6 @@
 package com.pluxity.aiot.mic
 
-import com.pluxity.aiot.global.config.WebClientFactory
+import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.MicProperties
@@ -13,20 +13,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientException
-import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
+import org.springframework.web.client.RestClientResponseException
+import org.springframework.web.client.body
 
 private val log = KotlinLogging.logger {}
 
 @Component
 @ConditionalOnProperty("mic.enabled", havingValue = "true")
 class MicClient(
-    webClientFactory: WebClientFactory,
+    restClientFactory: RestClientFactory,
     private val micProperties: MicProperties,
 ) {
-    private val client: WebClient = webClientFactory.createClient(micProperties.baseUrl)
+    private val client: RestClient = restClientFactory.createClient(micProperties.baseUrl)
 
     @Volatile
     private var accessToken: String? = null
@@ -44,10 +44,9 @@ class MicClient(
             client
                 .post()
                 .uri("$API_PREFIX/auth/token")
-                .bodyValue(MicLoginRequest(micProperties.username, micProperties.password))
+                .body(MicLoginRequest(micProperties.username, micProperties.password))
                 .retrieve()
-                .bodyToMono<MicLoginResult>()
-                .block()
+                .body<MicLoginResult>()
                 ?: throw CustomException(ErrorCode.MIC_LOGIN_FAILED, "응답 없음")
 
         accessToken = result.accessToken
@@ -86,8 +85,7 @@ class MicClient(
                         .build()
                 }.headers { headers -> headers.setBearerAuth(getAccessToken()) }
                 .retrieve()
-                .bodyToMono(object : ParameterizedTypeReference<MicPageResult<MicInfo>>() {})
-                .block()
+                .body(object : ParameterizedTypeReference<MicPageResult<MicInfo>>() {})
                 ?: throw CustomException(ErrorCode.MIC_API_ERROR, "마이크 목록 응답 없음")
         }
 
@@ -95,14 +93,14 @@ class MicClient(
      * 토큰 갱신 스케줄러가 만료를 놓친 경우를 대비해, 401이면 재로그인 후 한 번만 다시 호출한다.
      * 재로그인과 재시도에서 난 오류도 도메인 예외로 변환해, 일반 500으로 새어 나가지 않게 한다.
      *
-     * 연결 거부·DNS 실패·타임아웃은 WebClientRequestException이라 응답 예외의 하위 타입이 아니다.
+     * 연결 거부·DNS 실패·타임아웃은 ResourceAccessException이라 응답 예외의 하위 타입이 아니다.
      * 상위 타입으로 받지 않으면 업체 서버가 죽은 가장 흔한 상황에서만 502가 아닌 500이 나간다.
      */
     private fun <T> withRetryOnUnauthorized(block: () -> T): T =
         try {
             block()
-        } catch (e: WebClientException) {
-            if (e !is WebClientResponseException || e.statusCode != HttpStatus.UNAUTHORIZED) {
+        } catch (e: RestClientException) {
+            if (e !is RestClientResponseException || e.statusCode != HttpStatus.UNAUTHORIZED) {
                 throw CustomException(ErrorCode.MIC_API_ERROR, e.message)
             }
             log.warn { "AI 마이크 API 401, 재로그인 후 재시도" }

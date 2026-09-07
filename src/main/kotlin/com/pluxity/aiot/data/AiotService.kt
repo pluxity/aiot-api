@@ -45,19 +45,17 @@ class AiotService(
     private val featureQueryService: FeatureQueryService,
     private val featureStatusWriter: FeatureStatusWriter,
     mobiusConfigService: MobiusConfigService,
-    restClientFactory: RestClientFactory,
+    private val restClientFactory: RestClientFactory,
     private val serverDomainProperties: ServerDomainProperties,
 ) {
     @Autowired(required = false)
     private val ngrokConfig: NgrokConfig? = null
 
-    @Value("\${spring.profiles.active:local}")
+    @Value($$"${spring.profiles.active:local}")
     private val activeProfile: String = ""
 
-    @Value("\${server.port}")
+    @Value($$"${server.port}")
     private val serverPort: String = "8080"
-
-    private val restClientFactory = restClientFactory
 
     /** 주소 변경 이벤트 스레드가 갈아끼우고 요청 스레드가 읽는다. */
     @Volatile

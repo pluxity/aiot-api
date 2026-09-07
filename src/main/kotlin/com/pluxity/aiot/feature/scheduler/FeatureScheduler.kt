@@ -96,7 +96,6 @@ class FeatureScheduler(
         @Column(name = "_time") val time: Instant? = null,
     )
 
-    /** 읽기·HTTP·쓰기를 나눈다. HTTP가 트랜잭션 안에 있으면 응답을 기다리는 내내 커넥션을 쥔다. */
     @Profile("!local")
     @Scheduled(cron = "0 0 8 * * ?")
     fun scheduledBatteryDataUpdate() {

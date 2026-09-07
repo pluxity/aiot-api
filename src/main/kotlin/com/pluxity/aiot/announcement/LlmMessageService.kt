@@ -149,11 +149,9 @@ class LlmMessageService(
                 .atZone(ZoneId.of("Asia/Seoul"))
                 .toInstant()
 
-        // 온습도계 센서 타입 조회
         val temperatureHumiditySensor = SensorType.TEMPERATURE_HUMIDITY
         val temperatureField = DeviceProfileEnum.TEMPERATURE.fieldKey
 
-        // InfluxDB 쿼리 생성 (facilityId로 필터링)
         val query =
             Flux
                 .from(influxdbProperties.bucket)
@@ -169,10 +167,8 @@ class LlmMessageService(
 
         log.debug { "Temperature query for Site $siteId, $date $hour:00-${hour + 1}:00: $query" }
 
-        // 쿼리 실행
         val results = queryApi.query(query, influxdbProperties.org, TemperatureData::class.java)
 
-        // 평균 온도 추출
         val avgTemp =
             results
                 .firstOrNull()

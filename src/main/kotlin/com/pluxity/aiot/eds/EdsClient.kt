@@ -26,10 +26,7 @@ class EdsClient(
     restClientFactory: RestClientFactory,
     private val edsProperties: EdsProperties,
 ) {
-    /**
-     * EDS는 HTTP 상태가 아니라 응답 본문의 code로 성패를 판정한다.
-     * 상태코드에 예외를 던지면 아래 code 검사에 닿지 못해 도메인 에러 매핑이 사라진다.
-     */
+    /** EDS는 응답 본문의 code로 성패를 판정한다. 상태코드에 예외를 던지면 그 검사에 닿지 못한다. */
     private val client: RestClient = restClientFactory.createClient(edsProperties.baseUrl, throwOnHttpError = false)
 
     /** keepAlive 스케줄러 스레드가 쓰고 요청 스레드가 읽는다. */
@@ -138,10 +135,7 @@ class EdsClient(
         return response.result
     }
 
-    /**
-     * WebClient의 maxInMemorySize가 하던 상한을 스트림 단계에서 되살린다.
-     * Content-Length는 chunked면 -1이고 서버가 과소 신고할 수도 있어 판단 근거가 못 된다.
-     */
+    /** Content-Length는 chunked면 -1이고 과소 신고도 가능해, 상한은 스트림에서 걸어야 한다. */
     fun getEventThumbnail(index: Long): ByteArray? =
         try {
             client

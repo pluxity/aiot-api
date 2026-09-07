@@ -13,23 +13,17 @@ import io.mockk.every
 import io.mockk.mockk
 import java.net.InetSocketAddress
 
-/**
- * 배터리 값이 없는 것과 요청이 실패한 것은 다르다.
- *
- * 값이 없으면 null로 반영해 옛 수치를 지워야 하고, 요청이 실패했으면 건드리지 말아야 한다.
- * 둘을 뭉뚱그려 빼면 배터리가 빠진 기기가 며칠 전 수치를 계속 표시한다.
- */
+/** 값이 없는 것과 못 받은 것을 뭉뚱그리면 배터리가 빠진 기기가 옛 수치를 계속 표시한다. */
 class BatterySyncKoTest :
     BehaviorSpec({
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        // 값이 있는 기기
         server.createContext("/has-battery/3_1.2_0/data-report/la") { exchange ->
             val body = """{"m2m:cin":{"con":{"Battery Level":42}}}"""
             exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
             exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
             exchange.responseBody.use { it.write(body.toByteArray()) }
         }
-        // 배터리 항목이 없어 Mobius가 404를 주는 기기
+        // 배터리 항목이 없으면 Mobius가 404를 준다
         server.createContext("/no-battery/3_1.2_0/data-report/la") { exchange ->
             exchange.sendResponseHeaders(404, -1)
             exchange.close()

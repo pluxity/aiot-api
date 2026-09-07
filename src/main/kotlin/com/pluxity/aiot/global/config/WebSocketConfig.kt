@@ -43,9 +43,8 @@ class WebSocketConfig(
 @Configuration
 class AsyncConfig {
     /**
-     * 현재 @Async 사용처는 0개다. 그래도 지우면 안 된다. 지운다고 자동설정이 살아나지 않고
-     * (Executor 타입 빈이 둘 더 있어 계속 백오프), 나중에 붙는 @Async가
-     * AsyncExecutionInterceptor의 SimpleAsyncTaskExecutor 폴백(플랫폼·무제한·스프링 관리 밖)으로 떨어진다.
+     * 사용처가 0개여도 지우면 안 된다. 지운다고 자동설정이 살아나지 않고,
+     * 나중에 붙는 @Async가 플랫폼·무제한 폴백으로 떨어진다.
      */
     @Bean(name = ["taskExecutor"])
     @Primary
@@ -64,13 +63,9 @@ class AsyncConfig {
         }
 
     /**
-     * 이름이 정확히 taskScheduler여야 TaskSchedulerRouter가 익명 단일 스레드 폴백 대신 이 빈을 고른다.
-     *
-     * @Primary를 붙이면 안 된다. @Primary는 파라미터 이름 매칭을 이겨서, WebSocketConfig의
-     * 하트비트 주입이 이 빈으로 넘어와 분리가 무너진다.
-     *
-     * cron·fixedRate 작업은 매번 새 가상 스레드로 넘겨지지만 fixedDelay 작업은 스케줄러 스레드
-     * 하나에서 직접 돈다. fixedDelay가 여럿 필요해지면 ThreadPoolTaskScheduler로 바꿔야 한다.
+     * 이름이 정확히 taskScheduler여야 익명 단일 스레드 폴백 대신 이 빈이 쓰인다.
+     * @Primary를 붙이면 이름 매칭을 이겨 하트비트 주입이 이쪽으로 넘어온다.
+     * fixedDelay 작업은 스케줄러 스레드 하나에서 직접 도니 여럿 필요해지면 풀 기반으로 바꿔야 한다.
      */
     @Bean
     fun taskScheduler(): TaskScheduler =

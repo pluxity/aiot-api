@@ -13,6 +13,7 @@ import io.jsonwebtoken.security.Keys
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.stereotype.Service
 import org.springframework.web.util.WebUtils
+import java.time.Duration
 import java.util.Date
 import java.util.function.Function
 import javax.crypto.SecretKey
@@ -54,7 +55,7 @@ class JwtProvider(
     private fun buildToken(
         extraClaims: Map<String, Any>,
         username: String,
-        expiration: Long,
+        expiration: Duration,
         isRefreshToken: Boolean,
     ): String =
         Jwts
@@ -62,7 +63,7 @@ class JwtProvider(
             .claims(extraClaims)
             .subject(username)
             .issuedAt(Date(System.currentTimeMillis()))
-            .expiration(Date(System.currentTimeMillis() + expiration * 1000))
+            .expiration(Date(System.currentTimeMillis() + expiration.toMillis()))
             .signWith(getSecretKey(isRefreshToken), Jwts.SIG.HS256)
             .compact()
 

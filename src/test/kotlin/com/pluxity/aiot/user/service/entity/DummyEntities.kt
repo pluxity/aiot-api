@@ -18,7 +18,7 @@ fun dummyUser(
 fun dummyRefreshToken(
     username: String = "username",
     token: String = "token",
-    timeToLive: Int = 30,
+    timeToLive: Long = 30,
 ): RefreshToken = RefreshToken(username, token, timeToLive)
 
 fun dummyRole(

@@ -33,11 +33,12 @@ jwt:
   access-token:
     name: AccessToken
     secret: +iBcUJRWGvl+94+ow4nXV1fzWIq4rph8x7MyRmrtWio=
-    expiration: 36000000
+    # Duration 표기(예: 30m, 10h, 10d). 단위 없는 숫자는 ms로 해석된다.
+    expiration: 10h
   refresh-token:
     name: RefreshToken
     secret: gtzRlqF6bIkmOi5i15A9G5xbLdwiAMmZi6JPOeemC1E=
-    expiration: 864000000
+    expiration: 10d
 
 user:
   init-password: test1234

@@ -7,16 +7,14 @@ import com.influxdb.query.dsl.functions.restriction.Restrictions
 import com.pluxity.aiot.data.AiotService
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.feature.Feature
+import com.pluxity.aiot.feature.FeatureQueryService
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.feature.FeatureStatusWriter
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.ConnectionErrorPayload
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.supervisorScope
 import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -34,6 +32,8 @@ class FeatureScheduler(
     private val queryApi: QueryApi,
     private val influxdbProperties: InfluxdbProperties,
     private val aiotService: AiotService,
+    private val featureQueryService: FeatureQueryService,
+    private val featureStatusWriter: FeatureStatusWriter,
     private val messageSender: StompMessageSender,
 ) {
     @Profile("!local")
@@ -98,21 +98,9 @@ class FeatureScheduler(
 
     @Profile("!local")
     @Scheduled(cron = "0 0 8 * * ?")
-    @Transactional
     fun scheduledBatteryDataUpdate() {
-        val features = featureRepository.findAll()
-        runBlocking {
-            supervisorScope {
-                features
-                    .map { feature ->
-                        async {
-                            // async로 병렬 처리
-                            val batteryData = aiotService.fetchDeviceBatteryData(feature.deviceId)
-                            feature.updateBatteryLevel(batteryData)
-                            log.info { "deviceId: ${feature.deviceId}, Battery Level: $batteryData, update level: ${feature.batteryLevel}" }
-                        }
-                    }.awaitAll()
-            }
-        }
+        val deviceIds = featureQueryService.findAllDeviceIds()
+        val levels = aiotService.fetchAllBatteryLevels(deviceIds)
+        featureStatusWriter.applyBatteryLevels(levels)
     }
 }

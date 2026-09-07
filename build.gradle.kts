@@ -44,6 +44,7 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-spatial")
     implementation("org.locationtech.jts:jts-core:1.20.0")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    // 사용처 없음. webflux가 남는 이상 지울 실익이 적어 EdsWebSocketClient 전환 시 함께 뺀다
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:2.0.0")

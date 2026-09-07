@@ -3,17 +3,18 @@ package com.pluxity.aiot.eds
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.eds.dto.EdsCrowdCountData
 import com.pluxity.aiot.eds.dto.EdsEventData
+import com.pluxity.aiot.global.properties.EdsProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.socket.WebSocketMessage
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient
 import reactor.core.Disposable
+import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.netty.http.client.HttpClient
 import reactor.util.retry.Retry
 import java.net.URI
-import java.time.Duration
 
 private val log = KotlinLogging.logger {}
 
@@ -23,8 +24,13 @@ class EdsWebSocketClient(
     private val edsClient: EdsClient,
     private val objectMapper: ObjectMapper,
     private val edsFacade: EdsFacade,
+    private val edsProperties: EdsProperties,
 ) {
+    // disconnect()는 라이프사이클 스레드에서, 읽기는 Reactor 스레드에서 일어난다
+    @Volatile
     private var disposable: Disposable? = null
+
+    @Volatile
     private var stopped = false
 
     fun connect() {
@@ -34,25 +40,32 @@ class EdsWebSocketClient(
         val client = ReactorNettyWebSocketClient(HttpClient.create())
 
         disposable =
-            client
-                .execute(buildUri()) { session ->
-                    log.info { "EDS WebSocket 연결 성공" }
+            Mono
+                // 재구독마다 api-key를 다시 읽는다. defer가 없으면 connect() 시점의 키가 박혀,
+                // keepAlive 실패로 재로그인한 뒤 끊기면 만료된 키로 영원히 재시도한다
+                .defer {
+                    client.execute(buildUri()) { session ->
+                        log.info { "EDS WebSocket 연결 성공" }
 
-                    session
-                        .receive()
-                        .filter { it.type == WebSocketMessage.Type.TEXT }
-                        .map { it.payloadAsText }
-                        .publishOn(Schedulers.boundedElastic())
-                        .doOnNext { handleMessage(it) }
-                        .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
-                        .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
-                        .then()
-                }.doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
-                .repeatWhen { it.delayElements(Duration.ofSeconds(5)).takeWhile { !stopped } }
+                        session
+                            .receive()
+                            .filter { it.type == WebSocketMessage.Type.TEXT }
+                            .map { it.payloadAsText }
+                            .publishOn(Schedulers.boundedElastic())
+                            .doOnNext { handleMessage(it) }
+                            .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
+                            .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
+                            .then()
+                    }
+                }
+                // repeatWhen·retryWhen은 자기 상류에 재구독한다. 이 아래에 두면 최초 구독만 옮겨진다
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
+                .repeatWhen { it.delayElements(edsProperties.reconnectDelay).takeWhile { !stopped } }
                 .retryWhen(
                     Retry
-                        .backoff(Long.MAX_VALUE, Duration.ofSeconds(5))
-                        .maxBackoff(Duration.ofMinutes(2))
+                        .backoff(Long.MAX_VALUE, edsProperties.reconnectDelay)
+                        .maxBackoff(edsProperties.reconnectMaxDelay)
                         .filter { !stopped }
                         .doBeforeRetry { log.info { "EDS WebSocket 재연결 시도 (${it.totalRetries() + 1}회)" } },
                 ).subscribe()

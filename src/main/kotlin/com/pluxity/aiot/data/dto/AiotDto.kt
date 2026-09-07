@@ -50,3 +50,10 @@ data class SubscriptionM2mSub(
 data class SubscriptionEnc(
     val net: List<Int> = listOf(3),
 )
+
+/** 동기화 단계 사이로 넘기는 값. 엔티티를 넘기면 detached가 되어 변경이 flush되지 않는다. */
+data class DeviceStatus(
+    val longitude: Double,
+    val latitude: Double,
+    val batteryLevel: Int?,
+)

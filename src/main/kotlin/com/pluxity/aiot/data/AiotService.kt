@@ -1,5 +1,6 @@
 package com.pluxity.aiot.data
 
+import com.pluxity.aiot.data.dto.DeviceStatus
 import com.pluxity.aiot.data.dto.LocationData
 import com.pluxity.aiot.data.dto.MobiusBatteryResponse
 import com.pluxity.aiot.data.dto.MobiusLocationResponse
@@ -8,144 +9,176 @@ import com.pluxity.aiot.data.dto.SubscriptionM2mSub
 import com.pluxity.aiot.data.dto.SubscriptionRequest
 import com.pluxity.aiot.data.subscription.dto.SubscriptionCinResponse
 import com.pluxity.aiot.data.subscription.dto.SubscriptionRepListResponse
-import com.pluxity.aiot.feature.Feature
+import com.pluxity.aiot.feature.FeatureQueryService
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.feature.FeatureStatusWriter
+import com.pluxity.aiot.feature.parseDeviceName
 import com.pluxity.aiot.global.config.NgrokConfig
-import com.pluxity.aiot.global.config.WebClientFactory
+import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.mobius.MobiusConfigService
 import com.pluxity.aiot.mobius.MobiusUrlUpdatedEvent
 import com.pluxity.aiot.sensor.type.AbbreviationData
-import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.supervisorScope
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
+import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientResponseException
+import org.springframework.web.client.body
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
 import java.time.Instant
 import java.time.LocalDateTime
+import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 
 private val log = KotlinLogging.logger {}
 
 @Service
 class AiotService(
     private val featureRepository: FeatureRepository,
-    private val siteRepository: SiteRepository,
+    private val featureQueryService: FeatureQueryService,
+    private val featureStatusWriter: FeatureStatusWriter,
     mobiusConfigService: MobiusConfigService,
-    webClientFactory: WebClientFactory,
+    private val restClientFactory: RestClientFactory,
     private val serverDomainProperties: ServerDomainProperties,
 ) {
     @Autowired(required = false)
     private val ngrokConfig: NgrokConfig? = null
 
-    @Value("\${spring.profiles.active:local}")
+    @Value($$"${spring.profiles.active:local}")
     private val activeProfile: String = ""
 
-    @Value("\${server.port}")
+    @Value($$"${server.port}")
     private val serverPort: String = "8080"
 
-    private var cachedMobiusUrl: String = mobiusConfigService.currentUrl
-    private val client: WebClient =
-        webClientFactory
-            .createClient(cachedMobiusUrl)
+    /** 주소 변경 이벤트 스레드가 갈아끼우고 요청 스레드가 읽는다. */
+    @Volatile
+    private var client: RestClient = createMobiusClient(mobiusConfigService.currentUrl)
+
+    private fun createMobiusClient(baseUrl: String): RestClient =
+        restClientFactory
+            .createClient(baseUrl)
             .mutate()
             .defaultHeaders { headers ->
                 headers.setAll(createMobiusHeaders())
             }.build()
 
-    @Transactional
+    /**
+     * Reactor Netty가 호스트당 커넥션 풀로 걸고 있던 상한을 이어받는다.
+     * JDK HttpClient에는 대응 설정이 없어 그냥 옮기면 이 상한이 사라진다.
+     */
+    private val mobiusSemaphore = Semaphore(maxOf(Runtime.getRuntime().availableProcessors(), 8) * 2)
+
+    /**
+     * 실제로 client를 부르는 곳에서만 쓴다.
+     * fan-out 쪽에서 잡은 채 그 안에서 또 잡으면 자기를 기다리는 데드락이 된다.
+     */
+    private fun <T> mobiusLimiter(block: () -> T): T {
+        mobiusSemaphore.acquire()
+        return try {
+            block()
+        } finally {
+            mobiusSemaphore.release()
+        }
+    }
+
+    /**
+     * 트랜잭션을 붙이지 않는다. HTTP를 트랜잭션 안에서 돌면 응답을 기다리는 내내
+     * JDBC 커넥션을 쥐고 있게 된다.
+     */
     fun checkSynchronization() {
-        runBlocking {
-            val existFeatures = featureRepository.findAll()
-            val existingIds = existFeatures.mapNotNull { it.deviceId }
-            val features = fetchAllMobiusSensorPaths(existFeatures)
-            val newIds = features.map { it.deviceId }
-            val removedIds = existingIds - newIds.toSet()
-
-            featureRepository.deleteAllByDeviceIdIn(removedIds)
-            featureRepository.saveAll(features)
-        }
+        featureStatusWriter.applyPaths(fetchMobiusUril())
     }
 
-    @Transactional
     fun statusSynchronize() {
-        runBlocking {
-            val features = featureRepository.findAll()
-            log.info { "총 ${features.size}개의 Feature 위치 동기화 시작" }
+        val deviceIds = featureQueryService.findAllDeviceIds()
+        log.info { "총 ${deviceIds.size}개의 Feature 위치 동기화 시작" }
 
-            supervisorScope {
-                features
-                    .mapNotNull { feature ->
-                        async {
-                            val deviceId = feature.deviceId
-                            try {
-                                fetchDeviceLocationData(deviceId)?.let { locationData ->
-                                    val batteryLevel = fetchDeviceBatteryData(deviceId)
-                                    log.info { "Status 업데이트 성공: $deviceId (${locationData.latitude}, ${locationData.longitude})" }
-                                    val site =
-                                        siteRepository.findFirstByPointInPolygon(
-                                            locationData.longitude,
-                                            locationData.latitude,
-                                        )
-                                    feature.updateStatusInfo(
-                                        locationData.longitude,
-                                        locationData.latitude,
-                                        batteryLevel,
-                                        site,
-                                    )
-                                } ?: log.warn { "위치 데이터 없음: $deviceId" }
-                            } catch (e: Exception) {
-                                log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
-                            }
-                        }
-                    }.awaitAll()
-            }
+        featureStatusWriter.applyStatuses(fetchAllStatuses(deviceIds))
 
-            log.info { "위치 동기화 완료" }
-        }
+        log.info { "위치 동기화 완료" }
     }
 
-    suspend fun fetchDeviceBatteryData(deviceId: String): Int? =
-        client
-            .get()
-            .uri("/$deviceId/3_1.2_0/data-report/la")
-            .exchangeToMono { response ->
-                if (response.statusCode().is2xxSuccessful) {
-                    response.bodyToMono<MobiusBatteryResponse>()
-                } else {
-                    // 4xx, 5xx 상태코드는 null 반환 (예외 발생 안함)
-                    Mono.empty()
-                }
-            }.awaitSingleOrNull()
-            ?.cin
-            ?.con
-            ?.batteryLevel
+    /** 좌표가 없는 기기는 갱신할 것이 없어 뺀다. */
+    private fun fetchAllStatuses(deviceIds: List<String>): Map<String, DeviceStatus> =
+        fanOut(deviceIds, "위치") { deviceId ->
+            fetchDeviceLocationData(deviceId)?.let { locationData ->
+                val batteryLevel = fetchDeviceBatteryData(deviceId)
+                log.info { "Status 업데이트 성공: $deviceId (${locationData.latitude}, ${locationData.longitude})" }
+                DeviceStatus(locationData.longitude, locationData.latitude, batteryLevel)
+            } ?: run {
+                log.warn { "위치 데이터 없음: $deviceId" }
+                null
+            }
+        }.filterValues { it != null }
+            .mapValues { (_, status) -> status!! }
 
-    suspend fun fetchDeviceLocationData(deviceId: String): LocationData? {
-        val labels =
+    /**
+     * 값이 없는 기기도 null로 실어 보낸다. 빼버리면 옛 수치가 그대로 남는다.
+     * 요청 자체가 실패한 기기만 빠진다 — 못 받은 것을 null로 반영하면 멀쩡한 값을 지운다.
+     */
+    fun fetchAllBatteryLevels(deviceIds: List<String>): Map<String, Int?> = fanOut(deviceIds, "배터리") { fetchDeviceBatteryData(it) }
+
+    /**
+     * 트랜잭션 밖에서 돈다.
+     *
+     * 완료된 요청만 담고 값이 없으면 null로 남긴다. 실패한 요청은 아예 빼서
+     * 호출자가 "값 없음"과 "못 받음"을 구분할 수 있게 한다.
+     * 개별 실패가 전체를 멈추지 않도록 삼키고 로그만 남긴다.
+     */
+    private fun <T : Any> fanOut(
+        deviceIds: List<String>,
+        label: String,
+        fetch: (String) -> T?,
+    ): Map<String, T?> =
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            deviceIds
+                .map { deviceId ->
+                    executor.submit<Pair<String, T?>?> {
+                        try {
+                            deviceId to fetch(deviceId)
+                        } catch (e: Exception) {
+                            log.error(e) { "$label 데이터 가져오기 실패: $deviceId" }
+                            null
+                        }
+                    }
+                }.mapNotNull { it.get() }
+                .toMap()
+        }
+
+    /** 비-2xx는 예외 없이 null이다. 배터리 동기화 순회가 첫 실패에서 끊기면 안 된다. */
+    fun fetchDeviceBatteryData(deviceId: String): Int? =
+        mobiusLimiter {
             client
                 .get()
-                .uri("/$deviceId")
-                .retrieve()
-                .awaitBody<MobiusLocationResponse>()
-                .cntResponse
+                .uri("/$deviceId/3_1.2_0/data-report/la")
+                .exchange { _, response ->
+                    if (!response.statusCode.is2xxSuccessful) {
+                        null
+                    } else {
+                        response.bodyTo(MobiusBatteryResponse::class.java)
+                    }
+                }?.cin
+                ?.con
+                ?.batteryLevel
+        }
+
+    fun fetchDeviceLocationData(deviceId: String): LocationData? {
+        val labels =
+            mobiusLimiter {
+                client
+                    .get()
+                    .uri("/$deviceId")
+                    .retrieve()
+                    .body<MobiusLocationResponse>()
+                    ?: throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE)
+            }.cntResponse
                 .lbl
 
         val coordinates =
@@ -163,40 +196,21 @@ class AiotService(
         return if (latitude != null && longitude != null) LocationData(latitude, longitude) else null
     }
 
-    suspend fun fetchAllMobiusSensorPaths(existFeatures: List<Feature>): List<Feature> {
-        val objectIds = SensorType.entries.map { it.objectId }
-        val res =
+    /**
+     * 빈 응답을 emptyList()로 흘리면 안 된다.
+     * 뒤 단계가 "Mobius에 아무것도 없다"로 읽어 로컬 Feature를 전량 삭제한다.
+     * 삭제는 되돌릴 수 없지만 실패는 다음 주기에 재시도된다.
+     */
+    private fun fetchMobiusUril(): List<String> =
+        mobiusLimiter {
             client
                 .get()
                 .uri("?fu=1&ty=3&lvl=2")
                 .retrieve()
-                .awaitBody<MobiusUrilResponse>()
-
-        val existFeatureMap = existFeatures.associateBy { it.deviceId }
-
-        return res.uril
-            .asSequence()
-            .filter { path -> objectIds.any(path::contains) }
-            .filter { it.count { char -> char == '/' } == 3 }
-            .filterNot { it.contains("3_1.2_0") }
-            .filterNot { it.contains("P-TST") }
-            .map { path ->
-                val splitPaths = path.split("/")
-                val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
-                val objectId = sensorId.take(5)
-                val deviceType = SensorType.fromObjectId(objectId)
-                val parsedName = parseDeviceId(deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
-                existFeatureMap[deviceId]?.apply {
-                    updateInfo(parsedName, sensorId)
-                } ?: Feature(
-                    deviceId = deviceId,
-                    name = parsedName,
-                    objectId = sensorId,
-                )
-            }.associateBy { it.deviceId }
-            .values
-            .toList()
-    }
+                .body<MobiusUrilResponse>()
+                ?.uril
+                ?: throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE)
+        }
 
     /**
      * deviceId를 파싱하여 deviceName을 생성합니다.
@@ -208,33 +222,7 @@ class AiotService(
     fun parseDeviceId(
         deviceId: String,
         abbrMap: Map<String, AbbreviationData>,
-    ): String {
-        val parts =
-            deviceId
-                .replace("[\\s_]+".toRegex(), "-")
-                .split("-")
-                .filter { it.isNotBlank() }
-
-        val name =
-            parts
-                .firstNotNullOfOrNull { abbrMap[it.lowercase()] }
-                ?.fullName
-                ?: return deviceId
-
-        val numericSuffix =
-            parts
-                .lastOrNull()
-                ?.takeIf { it.all(Char::isDigit) }
-                .orEmpty()
-
-        return buildString {
-            append(name)
-            if (numericSuffix.isNotEmpty()) {
-                append("-")
-                append(numericSuffix)
-            }
-        }
-    }
+    ): String = parseDeviceName(deviceId, abbrMap)
 
     private fun createMobiusHeaders(): Map<String, String> =
         mapOf(
@@ -258,17 +246,18 @@ class AiotService(
         subscriptionName: String,
         deviceId: String,
     ) {
-        client
-            .post()
-            .uri(uri)
-            .header("Content-Type", "application/json;ty=23")
-            .bodyValue(body)
-            .retrieve() // <- 여기서 비-2xx면 WebClientResponseException 던짐
-            .bodyToMono(String::class.java)
-            .doOnNext { respBody ->
-                log.info { "'$uri/$subscriptionName' Subscribe Result : '$respBody'" }
-                updateFeatureSubscriptionTime(deviceId)
-            }.block()
+        val respBody =
+            mobiusLimiter {
+                client
+                    .post()
+                    .uri(uri)
+                    .header("Content-Type", "application/json;ty=23")
+                    .body(body)
+                    .retrieve() // 비-2xx면 RestClientResponseException을 던진다. 409 재시도 경로가 이걸 받는다
+                    .body(String::class.java)
+            }
+        log.info { "'$uri/$subscriptionName' Subscribe Result : '$respBody'" }
+        updateFeatureSubscriptionTime(deviceId)
     }
 
     /**
@@ -293,7 +282,7 @@ class AiotService(
 
         try {
             fetchSubscription(subscriptionUrl, subscriptionBody, subscriptionName, deviceId)
-        } catch (e: WebClientResponseException) {
+        } catch (e: RestClientResponseException) {
             if (e.statusCode.value() == 409 && e.responseBodyAsString.contains("resource is already exist")) {
                 log.info { "Subscription '$subscriptionName' already exists. Attempting to remove and recreate." }
 
@@ -322,20 +311,20 @@ class AiotService(
         }
     }
 
-    suspend fun findByDateRange(
+    fun findByDateRange(
         deviceId: String,
         objectId: String,
         startStr: String,
         endStr: String,
-    ): List<SubscriptionCinResponse>? {
-        val res =
+    ): List<SubscriptionCinResponse>? =
+        mobiusLimiter {
             client
                 .get()
                 .uri("/$deviceId/$objectId/data-report?rcn=4&ty=4&lvl=1&cra=$startStr&crb=$endStr")
                 .retrieve()
-                .awaitBody<SubscriptionRepListResponse>()
-        return res.cin
-    }
+                .body<SubscriptionRepListResponse>()
+                ?.cin
+        }
 
     /**
      * 프로파일에 따른 구독 URL을 반환합니다.
@@ -380,18 +369,21 @@ class AiotService(
         objectId: String,
         subscriptionName: String,
     ) {
-        client
-            .delete()
-            .uri("/$deviceId/$objectId/data-report/$activeProfile-$deviceId-$objectId")
-            .exchangeToMono { response ->
-                val isSuccess = response.statusCode().is2xxSuccessful
-                response.bodyToMono<String>().doOnNext { body ->
-                    log.info { "'$subscriptionName' Subscribe Result(${response.statusCode()}) : '$body'" }
-                    if (isSuccess) {
-                        updateFeatureSubscriptionTime(deviceId)
+        // 실패해도 본문을 읽어 로깅하고 계속 간다. 순회가 첫 실패에서 끊기면 안 된다
+        val succeeded =
+            mobiusLimiter {
+                client
+                    .delete()
+                    .uri("/$deviceId/$objectId/data-report/$activeProfile-$deviceId-$objectId")
+                    .exchange { _, response ->
+                        val body = response.bodyTo(String::class.java)
+                        log.info { "'$subscriptionName' Subscribe Result(${response.statusCode}) : '$body'" }
+                        response.statusCode.is2xxSuccessful
                     }
-                }
-            }.block()
+            }
+        if (succeeded == true) {
+            updateFeatureSubscriptionTime(deviceId)
+        }
     }
 
     fun removeAllSubscriptions() {
@@ -403,10 +395,10 @@ class AiotService(
         }
     }
 
+    /** 문자열만 갈아끼우면 client가 생성 시점 주소에 묶여 옛 서버로 계속 동기화한다. */
     @EventListener
-    @Transactional
     fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
-        this.cachedMobiusUrl = event.newUrl
+        this.client = createMobiusClient(event.newUrl)
         checkSynchronization()
         statusSynchronize()
         subscription()

@@ -4,16 +4,17 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
+import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.annotation.EnableAsync
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler
-import java.util.concurrent.Executor
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -41,17 +42,17 @@ class WebSocketConfig(
 @EnableAsync
 @Configuration
 class AsyncConfig {
+    /**
+     * 사용처가 0개여도 지우면 안 된다. 지운다고 자동설정이 살아나지 않고,
+     * 나중에 붙는 @Async가 플랫폼·무제한 폴백으로 떨어진다.
+     */
     @Bean(name = ["taskExecutor"])
     @Primary
-    fun taskExecutor(): Executor {
-        val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 5
-        executor.maxPoolSize = 10
-        executor.queueCapacity = 500
-        executor.setThreadNamePrefix("MyExecutor-")
-        executor.initialize()
-        return executor
-    }
+    fun taskExecutor(): AsyncTaskExecutor =
+        SimpleAsyncTaskExecutor("app-async-").apply {
+            setVirtualThreads(true)
+            setTaskTerminationTimeout(SHUTDOWN_WAIT_MILLIS)
+        }
 
     @Bean
     fun heartBeatScheduler(): TaskScheduler =
@@ -62,19 +63,20 @@ class AsyncConfig {
         }
 
     /**
-     * TaskScheduler 빈이 있으면 부트의 기본 스케줄러 자동 설정이 물러난다.
-     * 이름을 taskScheduler로 두어 @Scheduled 배치가 하트비트와 스레드를 나눠 쓰지 않게 한다.
-     *
-     * @Primary를 붙이면 안 된다. TaskSchedulerRouter는 TaskScheduler 빈이 여럿일 때 이름으로
-     * 이 빈을 찾으므로 @Primary가 없어도 @Scheduled는 정상 동작하는 반면, @Primary가 있으면
-     * WebSocketConfig의 하트비트 주입이 이 빈으로 넘어와 분리가 무너진다.
-     * ThreadPoolTaskScheduler는 Executor이기도 해서 taskExecutor와 @Primary가 충돌하기도 한다.
+     * 이름이 정확히 taskScheduler여야 익명 단일 스레드 폴백 대신 이 빈이 쓰인다.
+     * @Primary를 붙이면 이름 매칭을 이겨 하트비트 주입이 이쪽으로 넘어온다.
+     * fixedDelay 작업은 스케줄러 스레드 하나에서 직접 도니 여럿 필요해지면 풀 기반으로 바꿔야 한다.
      */
-    @Bean(name = ["taskScheduler"])
+    @Bean
     fun taskScheduler(): TaskScheduler =
-        ThreadPoolTaskScheduler().apply {
-            poolSize = 4 // @Scheduled 배치 수(ums 연동 시 4개)와 맞춘다
-            setThreadNamePrefix("scheduled-")
-            initialize()
+        SimpleAsyncTaskScheduler().apply {
+            setVirtualThreads(true)
+            setThreadNamePrefix("app-sched-")
+            // 넘겨진 작업은 종료 시 자동으로 기다려주지 않는다
+            setTaskTerminationTimeout(SHUTDOWN_WAIT_MILLIS)
         }
+
+    companion object {
+        private const val SHUTDOWN_WAIT_MILLIS = 10_000L
+    }
 }

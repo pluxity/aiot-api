@@ -1,69 +1,55 @@
 package com.pluxity.aiot.data
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.data.dto.MobiusCntResponse
 import com.pluxity.aiot.data.dto.MobiusLocationResponse
+import com.pluxity.aiot.feature.FeatureQueryService
 import com.pluxity.aiot.feature.FeatureRepository
-import com.pluxity.aiot.global.config.WebClientFactory
+import com.pluxity.aiot.feature.FeatureStatusWriter
+import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.mobius.MobiusConfigService
 import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.ClientResponse
-import org.springframework.web.reactive.function.client.ExchangeFunction
-import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Mono
+import org.springframework.test.web.client.ExpectedCount
+import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.anything
+import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
+import org.springframework.web.client.RestClient
+import tools.jackson.databind.json.JsonMapper
 
 class AiotServiceKoTest :
     BehaviorSpec({
+        val jsonMapper = JsonMapper.builder().build()
+
         fun createServiceWithResponse(responseBody: Any): AiotService {
-            val objectMapper = ObjectMapper()
+            val builder = RestClient.builder()
+            MockRestServiceServer
+                .bindTo(builder)
+                .build()
+                .expect(ExpectedCount.manyTimes(), anything())
+                .andRespond(withSuccess(jsonMapper.writeValueAsString(responseBody), MediaType.APPLICATION_JSON))
 
-            val exchangeFunction =
-                ExchangeFunction {
-                    // responseBody 객체를 JSON 문자열로 직렬화
-                    val json = objectMapper.writeValueAsString(responseBody)
-
-                    val response =
-                        ClientResponse
-                            .create(HttpStatus.OK)
-                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                            .body(json)
-                            .build()
-                    Mono.just(response)
-                }
-
-            val webClient =
-                WebClient
-                    .builder()
-                    .exchangeFunction(exchangeFunction)
-                    .build()
-
-            val webClientFactory: WebClientFactory =
+            val restClientFactory: RestClientFactory =
                 mockk {
-                    every { createClient(any(), any(), any(), any()) } returns webClient
+                    every { createClient(any(), any(), any(), any()) } returns builder.build()
                 }
 
-            val featureRepository: FeatureRepository = mockk(relaxed = true)
-            val siteRepository: SiteRepository = mockk(relaxed = true)
             val mobiusConfigService: MobiusConfigService =
                 mockk {
                     every { currentUrl } returns "http://mobius"
                 }
 
             return AiotService(
-                featureRepository,
-                siteRepository,
+                mockk<FeatureRepository>(relaxed = true),
+                mockk<FeatureQueryService>(relaxed = true),
+                mockk<FeatureStatusWriter>(relaxed = true),
                 mobiusConfigService,
-                webClientFactory,
+                restClientFactory,
                 ServerDomainProperties(url = "http://domain"),
             )
         }

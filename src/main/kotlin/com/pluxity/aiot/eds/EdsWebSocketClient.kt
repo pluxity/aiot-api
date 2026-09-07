@@ -3,6 +3,7 @@ package com.pluxity.aiot.eds
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.eds.dto.EdsCrowdCountData
 import com.pluxity.aiot.eds.dto.EdsEventData
+import com.pluxity.aiot.global.properties.EdsProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -14,7 +15,6 @@ import reactor.core.scheduler.Schedulers
 import reactor.netty.http.client.HttpClient
 import reactor.util.retry.Retry
 import java.net.URI
-import java.time.Duration
 
 private val log = KotlinLogging.logger {}
 
@@ -24,6 +24,7 @@ class EdsWebSocketClient(
     private val edsClient: EdsClient,
     private val objectMapper: ObjectMapper,
     private val edsFacade: EdsFacade,
+    private val edsProperties: EdsProperties,
 ) {
     // disconnect()는 라이프사이클 스레드에서, 읽기는 Reactor 스레드에서 일어난다
     @Volatile
@@ -56,18 +57,18 @@ class EdsWebSocketClient(
                             .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
                             .then()
                     }
-                }.doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
-                .repeatWhen { it.delayElements(Duration.ofSeconds(5)).takeWhile { !stopped } }
+                }
+                // repeatWhen·retryWhen은 자기 상류에 재구독한다. 이 아래에 두면 최초 구독만 옮겨진다
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
+                .repeatWhen { it.delayElements(edsProperties.reconnectDelay).takeWhile { !stopped } }
                 .retryWhen(
                     Retry
-                        .backoff(Long.MAX_VALUE, Duration.ofSeconds(5))
-                        .maxBackoff(Duration.ofMinutes(2))
+                        .backoff(Long.MAX_VALUE, edsProperties.reconnectDelay)
+                        .maxBackoff(edsProperties.reconnectMaxDelay)
                         .filter { !stopped }
                         .doBeforeRetry { log.info { "EDS WebSocket 재연결 시도 (${it.totalRetries() + 1}회)" } },
-                )
-                // 재구독은 공용 parallel 스케줄러에서 일어난다. buildUri()가 블로킹 HTTP다
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe()
+                ).subscribe()
     }
 
     fun disconnect() {

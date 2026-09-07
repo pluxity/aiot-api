@@ -64,7 +64,10 @@ class EdsWebSocketClient(
                         .maxBackoff(Duration.ofMinutes(2))
                         .filter { !stopped }
                         .doBeforeRetry { log.info { "EDS WebSocket 재연결 시도 (${it.totalRetries() + 1}회)" } },
-                ).subscribe()
+                )
+                // 재구독은 공용 parallel 스케줄러에서 일어난다. buildUri()가 블로킹 HTTP다
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe()
     }
 
     fun disconnect() {

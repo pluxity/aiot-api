@@ -8,14 +8,14 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import java.net.http.HttpClient
 import java.time.Duration
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.function.Predicate
 
 @Component
 class RestClientFactory : DisposableBean {
-    /** HttpClient는 셀렉터 스레드와 커넥션 풀을 들고 있어 컨텍스트 종료 때 닫아야 한다. */
-    private val clients = CopyOnWriteArrayList<HttpClient>()
+    /** 연결 타임아웃만 HttpClient를 가른다. 호출마다 새로 만들면 셀렉터 스레드가 쌓인다. */
+    private val clients = ConcurrentHashMap<Long, HttpClient>()
 
     /** 가상 스레드라 여러 개 둘 이득이 없다. 지정하지 않으면 JDK가 자체 플랫폼 풀을 만든다. */
     private val executor = Executors.newVirtualThreadPerTaskExecutor()
@@ -28,12 +28,13 @@ class RestClientFactory : DisposableBean {
         throwOnHttpError: Boolean = true,
     ): RestClient {
         val httpClient =
-            HttpClient
-                .newBuilder()
-                .executor(executor)
-                .connectTimeout(Duration.ofMillis(connectionTimeoutMs))
-                .build()
-        clients += httpClient
+            clients.computeIfAbsent(connectionTimeoutMs) { timeout ->
+                HttpClient
+                    .newBuilder()
+                    .executor(executor)
+                    .connectTimeout(Duration.ofMillis(timeout))
+                    .build()
+            }
 
         val requestFactory =
             JdkClientHttpRequestFactory(httpClient).apply {
@@ -55,7 +56,7 @@ class RestClientFactory : DisposableBean {
     }
 
     override fun destroy() {
-        clients.forEach { it.close() }
+        clients.values.forEach { it.close() }
         clients.clear()
         executor.close()
     }

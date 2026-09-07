@@ -27,7 +27,7 @@ class JwtProvider(
         isRefreshToken: Boolean = false,
     ): String = extractAllClaims(token, isRefreshToken).subject
 
-    /** SignedJWT.verify()는 서명만 본다. 아래 만료 검사를 빼면 만료된 토큰이 통과한다. */
+    /** SignedJWT.verify()는 서명만 본다. 아래 exp·nbf 검사를 빼면 만료·미개시 토큰이 통과한다. */
     fun extractAllClaims(
         token: String,
         isRefreshToken: Boolean = false,
@@ -43,8 +43,13 @@ class JwtProvider(
         if (!verified) throw invalidTokenException(isRefreshToken)
 
         val claims = signedJwt.jwtClaimsSet
+        val now = Date()
+
         val expiresAt = claims.expirationTime ?: throw invalidTokenException(isRefreshToken)
-        if (expiresAt.before(Date())) throw expiredTokenException(isRefreshToken)
+        if (expiresAt.before(now)) throw expiredTokenException(isRefreshToken)
+
+        val notBefore = claims.notBeforeTime
+        if (notBefore != null && now.before(notBefore)) throw invalidTokenException(isRefreshToken)
 
         return claims
     }

@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import java.time.Duration
+import java.util.Date
 
 /** nimbus의 SignedJWT.verify()는 서명만 본다. 만료 검사를 빠뜨리면 여기서 걸린다. */
 class JwtProviderValidationKoTest :
@@ -36,6 +37,22 @@ class JwtProviderValidationKoTest :
                 Then("만료로 거절한다") {
                     val exception = shouldThrow<CustomException> { provider.validateAccessToken(expiredToken) }
                     exception.errorCode shouldBe ErrorCode.EXPIRED_ACCESS_TOKEN
+                }
+            }
+        }
+
+        Given("유효 시작 시각(nbf)이 아직 오지 않은 액세스 토큰") {
+            val provider = providerWith(accessLifetime = Duration.ofHours(10))
+            val notYetValid =
+                provider.generateAccessToken(
+                    "tester",
+                    mapOf("nbf" to Date(System.currentTimeMillis() + Duration.ofHours(1).toMillis())),
+                )
+
+            When("검증하면") {
+                Then("유효 기간이 시작되지 않아 거절한다") {
+                    val exception = shouldThrow<CustomException> { provider.validateAccessToken(notYetValid) }
+                    exception.errorCode shouldBe ErrorCode.INVALID_ACCESS_TOKEN
                 }
             }
         }

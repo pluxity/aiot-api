@@ -16,7 +16,6 @@ import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -145,9 +144,7 @@ class SensorDataMigrationService(
         val endStr = DateTimeUtils.formatToTimestamp(endTime)
 
         // Mobius API 호출
-        return runBlocking {
-            aiotService.findByDateRange(deviceId, "${objectId}_1.0_0", startStr, endStr)
-        }
+        return aiotService.findByDateRange(deviceId, "${objectId}_1.0_0", startStr, endStr)
     }
 
     // 디바이스별 타이머 작업 저장

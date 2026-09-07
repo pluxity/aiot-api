@@ -50,6 +50,7 @@ enum class ErrorCode(
     NOT_FOUND_CCTV(HttpStatus.NOT_FOUND, "ID가 %s인 CCTV를 찾을 수 없습니다."),
     NOT_FOUND_LLM_MESSAGE(HttpStatus.NOT_FOUND, "ID가 %s인 LLM 메시지를 찾을 수 없습니다."),
     LLM_RESPONSE_EMPTY(HttpStatus.BAD_GATEWAY, "LLM 응답 본문이 비어 있습니다."),
+    MOBIUS_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "Mobius 응답 본문이 비어 있습니다."),
     NOT_FOUND_SPEAKER_PRESET(HttpStatus.NOT_FOUND, "ID가 %s인 스피커 프리셋을 찾을 수 없습니다."),
     NOT_FOUND_DISPLAY_PRESET(HttpStatus.NOT_FOUND, "ID가 %s인 전광판 프리셋을 찾을 수 없습니다."),
 

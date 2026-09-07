@@ -7,11 +7,13 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.scheduling.config.ScheduledTaskRegistrar
 import org.springframework.test.context.ActiveProfiles
@@ -47,7 +49,7 @@ class SchedulerIsolationKoTest(
 
                 Then("두 빈은 서로 다른 스레드 풀이어야 한다") {
                     (heartBeatScheduler as ThreadPoolTaskScheduler).threadNamePrefix shouldBe "stomp-heartbeat-"
-                    (taskScheduler as ThreadPoolTaskScheduler).threadNamePrefix shouldBe "scheduled-"
+                    taskScheduler.shouldBeInstanceOf<SimpleAsyncTaskScheduler>()
                 }
             }
         }
@@ -61,7 +63,7 @@ class SchedulerIsolationKoTest(
                 resolved.schedule({ threadName.complete(Thread.currentThread().name) }, Instant.now())
 
                 Then("이름으로 배치용 빈을 찾아 하트비트 풀을 쓰지 않는다") {
-                    threadName.get() shouldStartWith "scheduled-"
+                    threadName.get() shouldStartWith "app-sched-"
                 }
             }
         }

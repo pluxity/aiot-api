@@ -4,6 +4,11 @@ server:
     context-path: /
   forward-headers-strategy: framework
 spring:
+  # 대부분의 작업이 블로킹 I/O(Mobius/LLM/EDS HTTP, JDBC, Influx, S3, Redis)다.
+  # @Async/@Scheduled는 이 플래그로 전환되지 않아 AsyncConfig에서 따로 지정한다
+  threads:
+    virtual:
+      enabled: true
   servlet:
     multipart:
       max-file-size: 1GB

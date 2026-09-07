@@ -14,6 +14,7 @@ import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
+import org.springframework.context.ApplicationEventPublisher
 
 data class ConvertedConditionParams(
     val conditionType: ConditionType,
@@ -110,6 +111,9 @@ abstract class ProcessorTestHelper(
     protected val messageSenderMock: StompMessageSender,
     protected val writeApiMock: WriteApi,
 ) {
+    /** 프로세서 테스트는 발행 여부를 보지 않으므로 무해한 대체품을 둔다 */
+    protected val eventPublisherMock = ApplicationEventPublisher { _ -> }
+
     /**
      * 테스트용 DeviceType + EventCondition 생성
      */

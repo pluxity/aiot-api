@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class SiteService(
     private val siteRepository: SiteRepository,
+    private val siteSensorManagerRepository: SiteSensorManagerRepository,
     private val fileService: FileService,
 ) {
     companion object {
@@ -83,6 +84,7 @@ class SiteService(
     @Transactional
     fun delete(id: Long) {
         val site = findById(id)
+        siteSensorManagerRepository.deleteAllBySiteId(id)
         siteRepository.delete(site)
     }
 

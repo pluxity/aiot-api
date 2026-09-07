@@ -5,6 +5,7 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UserProperties
 import com.pluxity.aiot.global.utils.SortUtils
+import com.pluxity.aiot.site.SiteSensorManagerRepository
 import com.pluxity.aiot.user.dto.UserCreateRequest
 import com.pluxity.aiot.user.dto.UserLoggedInResponse
 import com.pluxity.aiot.user.dto.UserPasswordUpdateRequest
@@ -30,6 +31,7 @@ class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val userRoleRepository: UserRoleRepository,
+    private val siteSensorManagerRepository: SiteSensorManagerRepository,
     private val userProperties: UserProperties,
 ) {
     @Transactional(readOnly = true)
@@ -102,6 +104,7 @@ class UserService(
     fun delete(id: Long) {
         val user = findUserById(id)
         userRoleRepository.deleteAllByUser(user)
+        siteSensorManagerRepository.deleteAllByUser(user)
         userRepository.delete(user)
     }
 

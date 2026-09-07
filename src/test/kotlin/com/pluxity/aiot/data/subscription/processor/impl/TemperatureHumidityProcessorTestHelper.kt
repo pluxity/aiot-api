@@ -60,6 +60,7 @@ class TemperatureHumidityProcessorTestHelper(
             eventHistoryRepository,
             featureRepository,
             eventConditionRepository,
+            eventPublisherMock,
             writeApiMock,
         )
 }

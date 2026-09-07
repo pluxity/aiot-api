@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.notification.SensorEventNotified
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
@@ -18,6 +19,7 @@ import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -60,6 +62,7 @@ interface SensorDataProcessor {
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
         featureRepository: FeatureRepository,
+        eventPublisher: ApplicationEventPublisher,
     ) {
         val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
         val maxValue = condition.rightValue ?: 0.0
@@ -125,6 +128,23 @@ interface SensorDataProcessor {
                         profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(fieldKey),
                     ),
                 )
+
+                // 담당자 문자도 STOMP 알람과 같은 게이트를 쓴다. 수신 대상 조회와 발송은 구독자가 맡는다
+                eventPublisher.publishEvent(
+                    SensorEventNotified(
+                        eventId = eventHistory.requiredId,
+                        siteId = it.requiredId,
+                        siteName = it.name,
+                        deviceId = deviceId,
+                        sensorType = sensorType,
+                        level = condition.level,
+                        fieldDescription = fieldDescription,
+                        value = value,
+                        unit = fieldUnit,
+                        guideMessage = condition.guideMessage,
+                        occurredAt = parsedDate,
+                    ),
+                )
             }
         }
 
@@ -148,6 +168,7 @@ interface SensorDataProcessor {
         eventHistoryRepository: EventHistoryRepository,
         featureRepository: FeatureRepository,
         eventConditionRepository: EventConditionRepository,
+        eventPublisher: ApplicationEventPublisher,
     ) {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
@@ -191,6 +212,7 @@ interface SensorDataProcessor {
             messageSender = messageSender,
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,
+            eventPublisher = eventPublisher,
         )
     }
 

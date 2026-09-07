@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClientResponseException
 import java.net.InetSocketAddress
 
@@ -15,6 +16,13 @@ class RestClientFactoryKoTest :
         server.createContext("/ok") { exchange ->
             received["accept"] = exchange.requestHeaders.getFirst("Accept") ?: ""
             val body = """{"result":"ok"}"""
+            exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
+            exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(body.toByteArray()) }
+        }
+        server.createContext("/slow") { exchange ->
+            Thread.sleep(500)
+            val body = """{"result":"late"}"""
             exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
             exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
             exchange.responseBody.use { it.write(body.toByteArray()) }
@@ -64,6 +72,34 @@ class RestClientFactoryKoTest :
                             .retrieve()
                             .body(String::class.java)
                     }
+                }
+            }
+        }
+
+        Given("응답이 느린 서버") {
+            When("읽기 대기 시간을 짧게 준 클라이언트로 부르면") {
+                val impatient = factory.createClient(baseUrl, readTimeoutMs = 100)
+
+                Then("기다리지 않고 끊는다") {
+                    shouldThrow<ResourceAccessException> {
+                        impatient
+                            .get()
+                            .uri("/slow")
+                            .retrieve()
+                            .body(String::class.java)
+                    }
+                }
+            }
+
+            When("넉넉히 준 클라이언트로 부르면") {
+                val patient = factory.createClient(baseUrl, readTimeoutMs = 5000)
+
+                Then("응답을 끝까지 받는다") {
+                    patient
+                        .get()
+                        .uri("/slow")
+                        .retrieve()
+                        .body(String::class.java) shouldBe """{"result":"late"}"""
                 }
             }
         }

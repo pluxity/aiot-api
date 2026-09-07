@@ -102,3 +102,5 @@ logging:
 llm:
   api:
     base-url: ${LLM_API_BASE_URL:http://192.168.0.181:8000}
+    # 생성이 오래 걸린다. 단위 없는 숫자는 ms로 해석된다
+    response-timeout: 3m

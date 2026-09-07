@@ -40,7 +40,11 @@ class LlmMessageService(
     llmProperties: LlmProperties,
     restClientFactory: RestClientFactory,
 ) {
-    private val client: RestClient = restClientFactory.createClient(llmProperties.baseUrl)
+    private val client: RestClient =
+        restClientFactory.createClient(
+            baseUrl = llmProperties.baseUrl,
+            readTimeoutMs = llmProperties.responseTimeout.toMillis(),
+        )
 
     /** 가상 스레드는 스레드를 공급할 뿐 동시 호출 상한을 대신하지 않는다. LLM 쪽 상한은 그대로 둔다. */
     private val semaphore = Semaphore(llmProperties.concurrencyLimit)

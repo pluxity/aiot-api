@@ -32,6 +32,9 @@ class RestClientFactory : DisposableBean {
                 HttpClient
                     .newBuilder()
                     .executor(executor)
+                    // 기본값 HTTP/2는 평문 연결에서 Upgrade: h2c를 붙인다.
+                    // 본문 있는 요청에 이걸 붙이면 업그레이드를 못 다루는 서버가 본문을 흘린다
+                    .version(HttpClient.Version.HTTP_1_1)
                     .connectTimeout(Duration.ofMillis(timeout))
                     .build()
             }
@@ -47,6 +50,12 @@ class RestClientFactory : DisposableBean {
                 .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .defaultHeaders { it.accept = listOf(MediaType.APPLICATION_JSON) }
+                // Jackson 컨버터는 길이를 모른 채 흘려보내 Transfer-Encoding: chunked가 된다.
+                // 인터셉터 단계에서는 본문이 이미 바이트로 잡혀 있어 길이를 붙일 수 있다
+                .requestInterceptor { request, body, execution ->
+                    request.headers.contentLength = body.size.toLong()
+                    execution.execute(request, body)
+                }
 
         if (!throwOnHttpError) {
             builder.defaultStatusHandler(Predicate<HttpStatusCode> { true }) { _, _ -> }

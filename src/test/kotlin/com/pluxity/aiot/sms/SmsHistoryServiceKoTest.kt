@@ -4,6 +4,7 @@ import com.pluxity.aiot.sms.dto.UmsSendResultRow
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.kotest.extensions.spring.SpringTestLifecycleMode
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -41,7 +42,7 @@ class SmsHistoryServiceKoTest(
     private val smsFacade: SmsFacade,
     transactionManager: PlatformTransactionManager,
 ) : BehaviorSpec({
-        extension(SpringExtension)
+        extension(SpringExtension(SpringTestLifecycleMode.Root))
 
         val transaction = TransactionTemplate(transactionManager)
 

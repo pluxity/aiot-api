@@ -2,6 +2,7 @@ package com.pluxity.aiot.global.config
 
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.kotest.extensions.spring.SpringTestLifecycleMode
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -33,7 +34,7 @@ class SchedulerIsolationKoTest(
     @param:Qualifier("heartBeatScheduler") private val heartBeatScheduler: TaskScheduler,
     @param:Qualifier("taskScheduler") private val taskScheduler: TaskScheduler,
 ) : BehaviorSpec({
-        extension(SpringExtension)
+        extension(SpringExtension(SpringTestLifecycleMode.Root))
 
         Given("TaskScheduler 빈이 하트비트용과 배치용으로 나뉘어 있을 때") {
             When("WebSocketConfig에 주입된 스케줄러를 보면") {

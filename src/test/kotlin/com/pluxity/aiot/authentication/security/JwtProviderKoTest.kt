@@ -2,6 +2,7 @@ package com.pluxity.aiot.authentication.security
 
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.kotest.extensions.spring.SpringTestLifecycleMode
 import io.kotest.matchers.shouldBe
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
@@ -13,7 +14,7 @@ import java.time.Duration
 class JwtProviderKoTest(
     private val jwtProvider: JwtProvider,
 ) : BehaviorSpec({
-        extension(SpringExtension)
+        extension(SpringExtension(SpringTestLifecycleMode.Root))
 
         fun lifetimeOf(
             token: String,

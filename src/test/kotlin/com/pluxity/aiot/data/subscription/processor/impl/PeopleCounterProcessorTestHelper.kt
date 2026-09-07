@@ -32,6 +32,7 @@ class PeopleCounterProcessorTestHelper(
             eventHistoryRepository,
             featureRepository,
             eventConditionRepository,
+            eventPublisherMock,
             writeApiMock,
         )
 }

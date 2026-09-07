@@ -32,6 +32,7 @@ class OdorMonitorProcessorTestHelper(
             eventHistoryRepository,
             featureRepository,
             eventConditionRepository,
+            eventPublisherMock,
             writeApiMock,
         )
 }

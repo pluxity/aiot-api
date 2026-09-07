@@ -4,6 +4,7 @@ import com.pluxity.aiot.authentication.repository.RefreshTokenRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.UserProperties
+import com.pluxity.aiot.site.SiteSensorManagerRepository
 import com.pluxity.aiot.user.repository.RoleRepository
 import com.pluxity.aiot.user.repository.UserRepository
 import com.pluxity.aiot.user.repository.UserRoleRepository
@@ -32,6 +33,7 @@ class UserServiceKoTest :
         val passwordEncoder: PasswordEncoder = mockk()
         val refreshTokenRepository: RefreshTokenRepository = mockk()
         val userRoleRepository: UserRoleRepository = mockk()
+        val siteSensorManagerRepository: SiteSensorManagerRepository = mockk(relaxed = true)
         val userProperties: UserProperties = mockk(relaxed = true)
         val userService =
             UserService(
@@ -40,6 +42,7 @@ class UserServiceKoTest :
                 passwordEncoder,
                 refreshTokenRepository,
                 userRoleRepository,
+                siteSensorManagerRepository,
                 userProperties,
             )
 

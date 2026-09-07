@@ -23,9 +23,11 @@ class SiteServiceKoTest :
     BehaviorSpec({
         val siteRepository: SiteRepository = mockk()
         val fileService: FileService = mockk()
+        val siteSensorManagerRepository: SiteSensorManagerRepository = mockk(relaxed = true)
         val siteService =
             SiteService(
                 siteRepository,
+                siteSensorManagerRepository,
                 fileService,
             )
 

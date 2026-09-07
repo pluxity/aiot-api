@@ -32,6 +32,7 @@ class ForestFireProcessorTestHelper(
             eventHistoryRepository,
             featureRepository,
             eventConditionRepository,
+            eventPublisherMock,
             writeApiMock,
         )
 }

@@ -15,6 +15,7 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.task.TaskRejectedException
 
 data class ConvertedConditionParams(
     val conditionType: ConditionType,
@@ -111,8 +112,11 @@ abstract class ProcessorTestHelper(
     protected val messageSenderMock: StompMessageSender,
     protected val writeApiMock: WriteApi,
 ) {
-    /** 프로세서 테스트는 발행 여부를 보지 않으므로 무해한 대체품을 둔다 */
-    protected val eventPublisherMock = ApplicationEventPublisher { _ -> }
+    protected var eventPublisherMock = ApplicationEventPublisher { _ -> }
+
+    fun failEventPublishing(reason: String) {
+        eventPublisherMock = ApplicationEventPublisher { _ -> throw TaskRejectedException(reason) }
+    }
 
     /**
      * 테스트용 DeviceType + EventCondition 생성

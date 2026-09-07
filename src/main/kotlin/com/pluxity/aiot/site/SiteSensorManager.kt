@@ -13,7 +13,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 
-/** 현장의 센서 카테고리별 이벤트 담당자. 카테고리 하나에 여러 명을 지정할 수 있다 */
+/** 현장의 센서 카테고리별 이벤트 담당자 */
 @Entity
 @Table(
     name = "site_sensor_manager",

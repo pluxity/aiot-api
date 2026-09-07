@@ -12,11 +12,9 @@ import java.time.format.DateTimeFormatter
 private val log = KotlinLogging.logger {}
 
 /**
- * 이벤트 발생 지점은 트랜잭션 밖이라 `@TransactionalEventListener`가 아니라 일반 리스너를 쓴다.
- *
- * `@Async`는 두 가지를 한다. 발송이 센서 데이터 처리 스레드를 붙잡지 않게 하고,
- * [SmsFacade.send]가 요구하는 "트랜잭션 밖" 조건을 만든다.
- * 수식어를 붙이지 않아야 AsyncConfig의 taskExecutor 빈으로 간다.
+ * 발행 지점에 트랜잭션이 없어 `@TransactionalEventListener`는 이벤트를 흘린다.
+ * `@Async`는 센서 처리 스레드를 붙잡지 않게 하고 [SmsFacade.send]의 "트랜잭션 밖" 조건도 만든다.
+ * 수식어를 붙이면 AsyncConfig의 taskExecutor 빈으로 가지 않는다.
  */
 @Component
 class SensorEventSmsListener(

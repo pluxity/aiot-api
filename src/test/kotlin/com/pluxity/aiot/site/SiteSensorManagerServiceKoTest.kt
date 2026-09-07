@@ -40,7 +40,7 @@ class SiteSensorManagerServiceKoTest(
 ) : BehaviorSpec({
         extension(SpringExtension)
 
-        // 다른 스펙이 남긴 site/feature 행을 건드리면 FK 제약에 걸리므로 매핑만 정리한다
+        // 다른 스펙이 남긴 site/feature를 건드리면 FK에 걸리므로 매핑만 정리한다
         afterEach { siteSensorManagerRepository.deleteAll() }
 
         Given("현장의 카테고리 담당자를 지정") {
@@ -125,7 +125,6 @@ class SiteSensorManagerServiceKoTest(
                     val all = siteSensorManagerService.findBySite(site.requiredId)
                     all.single { it.sensorType == SensorType.FIRE }.managers shouldHaveSize 1
                     all.single { it.sensorType == SensorType.ODOR_MONITOR }.managers shouldHaveSize 1
-                    // 지정이 없는 카테고리도 화면이 목록을 만들지 않도록 함께 내려간다
                     all shouldHaveSize SensorType.entries.size
                 }
             }

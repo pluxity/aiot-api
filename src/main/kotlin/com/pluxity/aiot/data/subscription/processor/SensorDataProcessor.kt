@@ -129,22 +129,24 @@ interface SensorDataProcessor {
                     ),
                 )
 
-                // 담당자 문자도 STOMP 알람과 같은 게이트를 쓴다. 수신 대상 조회와 발송은 구독자가 맡는다
-                eventPublisher.publishEvent(
-                    SensorEventNotified(
-                        eventId = eventHistory.requiredId,
-                        siteId = it.requiredId,
-                        siteName = it.name,
-                        deviceId = deviceId,
-                        sensorType = sensorType,
-                        level = condition.level,
-                        fieldDescription = fieldDescription,
-                        value = value,
-                        unit = fieldUnit,
-                        guideMessage = condition.guideMessage,
-                        occurredAt = parsedDate,
-                    ),
-                )
+                // 비동기 리스너의 등록이 거부되면 여기서 터진다. 측정값 적재까지 막으면 안 된다
+                runCatching {
+                    eventPublisher.publishEvent(
+                        SensorEventNotified(
+                            eventId = eventHistory.requiredId,
+                            siteId = it.requiredId,
+                            siteName = it.name,
+                            deviceId = deviceId,
+                            sensorType = sensorType,
+                            level = condition.level,
+                            fieldDescription = fieldDescription,
+                            value = value,
+                            unit = fieldUnit,
+                            guideMessage = condition.guideMessage,
+                            occurredAt = parsedDate,
+                        ),
+                    )
+                }.onFailure { e -> log.error(e) { "이벤트 알림 발행 실패 (eventId=${eventHistory.requiredId})" } }
             }
         }
 

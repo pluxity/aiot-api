@@ -17,7 +17,7 @@ class SiteSensorManagerService(
     private val siteRepository: SiteRepository,
     private val userRepository: UserRepository,
 ) {
-    /** 지정된 카테고리가 없어도 전체 카테고리를 돌려줘, 화면이 목록을 따로 만들지 않게 한다 */
+    /** 지정이 없는 카테고리도 함께 돌려줘 화면이 목록을 따로 만들지 않게 한다 */
     fun findBySite(siteId: Long): List<SiteSensorManagerResponse> {
         requireSiteExists(siteId)
         val bySensorType =
@@ -34,7 +34,7 @@ class SiteSensorManagerService(
         }
     }
 
-    /** 전체 교체. 빈 목록이면 해당 카테고리의 담당자를 모두 해제한다 */
+    /** 전체 교체. 빈 목록이 곧 전원 해제다 */
     @Transactional
     fun replace(
         siteId: Long,
@@ -51,12 +51,12 @@ class SiteSensorManagerService(
 
         val current = siteSensorManagerRepository.findAllBySiteIdAndSensorType(siteId, sensorType)
         siteSensorManagerRepository.deleteAll(current)
-        // 유니크 제약 위반을 피하려면 같은 트랜잭션의 삭제가 삽입보다 먼저 나가야 한다
+        // 유니크 제약에 걸리지 않도록 삭제를 삽입보다 먼저 내보낸다
         siteSensorManagerRepository.flush()
         siteSensorManagerRepository.saveAll(users.map { SiteSensorManager(site, sensorType, it) })
     }
 
-    /** 이벤트 알림 대상. 엔티티가 트랜잭션 밖으로 나가지 않도록 번호만 돌려준다 */
+    /** 엔티티가 트랜잭션 밖으로 나가지 않도록 번호만 돌려준다 */
     fun findManagerPhoneNumbers(
         siteId: Long,
         sensorType: SensorType,

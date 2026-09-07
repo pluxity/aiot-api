@@ -57,10 +57,15 @@ class AiotService(
     @Value("\${server.port}")
     private val serverPort: String = "8080"
 
-    private var cachedMobiusUrl: String = mobiusConfigService.currentUrl
-    private val client: RestClient =
+    private val restClientFactory = restClientFactory
+
+    /** 주소 변경 이벤트 스레드가 갈아끼우고 요청 스레드가 읽는다. */
+    @Volatile
+    private var client: RestClient = createMobiusClient(mobiusConfigService.currentUrl)
+
+    private fun createMobiusClient(baseUrl: String): RestClient =
         restClientFactory
-            .createClient(cachedMobiusUrl)
+            .createClient(baseUrl)
             .mutate()
             .defaultHeaders { headers ->
                 headers.setAll(createMobiusHeaders())
@@ -379,9 +384,10 @@ class AiotService(
         }
     }
 
+    /** 문자열만 갈아끼우면 client가 생성 시점 주소에 묶여 옛 서버로 계속 동기화한다. */
     @EventListener
     fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
-        this.cachedMobiusUrl = event.newUrl
+        this.client = createMobiusClient(event.newUrl)
         checkSynchronization()
         statusSynchronize()
         subscription()

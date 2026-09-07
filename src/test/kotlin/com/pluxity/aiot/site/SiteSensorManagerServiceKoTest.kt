@@ -8,6 +8,7 @@ import com.pluxity.aiot.user.repository.UserRepository
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.kotest.extensions.spring.SpringTestLifecycleMode
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -38,7 +39,7 @@ class SiteSensorManagerServiceKoTest(
     private val siteService: SiteService,
     private val userRepository: UserRepository,
 ) : BehaviorSpec({
-        extension(SpringExtension)
+        extension(SpringExtension(SpringTestLifecycleMode.Root))
 
         // 다른 스펙이 남긴 site/feature를 건드리면 FK에 걸리므로 매핑만 정리한다
         afterEach { siteSensorManagerRepository.deleteAll() }

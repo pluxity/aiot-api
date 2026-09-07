@@ -3,8 +3,10 @@ package com.pluxity.aiot.global.config
 import com.pluxity.aiot.authentication.security.CustomUserDetails
 import com.pluxity.aiot.authentication.security.JwtAuthenticationFilter
 import com.pluxity.aiot.authentication.security.JwtProvider
+import com.pluxity.aiot.authentication.security.RestAuthenticationEntryPoint
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.properties.CorsProperties
 import com.pluxity.aiot.user.repository.UserRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -30,6 +32,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 class CommonSecurityConfig(
     private val repository: UserRepository,
     private val jwtProvider: JwtProvider,
+    private val restAuthenticationEntryPoint: RestAuthenticationEntryPoint,
+    private val corsProperties: CorsProperties,
 ) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
@@ -54,6 +58,9 @@ class CommonSecurityConfig(
                         "/swagger-config/**",
                         "/docs/**",
                     ).permitAll() // .requestMatchers("/admin/**").hasRole("ADMIN") // TODO: 구현 완료 시 적용
+                    // GET permitAll보다 뒤에 두면 익명 요청이 컨트롤러에 닿아 401 대신 404가 나간다
+                    .requestMatchers("/users/me/**")
+                    .authenticated()
                     .requestMatchers(HttpMethod.GET)
                     .permitAll()
                     .requestMatchers("/auth/**")
@@ -61,6 +68,7 @@ class CommonSecurityConfig(
                     .anyRequest()
                     .authenticated()
             } // 나머지 모든 (GET이 아닌) 요청은 인증 필요
+            .exceptionHandling { it.authenticationEntryPoint(restAuthenticationEntryPoint) }
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter::class.java)
             .sessionManagement { sessionManagement: SessionManagementConfigurer<HttpSecurity> ->
                 sessionManagement.sessionCreationPolicy(
@@ -89,12 +97,11 @@ class CommonSecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns =
-            mutableListOf("http://localhost:*", "http://127.0.0.1:*", "http://192.168.*.*:*", "https://*.pluxity.com")
-        configuration.allowedMethods = mutableListOf("GET", "PATCH", "POST", "PUT", "DELETE", "OPTIONS") // OPTIONS도 명시적으로 허용하는 것이 좋음
+        configuration.allowedOriginPatterns = corsProperties.allowedOriginPatterns
+        configuration.allowedMethods = corsProperties.allowedMethods
         configuration.allowedHeaders = mutableListOf("*") // 와일드카드 또는 필요한 헤더 명시
         configuration.allowCredentials = true
-        configuration.maxAge = 3600L // pre-flight 요청 캐시 시간
+        configuration.maxAge = corsProperties.maxAge // pre-flight 요청 캐시 시간
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

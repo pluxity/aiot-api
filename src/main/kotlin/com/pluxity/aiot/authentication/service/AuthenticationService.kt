@@ -19,10 +19,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.util.WebUtils
 import java.time.Duration
 
 @Service
+@Transactional(readOnly = true)
 class AuthenticationService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val userRepository: UserRepository,
@@ -46,7 +46,6 @@ class AuthenticationService(
         return userRepository.save(user).requiredId
     }
 
-    @Transactional
     fun signIn(
         signInRequest: SignInRequest,
         request: HttpServletRequest,
@@ -57,21 +56,19 @@ class AuthenticationService(
         publishToken(user, request, response)
     }
 
-    @Transactional
     fun signOut(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ) {
         val refreshToken = jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)
-        refreshToken?.let {
-            refreshTokenRepository
-                .findByToken(it)
-                ?.let { token -> refreshTokenRepository.delete(token) }
-            clearAllCookies(request, response)
-        }
+        refreshToken
+            ?.let { refreshTokenRepository.findByToken(it) }
+            ?.let { refreshTokenRepository.delete(it) }
+
+        // 저장소에 지울 토큰이 없어도 브라우저 쿠키는 지워야 한다
+        clearAllCookies(request, response)
     }
 
-    @Transactional
     fun refreshToken(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -80,9 +77,7 @@ class AuthenticationService(
             jwtProvider.getJwtFromRequest(jwtProperties.refreshToken.name, request)
                 ?: throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
 
-        if (!jwtProvider.isRefreshTokenValid(refreshToken)) {
-            throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-        }
+        jwtProvider.validateRefreshToken(refreshToken)
 
         val username = jwtProvider.extractUsername(refreshToken, true)
         val user = findUserByUsername(username)
@@ -114,9 +109,28 @@ class AuthenticationService(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ) {
-        deleteAuthCookie(jwtProperties.accessToken.name, request.contextPath, request, response)
-        deleteAuthCookie(jwtProperties.refreshToken.name, "${request.contextPath}/", request, response)
-        deleteExpiryCookie(request, response)
+        listOf(jwtProperties.accessToken.name, jwtProperties.refreshToken.name, EXPIRY_COOKIE_NAME)
+            .forEach { name -> expireCookie(name, cookiePath(request), response) }
+    }
+
+    /** 요청 쿠키를 찾아 지우면 쿠키가 안 실려온 요청에는 Set-Cookie가 하나도 안 나간다. */
+    private fun expireCookie(
+        name: String,
+        path: String,
+        response: HttpServletResponse,
+    ) {
+        val cookie =
+            ResponseCookie
+                .from(name, "")
+                .secure(false)
+                .httpOnly(true)
+                .sameSite("Lax")
+                .maxAge(0)
+                .path(path)
+                .build()
+                .toString()
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie)
     }
 
     private fun publishToken(
@@ -131,14 +145,14 @@ class AuthenticationService(
             jwtProperties.accessToken.name,
             newAccessToken,
             jwtProperties.accessToken.expiration,
-            request.contextPath,
+            cookiePath(request),
             response,
         )
         createAuthCookie(
             jwtProperties.refreshToken.name,
             newRefreshToken,
             jwtProperties.refreshToken.expiration,
-            "${request.contextPath}/",
+            cookiePath(request),
             response,
         )
         createExpiryCookie(request, response)
@@ -160,38 +174,6 @@ class AuthenticationService(
                 .httpOnly(true)
                 .sameSite("Lax")
                 .maxAge(expiry)
-                .path(path.takeIf { it.isNotBlank() } ?: "/")
-                .build()
-                .toString()
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie)
-    }
-
-    private fun deleteAuthCookie(
-        name: String,
-        path: String,
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-    ) {
-        WebUtils.getCookie(request, name)?.apply {
-            value = null
-            maxAge = 0
-            this.path = path
-            response.addCookie(this)
-        }
-    }
-
-    private fun createExpiryCookie(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-    ) {
-        val expiryTimeMillis = System.currentTimeMillis() + jwtProperties.refreshToken.expiration.toMillis()
-        val path = request.contextPath.takeIf { it.isNotEmpty() } ?: "/"
-
-        val cookie =
-            ResponseCookie
-                .from("expiry", expiryTimeMillis.toString())
-                .secure(false)
                 .path(path)
                 .build()
                 .toString()
@@ -199,15 +181,27 @@ class AuthenticationService(
         response.addHeader(HttpHeaders.SET_COOKIE, cookie)
     }
 
-    private fun deleteExpiryCookie(
+    private fun createExpiryCookie(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ) {
-        WebUtils.getCookie(request, "expiry")?.apply {
-            val path = request.contextPath.takeIf { it.isNotEmpty() } ?: "/"
-            maxAge = 0
-            this.path = path
-            response.addCookie(this)
-        }
+        val expiryTimeMillis = System.currentTimeMillis() + jwtProperties.refreshToken.expiration.toMillis()
+
+        val cookie =
+            ResponseCookie
+                .from(EXPIRY_COOKIE_NAME, expiryTimeMillis.toString())
+                .secure(false)
+                .path(cookiePath(request))
+                .build()
+                .toString()
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie)
+    }
+
+    /** 발급과 삭제의 경로가 어긋나면 브라우저는 삭제 지시를 무시한다. */
+    private fun cookiePath(request: HttpServletRequest): String = request.contextPath.takeIf { it.isNotBlank() } ?: "/"
+
+    companion object {
+        private const val EXPIRY_COOKIE_NAME = "expiry"
     }
 }

@@ -21,12 +21,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Duration
 
-/**
- * 발급된 수명이 Redis TTL과 쿠키 Max-Age에 초 단위로 전달되는지 확인한다.
- *
- * 두 소비 지점 모두 초를 받는데 설정값은 Duration이라, 여기에 toMillis()가 들어가면
- * 리프레시 토큰이 다시 27년을 산다. 단위를 잘못 고르기 가장 쉬운 자리라 값으로 못박는다.
- */
+/** Redis TTL과 쿠키 Max-Age는 둘 다 초를 받는다. toMillis()가 들어가면 27년이 된다. */
 class AuthenticationServiceKoTest :
     BehaviorSpec({
         val refreshTokenRepository: RefreshTokenRepository = mockk()
@@ -48,6 +43,27 @@ class AuthenticationServiceKoTest :
                 passwordEncoder,
                 jwtProperties,
             )
+
+        Given("쿠키를 하나도 들고 오지 않은 로그아웃 요청") {
+            When("로그아웃하면") {
+                every { jwtProvider.getJwtFromRequest(any(), any()) } returns null
+
+                val response = MockHttpServletResponse()
+                authenticationService.signOut(MockHttpServletRequest(), response)
+
+                val setCookies = response.getHeaders(HttpHeaders.SET_COOKIE)
+
+                Then("세 쿠키 모두 만료 지시가 나간다") {
+                    setCookies.count { it.contains("Max-Age=0") } shouldBe 3
+                }
+
+                Then("브라우저가 지울 수 있도록 이름이 모두 실린다") {
+                    setCookies.any { it.startsWith("AccessToken=") } shouldBe true
+                    setCookies.any { it.startsWith("RefreshToken=") } shouldBe true
+                    setCookies.any { it.startsWith("expiry=") } shouldBe true
+                }
+            }
+        }
 
         Given("액세스 10시간·리프레시 10일로 설정된 상태") {
             When("로그인에 성공해 토큰을 발급하면") {

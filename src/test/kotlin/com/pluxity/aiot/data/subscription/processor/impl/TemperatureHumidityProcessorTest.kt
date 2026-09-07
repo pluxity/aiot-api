@@ -13,6 +13,7 @@ import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.kotest.extensions.spring.SpringTestLifecycleMode
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -30,7 +31,7 @@ class TemperatureHumidityProcessorTest(
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
 ) : BehaviorSpec({
-        extension(SpringExtension)
+        extension(SpringExtension(SpringTestLifecycleMode.Root))
 
         // Mocks
         val writeApiMock = Mockito.mock(WriteApi::class.java)

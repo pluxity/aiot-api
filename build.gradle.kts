@@ -1,8 +1,8 @@
 plugins {
-    val kotlinVersion = "2.3.10"
+    val kotlinVersion = "2.4.10"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
-    id("org.springframework.boot") version "4.0.3"
+    id("org.springframework.boot") version "4.1.0"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("plugin.jpa") version kotlinVersion
     id("com.diffplug.spotless") version "8.1.0"
@@ -34,40 +34,40 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-common:3.0.1")
     implementation("io.github.oshai:kotlin-logging:8.0.01")
     implementation("org.zalando:logbook-spring-boot-starter:4.0.2")
-    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
-    implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
-    implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.3")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("software.amazon.awssdk:s3:2.42.3")
-    implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.8.0")
-    implementation("com.linecorp.kotlin-jdsl:jpql-render:3.8.0")
-    implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-boot4-support:3.8.0")
+    implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:jpql-render:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-boot4-support:3.9.0")
     implementation("org.hibernate.orm:hibernate-spatial")
     implementation("org.locationtech.jts:jts-core:1.20.0")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:2.0.0")
-    implementation("com.influxdb:influxdb-client-kotlin:7.3.0")
+    implementation("com.influxdb:influxdb-client-java:7.3.0")
     implementation("com.influxdb:flux-dsl:7.3.0")
     implementation("tools.jackson.module:jackson-module-kotlin")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // Kotest Spring Extension
-    testImplementation("io.kotest.extensions:kotest-extensions-spring:1.1.3")
-    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
-    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
+    // Kotest 6에서 Spring 확장이 코어 저장소로 흡수되며 groupId가 io.kotest.extensions → io.kotest로 바뀌었다
+    testImplementation("io.kotest:kotest-extensions-spring:6.2.4")
+    testImplementation("io.kotest:kotest-runner-junit5:6.2.4")
+    testImplementation("io.kotest:kotest-assertions-core:6.2.4")
     testImplementation("io.mockk:mockk:1.14.5")
     // H2 Database for testing
     testImplementation("com.h2database:h2")
     // websocket
     implementation("org.springframework.boot:spring-boot-starter-websocket")
-    implementation("io.github.springwolf:springwolf-core:2.0.0")
-    implementation("io.github.springwolf:springwolf-stomp:2.0.0")
-    runtimeOnly("io.github.springwolf:springwolf-ui:2.0.0")
+    implementation("io.github.springwolf:springwolf-core:2.4.0")
+    implementation("io.github.springwolf:springwolf-stomp:2.4.0")
+    runtimeOnly("io.github.springwolf:springwolf-ui:2.4.0")
 }
 
 kotlin {

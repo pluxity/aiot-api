@@ -1,6 +1,6 @@
 package com.pluxity.aiot.global.lifecycle
 
-import io.kotest.assertions.timing.eventually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import java.util.concurrent.CountDownLatch

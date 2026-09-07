@@ -12,4 +12,18 @@ enum class WhiteListPath(
     INFO("info"),
     PROMETHEUS("prometheus"),
     SWAGGER("swagger-ui"),
+    ;
+
+    /** startsWith만으로는 /health가 /health-actions를, /info가 /information을 삼킨다. */
+    fun matches(requestPath: String): Boolean {
+        val prefix = "/$path"
+        if (!requestPath.startsWith(prefix)) return false
+
+        val next = requestPath.getOrNull(prefix.length) ?: return true
+        return next == '/' || next == '.'
+    }
+
+    companion object {
+        fun isWhiteListed(requestPath: String): Boolean = entries.any { it.matches(requestPath) }
+    }
 }

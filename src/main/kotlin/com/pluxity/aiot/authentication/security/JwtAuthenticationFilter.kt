@@ -1,18 +1,18 @@
 package com.pluxity.aiot.authentication.security
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.global.exception.CustomException
-import com.pluxity.aiot.global.response.ErrorResponseBody
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.web.filter.OncePerRequestFilter
+
+private val log = KotlinLogging.logger {}
 
 class JwtAuthenticationFilter(
     private val jwtProvider: JwtProvider,
@@ -29,9 +29,10 @@ class JwtAuthenticationFilter(
             }
         }.onFailure { exception ->
             if (exception is CustomException) {
-                handleAuthenticationError(response, exception)
+                AuthenticationErrorWriter.write(response, exception.errorCode, exception.message)
                 return
             }
+            log.error(exception) { "인증 필터에서 처리하지 못한 예외 (uri=${request.requestURI})" }
         }
 
         filterChain.doFilter(request, response)
@@ -40,34 +41,12 @@ class JwtAuthenticationFilter(
     private fun authenticateRequest(request: HttpServletRequest) {
         val token = jwtProvider.getAccessTokenFromRequest(request)
 
-        if (token != null && jwtProvider.isAccessTokenValid(token)) {
-            val username = jwtProvider.extractUsername(token)
-            val userDetails = userDetailsService.loadUserByUsername(username)
-            setAuthenticationContext(request, userDetails)
-        }
-    }
+        if (token == null) return
 
-    private fun handleAuthenticationError(
-        response: HttpServletResponse,
-        exception: CustomException,
-    ) {
-        val objectMapper = ObjectMapper()
-        response.status = exception.errorCode.getHttpStatus().value()
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = "UTF-8"
-
-        val errorResponse =
-            ErrorResponseBody(
-                status = exception.errorCode.getHttpStatus(),
-                message = exception.message,
-                code =
-                    exception.errorCode
-                        .getHttpStatus()
-                        .value()
-                        .toString(),
-                error = exception.errorCode.name,
-            )
-        response.writer.write(objectMapper.writeValueAsString(errorResponse))
+        jwtProvider.validateAccessToken(token)
+        val username = jwtProvider.extractUsername(token)
+        val userDetails = userDetailsService.loadUserByUsername(username)
+        setAuthenticationContext(request, userDetails)
     }
 
     private fun setAuthenticationContext(
@@ -81,8 +60,6 @@ class JwtAuthenticationFilter(
 
     private fun authenticationRequired(request: HttpServletRequest): Boolean {
         val path = request.requestURI.substring(request.contextPath.length)
-        return WhiteListPath.entries.none { whiteListPath ->
-            path.startsWith("/${whiteListPath.path}")
-        }
+        return !WhiteListPath.isWhiteListed(path)
     }
 }

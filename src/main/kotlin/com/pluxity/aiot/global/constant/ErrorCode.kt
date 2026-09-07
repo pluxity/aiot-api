@@ -8,6 +8,7 @@ enum class ErrorCode(
 ) : Code {
     INVALID_ID_OR_PASSWORD(HttpStatus.BAD_REQUEST, "아이디 또는 비밀번호가 틀렸습니다."),
 
+    UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "ACCESS 토큰이 유효하지 않습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "REFRESH 토큰이 유효하지 않습니다."),
     INVALID_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),

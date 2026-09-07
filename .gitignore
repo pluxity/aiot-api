@@ -40,3 +40,6 @@ out/
 .kotlin
 
 .claude
+
+# p6spy 테스트 실행 산출물
+spy.log

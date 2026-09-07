@@ -1,22 +1,21 @@
 package com.pluxity.aiot.authentication.security
 
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.crypto.MACSigner
+import com.nimbusds.jose.crypto.MACVerifier
+import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.SignedJWT
 import com.pluxity.aiot.authentication.repository.RefreshTokenRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.properties.JwtProperties
-import io.jsonwebtoken.Claims
-import io.jsonwebtoken.ExpiredJwtException
-import io.jsonwebtoken.JwtException
-import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.io.Decoders
-import io.jsonwebtoken.security.Keys
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.stereotype.Service
 import org.springframework.web.util.WebUtils
 import java.time.Duration
+import java.util.Base64
 import java.util.Date
-import java.util.function.Function
-import javax.crypto.SecretKey
 
 @Service
 class JwtProvider(
@@ -26,24 +25,29 @@ class JwtProvider(
     fun extractUsername(
         token: String,
         isRefreshToken: Boolean = false,
-    ): String = extractClaim(token, Claims::getSubject, isRefreshToken)
+    ): String = extractAllClaims(token, isRefreshToken).subject
 
-    fun <T> extractClaim(
+    /** SignedJWT.verify()는 서명만 본다. 아래 만료 검사를 빼면 만료된 토큰이 통과한다. */
+    fun extractAllClaims(
         token: String,
-        claimsResolver: Function<Claims, T>,
-        isRefreshToken: Boolean,
-    ): T = claimsResolver.apply(extractAllClaims(token, isRefreshToken))
+        isRefreshToken: Boolean = false,
+    ): JWTClaimsSet {
+        val signedJwt =
+            runCatching { SignedJWT.parse(token) }
+                .getOrElse { throw invalidTokenException(isRefreshToken) }
 
-    private fun extractAllClaims(
-        token: String,
-        isRefreshToken: Boolean,
-    ): Claims =
-        Jwts
-            .parser()
-            .verifyWith(getSecretKey(isRefreshToken))
-            .build()
-            .parseSignedClaims(token)
-            .payload
+        val verified =
+            runCatching { signedJwt.verify(MACVerifier(secretKeyBytes(isRefreshToken))) }
+                .getOrElse { throw invalidTokenException(isRefreshToken) }
+
+        if (!verified) throw invalidTokenException(isRefreshToken)
+
+        val claims = signedJwt.jwtClaimsSet
+        val expiresAt = claims.expirationTime ?: throw invalidTokenException(isRefreshToken)
+        if (expiresAt.before(Date())) throw expiredTokenException(isRefreshToken)
+
+        return claims
+    }
 
     fun generateAccessToken(
         username: String,
@@ -57,73 +61,50 @@ class JwtProvider(
         username: String,
         expiration: Duration,
         isRefreshToken: Boolean,
-    ): String =
-        Jwts
-            .builder()
-            .claims(extraClaims)
-            .subject(username)
-            .issuedAt(Date(System.currentTimeMillis()))
-            .expiration(Date(System.currentTimeMillis() + expiration.toMillis()))
-            .signWith(getSecretKey(isRefreshToken), Jwts.SIG.HS256)
-            .compact()
+    ): String {
+        val issuedAt = System.currentTimeMillis()
+        val claimsBuilder = JWTClaimsSet.Builder()
+        extraClaims.forEach { (key, value) -> claimsBuilder.claim(key, value) }
 
-    fun isAccessTokenValid(token: String): Boolean =
-        runCatching {
-            Jwts
-                .parser()
-                .verifyWith(getSecretKey(false))
+        val claims =
+            claimsBuilder
+                .subject(username)
+                .issueTime(Date(issuedAt))
+                .expirationTime(Date(issuedAt + expiration.toMillis()))
                 .build()
-                .parseSignedClaims(token)
-        }.fold(
-            onSuccess = { true },
-            onFailure = { exception ->
-                when (exception) {
-                    is ExpiredJwtException -> throw CustomException(ErrorCode.EXPIRED_ACCESS_TOKEN)
-                    is JwtException, is IllegalArgumentException ->
-                        throw CustomException(ErrorCode.INVALID_ACCESS_TOKEN)
-                    else -> throw exception
-                }
-            },
-        )
 
-    fun isRefreshTokenValid(token: String?): Boolean {
-        if (token.isNullOrBlank()) return false
-
-        return runCatching {
-            val refreshToken =
-                refreshTokenRepository
-                    .findByToken(token)
-                    ?: throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-
-            if (!refreshToken.isValidToken()) {
-                throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-            }
-
-            Jwts
-                .parser()
-                .verifyWith(getSecretKey(true))
-                .build()
-                .parseSignedClaims(refreshToken.token)
-        }.fold(
-            onSuccess = { true },
-            onFailure = { exception ->
-                when (exception) {
-                    is ExpiredJwtException -> throw CustomException(ErrorCode.EXPIRED_REFRESH_TOKEN)
-                    is JwtException, is IllegalArgumentException ->
-                        throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
-                    else -> throw exception
-                }
-            },
-        )
+        val signedJwt = SignedJWT(JWSHeader(JWSAlgorithm.HS256), claims)
+        signedJwt.sign(MACSigner(secretKeyBytes(isRefreshToken)))
+        return signedJwt.serialize()
     }
 
-    private fun getSecretKey(isRefreshToken: Boolean): SecretKey {
-        val keyBytes =
-            Decoders.BASE64.decode(
-                if (isRefreshToken) jwtProperties.refreshToken.secretKey else jwtProperties.accessToken.secretKey,
-            )
-        return Keys.hmacShaKeyFor(keyBytes)
+    fun validateAccessToken(token: String) {
+        extractAllClaims(token, false)
     }
+
+    fun validateRefreshToken(token: String?) {
+        if (token.isNullOrBlank()) throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
+
+        val stored =
+            refreshTokenRepository.findByToken(token)
+                ?: throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
+
+        if (!stored.isValidToken()) throw CustomException(ErrorCode.INVALID_REFRESH_TOKEN)
+
+        extractAllClaims(stored.token, true)
+    }
+
+    /** jjwt가 쓰던 키 유도 그대로다. 바꾸면 이미 발급한 토큰이 전부 무효가 된다. */
+    private fun secretKeyBytes(isRefreshToken: Boolean): ByteArray =
+        Base64.getDecoder().decode(
+            if (isRefreshToken) jwtProperties.refreshToken.secretKey else jwtProperties.accessToken.secretKey,
+        )
+
+    private fun invalidTokenException(isRefreshToken: Boolean) =
+        CustomException(if (isRefreshToken) ErrorCode.INVALID_REFRESH_TOKEN else ErrorCode.INVALID_ACCESS_TOKEN)
+
+    private fun expiredTokenException(isRefreshToken: Boolean) =
+        CustomException(if (isRefreshToken) ErrorCode.EXPIRED_REFRESH_TOKEN else ErrorCode.EXPIRED_ACCESS_TOKEN)
 
     fun getAccessTokenFromRequest(request: HttpServletRequest): String? = getJwtFromRequest(jwtProperties.accessToken.name, request)
 

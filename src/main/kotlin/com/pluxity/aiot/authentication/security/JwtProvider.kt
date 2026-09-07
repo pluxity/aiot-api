@@ -45,8 +45,9 @@ class JwtProvider(
         val claims = signedJwt.jwtClaimsSet
         val now = Date()
 
+        // RFC 7519: exp는 배타적(now < exp), nbf는 포함적(now >= nbf). 부등호 방향이 다른 건 의도다
         val expiresAt = claims.expirationTime ?: throw invalidTokenException(isRefreshToken)
-        if (expiresAt.before(now)) throw expiredTokenException(isRefreshToken)
+        if (!expiresAt.after(now)) throw expiredTokenException(isRefreshToken)
 
         val notBefore = claims.notBeforeTime
         if (notBefore != null && now.before(notBefore)) throw invalidTokenException(isRefreshToken)

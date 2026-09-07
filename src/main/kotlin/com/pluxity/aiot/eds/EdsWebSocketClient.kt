@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.socket.WebSocketMessage
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient
 import reactor.core.Disposable
+import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.netty.http.client.HttpClient
 import reactor.util.retry.Retry
@@ -24,7 +25,11 @@ class EdsWebSocketClient(
     private val objectMapper: ObjectMapper,
     private val edsFacade: EdsFacade,
 ) {
+    // disconnect()는 라이프사이클 스레드에서, 읽기는 Reactor 스레드에서 일어난다
+    @Volatile
     private var disposable: Disposable? = null
+
+    @Volatile
     private var stopped = false
 
     fun connect() {
@@ -34,19 +39,23 @@ class EdsWebSocketClient(
         val client = ReactorNettyWebSocketClient(HttpClient.create())
 
         disposable =
-            client
-                .execute(buildUri()) { session ->
-                    log.info { "EDS WebSocket 연결 성공" }
+            Mono
+                // 재구독마다 api-key를 다시 읽는다. defer가 없으면 connect() 시점의 키가 박혀,
+                // keepAlive 실패로 재로그인한 뒤 끊기면 만료된 키로 영원히 재시도한다
+                .defer {
+                    client.execute(buildUri()) { session ->
+                        log.info { "EDS WebSocket 연결 성공" }
 
-                    session
-                        .receive()
-                        .filter { it.type == WebSocketMessage.Type.TEXT }
-                        .map { it.payloadAsText }
-                        .publishOn(Schedulers.boundedElastic())
-                        .doOnNext { handleMessage(it) }
-                        .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
-                        .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
-                        .then()
+                        session
+                            .receive()
+                            .filter { it.type == WebSocketMessage.Type.TEXT }
+                            .map { it.payloadAsText }
+                            .publishOn(Schedulers.boundedElastic())
+                            .doOnNext { handleMessage(it) }
+                            .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
+                            .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
+                            .then()
+                    }
                 }.doOnSuccess { if (!stopped) log.warn { "EDS WebSocket 연결 정상 종료, 재연결 예정" } }
                 .repeatWhen { it.delayElements(Duration.ofSeconds(5)).takeWhile { !stopped } }
                 .retryWhen(

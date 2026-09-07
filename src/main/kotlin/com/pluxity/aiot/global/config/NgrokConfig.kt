@@ -24,7 +24,7 @@ class NgrokConfig(
     private val client: RestClient =
         restClientFactory.createClient(
             baseUrl = "http://localhost:4040",
-            connectionTimeoutMs = 2000,
+            connectionTimeoutMs = 1000,
             readTimeoutMs = 5000,
         )
 

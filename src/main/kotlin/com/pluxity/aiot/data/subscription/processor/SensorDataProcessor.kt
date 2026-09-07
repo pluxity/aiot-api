@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.condition.EventCondition
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.condition.Operator
 import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.notification.SensorEventNotified
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.Feature
 import com.pluxity.aiot.feature.FeatureRepository
@@ -18,6 +19,7 @@ import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -60,6 +62,7 @@ interface SensorDataProcessor {
         messageSender: StompMessageSender,
         eventHistoryRepository: EventHistoryRepository,
         featureRepository: FeatureRepository,
+        eventPublisher: ApplicationEventPublisher,
     ) {
         val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
         val maxValue = condition.rightValue ?: 0.0
@@ -125,6 +128,25 @@ interface SensorDataProcessor {
                         profileDescription = DeviceProfileEnum.getDescriptionByFieldKey(fieldKey),
                     ),
                 )
+
+                // 비동기 리스너의 등록이 거부되면 여기서 터진다. 측정값 적재까지 막으면 안 된다
+                runCatching {
+                    eventPublisher.publishEvent(
+                        SensorEventNotified(
+                            eventId = eventHistory.requiredId,
+                            siteId = it.requiredId,
+                            siteName = it.name,
+                            deviceId = deviceId,
+                            sensorType = sensorType,
+                            level = condition.level,
+                            fieldDescription = fieldDescription,
+                            value = value,
+                            unit = fieldUnit,
+                            guideMessage = condition.guideMessage,
+                            occurredAt = parsedDate,
+                        ),
+                    )
+                }.onFailure { e -> log.error(e) { "이벤트 알림 발행 실패 (eventId=${eventHistory.requiredId})" } }
             }
         }
 
@@ -148,6 +170,7 @@ interface SensorDataProcessor {
         eventHistoryRepository: EventHistoryRepository,
         featureRepository: FeatureRepository,
         eventConditionRepository: EventConditionRepository,
+        eventPublisher: ApplicationEventPublisher,
     ) {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
@@ -191,6 +214,7 @@ interface SensorDataProcessor {
             messageSender = messageSender,
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,
+            eventPublisher = eventPublisher,
         )
     }
 

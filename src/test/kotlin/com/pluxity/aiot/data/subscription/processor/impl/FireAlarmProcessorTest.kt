@@ -1,6 +1,8 @@
 package com.pluxity.aiot.data.subscription.processor.impl
 
 import com.influxdb.client.WriteApi
+import com.influxdb.client.domain.WritePrecision
+import com.pluxity.aiot.data.measure.FireAlarm
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.entity.EventStatus
@@ -15,6 +17,7 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
@@ -102,6 +105,34 @@ class FireAlarmProcessorTest(
                     val feature = helper.featureRepository.findByDeviceId(deviceId)
                     feature.shouldNotBeNull()
                     feature.eventStatus shouldBe "NORMAL"
+                }
+            }
+        }
+
+        Given("문자 발송 큐가 가득 찬 상황") {
+            When("이벤트 알림 발행이 거부됨") {
+                val deviceId = "FIRE_REJECT"
+
+                val setup =
+                    helper.setupDeviceWithCondition(
+                        objectId = SensorType.FIRE.objectId,
+                        deviceId = deviceId,
+                        eventLevel = ConditionLevel.DANGER,
+                        minValue = null,
+                        maxValue = null,
+                        isBoolean = true,
+                        fieldKey = DeviceProfileEnum.FIRE_ALARM.fieldKey,
+                    )
+                helper.failEventPublishing("큐가 가득 참")
+
+                val sensorData = helper.createSensorData(fireAlarm = true)
+                helper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+
+                Then("이벤트는 남고 측정값 적재도 건너뛰지 않는다") {
+                    eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 1
+                    val captor = ArgumentCaptor.forClass(FireAlarm::class.java)
+                    Mockito.verify(writeApiMock).writeMeasurement(Mockito.eq(WritePrecision.S), captor.capture())
+                    captor.value.deviceId shouldBe deviceId
                 }
             }
         }

@@ -14,6 +14,7 @@ import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -24,6 +25,7 @@ class OdorMonitorProcessor(
     private val eventHistoryRepository: EventHistoryRepository,
     private val featureRepository: FeatureRepository,
     private val eventConditionRepository: EventConditionRepository,
+    private val eventPublisher: ApplicationEventPublisher,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
@@ -51,6 +53,7 @@ class OdorMonitorProcessor(
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,
             eventConditionRepository = eventConditionRepository,
+            eventPublisher = eventPublisher,
         )
         log.debug { "$values processed" }
         log.info {

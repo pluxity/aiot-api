@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.util.WebUtils
+import java.time.Duration
 
 @Service
 class AuthenticationService(
@@ -142,13 +143,13 @@ class AuthenticationService(
         )
         createExpiryCookie(request, response)
 
-        refreshTokenRepository.save(RefreshToken(user.username, newRefreshToken, jwtProperties.refreshToken.expiration.toInt()))
+        refreshTokenRepository.save(RefreshToken(user.username, newRefreshToken, jwtProperties.refreshToken.expiration.toSeconds()))
     }
 
     private fun createAuthCookie(
         name: String,
         value: String,
-        expiry: Long,
+        expiry: Duration,
         path: String,
         response: HttpServletResponse,
     ) {
@@ -184,7 +185,7 @@ class AuthenticationService(
         request: HttpServletRequest,
         response: HttpServletResponse,
     ) {
-        val expiryTimeMillis = System.currentTimeMillis() + (jwtProperties.refreshToken.expiration * 1000L)
+        val expiryTimeMillis = System.currentTimeMillis() + jwtProperties.refreshToken.expiration.toMillis()
         val path = request.contextPath.takeIf { it.isNotEmpty() } ?: "/"
 
         val cookie =

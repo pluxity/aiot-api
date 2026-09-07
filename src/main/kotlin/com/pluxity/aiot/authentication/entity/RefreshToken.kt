@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.index.Indexed
 data class RefreshToken(
     @Id val username: String,
     @Indexed val token: String,
-    @TimeToLive val timeToLive: Int,
+    @TimeToLive val timeToLive: Long,
 ) {
     fun isValidToken(): Boolean = token.isNotBlank()
 }

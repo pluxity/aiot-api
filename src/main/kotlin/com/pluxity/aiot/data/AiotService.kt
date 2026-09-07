@@ -107,9 +107,9 @@ class AiotService(
         log.info { "위치 동기화 완료" }
     }
 
-    /** 트랜잭션 밖에서 돈다. 개별 실패가 전체를 멈추지 않도록 삼키고 로그만 남긴다. */
+    /** 좌표가 없는 기기는 갱신할 것이 없어 뺀다. */
     private fun fetchAllStatuses(deviceIds: List<String>): Map<String, DeviceStatus> =
-        fanOut(deviceIds) { deviceId ->
+        fanOut(deviceIds, "위치") { deviceId ->
             fetchDeviceLocationData(deviceId)?.let { locationData ->
                 val batteryLevel = fetchDeviceBatteryData(deviceId)
                 log.info { "Status 업데이트 성공: $deviceId (${locationData.latitude}, ${locationData.longitude})" }
@@ -118,22 +118,35 @@ class AiotService(
                 log.warn { "위치 데이터 없음: $deviceId" }
                 null
             }
-        }
+        }.filterValues { it != null }
+            .mapValues { (_, status) -> status!! }
 
-    fun fetchAllBatteryLevels(deviceIds: List<String>): Map<String, Int?> = fanOut(deviceIds) { fetchDeviceBatteryData(it) }
+    /**
+     * 값이 없는 기기도 null로 실어 보낸다. 빼버리면 옛 수치가 그대로 남는다.
+     * 요청 자체가 실패한 기기만 빠진다 — 못 받은 것을 null로 반영하면 멀쩡한 값을 지운다.
+     */
+    fun fetchAllBatteryLevels(deviceIds: List<String>): Map<String, Int?> = fanOut(deviceIds, "배터리") { fetchDeviceBatteryData(it) }
 
+    /**
+     * 트랜잭션 밖에서 돈다.
+     *
+     * 완료된 요청만 담고 값이 없으면 null로 남긴다. 실패한 요청은 아예 빼서
+     * 호출자가 "값 없음"과 "못 받음"을 구분할 수 있게 한다.
+     * 개별 실패가 전체를 멈추지 않도록 삼키고 로그만 남긴다.
+     */
     private fun <T : Any> fanOut(
         deviceIds: List<String>,
+        label: String,
         fetch: (String) -> T?,
-    ): Map<String, T> =
+    ): Map<String, T?> =
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             deviceIds
                 .map { deviceId ->
-                    executor.submit<Pair<String, T>?> {
+                    executor.submit<Pair<String, T?>?> {
                         try {
-                            fetch(deviceId)?.let { deviceId to it }
+                            deviceId to fetch(deviceId)
                         } catch (e: Exception) {
-                            log.error(e) { "위치 데이터 가져오기 실패: $deviceId" }
+                            log.error(e) { "$label 데이터 가져오기 실패: $deviceId" }
                             null
                         }
                     }

@@ -29,6 +29,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("com.microsoft.sqlserver:mssql-jdbc")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
     implementation("org.springdoc:springdoc-openapi-starter-common:3.0.1")
     implementation("io.github.oshai:kotlin-logging:8.0.01")
@@ -81,6 +82,8 @@ tasks.jar {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // 실행 환경과 무관하게 시각 검증이 같은 결과를 내도록 고정한다
+    systemProperty("user.timezone", "Asia/Seoul")
 }
 
 spotless {

@@ -46,6 +46,20 @@ mic:
   token-ttl-fallback: ${MIC_TOKEN_TTL_FALLBACK:3600}
   list-page-size: ${MIC_LIST_PAGE_SIZE:100}
 
+ums:
+  enabled: ${UMS_ENABLED:false}
+  url: ${UMS_DB_URL:}
+  username: ${UMS_DB_USERNAME:}
+  password: "${UMS_DB_PASSWORD:}"
+  system-account: ${UMS_SYSTEM_ACCOUNT:}
+  sub-code: ${UMS_SUB_CODE:}
+  sender-number: ${UMS_SENDER_NUMBER:}
+  result-poll-interval-seconds: ${UMS_RESULT_POLL_INTERVAL_SECONDS:60}
+  result-poll-batch-size: ${UMS_RESULT_POLL_BATCH_SIZE:100}
+  result-poll-cutoff-hours: ${UMS_RESULT_POLL_CUTOFF_HOURS:24}
+  connection-timeout-millis: ${UMS_CONNECTION_TIMEOUT_MILLIS:5000}
+  query-timeout-seconds: ${UMS_QUERY_TIMEOUT_SECONDS:10}
+
 file:
   storage-strategy: ${FILE_STORAGE_STRATEGY:s3}
   local:

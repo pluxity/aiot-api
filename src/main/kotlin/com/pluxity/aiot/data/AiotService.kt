@@ -3,8 +3,8 @@ package com.pluxity.aiot.data
 import com.pluxity.aiot.data.dto.DeviceStatus
 import com.pluxity.aiot.data.dto.LocationData
 import com.pluxity.aiot.data.dto.MobiusBatteryResponse
+import com.pluxity.aiot.data.dto.MobiusChildContainersResponse
 import com.pluxity.aiot.data.dto.MobiusLocationResponse
-import com.pluxity.aiot.data.dto.MobiusUrilResponse
 import com.pluxity.aiot.data.dto.SubscriptionM2mSub
 import com.pluxity.aiot.data.dto.SubscriptionRequest
 import com.pluxity.aiot.data.subscription.dto.SubscriptionCinResponse
@@ -39,6 +39,10 @@ import java.util.concurrent.Semaphore
 
 private val log = KotlinLogging.logger {}
 
+// 디바이스 수 x 컨테이너 수를 넘겨야 한다. 상한에 걸리면 뒤쪽 디바이스가 조용히 빠진다
+private const val CONTAINER_LIMIT = 100_000
+private const val OBJECT_INSTANCE_LABEL = "objectVersion:1.0"
+
 @Service
 class AiotService(
     private val featureRepository: FeatureRepository,
@@ -60,6 +64,9 @@ class AiotService(
     /** 주소 변경 이벤트 스레드가 갈아끼우고 요청 스레드가 읽는다. */
     @Volatile
     private var client: RestClient = createMobiusClient(mobiusConfigService.currentUrl)
+
+    @Volatile
+    private var deviceLabel: String = deviceLabelOf(mobiusConfigService.currentUrl)
 
     private fun createMobiusClient(baseUrl: String): RestClient =
         restClientFactory
@@ -93,7 +100,7 @@ class AiotService(
      * JDBC 커넥션을 쥐고 있게 된다.
      */
     fun checkSynchronization() {
-        featureStatusWriter.applyPaths(fetchMobiusUril())
+        featureStatusWriter.applyDevices(fetchMobiusDevices())
     }
 
     fun statusSynchronize() {
@@ -197,20 +204,40 @@ class AiotService(
     }
 
     /**
-     * 빈 응답을 emptyList()로 흘리면 안 된다.
+     * 빈 결과를 emptyList()로 흘리면 안 된다.
      * 뒤 단계가 "Mobius에 아무것도 없다"로 읽어 로컬 Feature를 전량 삭제한다.
      * 삭제는 되돌릴 수 없지만 실패는 다음 주기에 재시도된다.
+     *
+     * 검색(fu=1)은 결과 상한에 잘려 디바이스가 누락되고, rcn 조회는 lvl을 무시하고 하위 전부를 평면으로 준다.
+     * 그래서 라벨로 깊이를 대신해 디바이스와 Object Instance를 따로 받아 pi→ri로 잇는다.
      */
-    private fun fetchMobiusUril(): List<String> =
+    private fun fetchMobiusDevices(): List<MobiusDevice> {
+        val devices = fetchChildContainers(deviceLabel)
+        if (devices.isEmpty()) throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE)
+
+        val objects = fetchChildContainers(OBJECT_INSTANCE_LABEL)
+        return MobiusDeviceResolver
+            .resolve(devices, objects)
+            .ifEmpty { throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE) }
+    }
+
+    private fun fetchChildContainers(label: String) =
         mobiusLimiter {
             client
                 .get()
-                .uri("?fu=1&ty=3&lvl=2")
+                .uri("?rcn=8&ty=3&lbl=$label&lim=$CONTAINER_LIMIT")
                 .retrieve()
-                .body<MobiusUrilResponse>()
-                ?.uril
-                ?: throw CustomException(ErrorCode.MOBIUS_EMPTY_RESPONSE)
+                .body<MobiusChildContainersResponse>()
+                ?.ae
+                ?.containers
+                .orEmpty()
         }
+
+    /** AE 이름은 "{네트워크제어기ID}.{앱ID}" 형식이고 디바이스 컨테이너 라벨에 그 제어기 ID가 들어간다 */
+    private fun deviceLabelOf(baseUrl: String): String {
+        val ae = baseUrl.trimEnd('/').substringAfterLast('/')
+        return "networkControllerId:${ae.substringBefore('.')}"
+    }
 
     /**
      * deviceId를 파싱하여 deviceName을 생성합니다.
@@ -399,6 +426,7 @@ class AiotService(
     @EventListener
     fun handleMobiusUrlUpdated(event: MobiusUrlUpdatedEvent) {
         this.client = createMobiusClient(event.newUrl)
+        this.deviceLabel = deviceLabelOf(event.newUrl)
         checkSynchronization()
         statusSynchronize()
         subscription()

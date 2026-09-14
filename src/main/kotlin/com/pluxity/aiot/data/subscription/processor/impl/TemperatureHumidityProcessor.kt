@@ -11,6 +11,7 @@ import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.ApplicationEventPublisher
@@ -25,6 +26,7 @@ class TemperatureHumidityProcessor(
     private val featureRepository: FeatureRepository,
     private val eventConditionRepository: EventConditionRepository,
     private val eventPublisher: ApplicationEventPublisher,
+    private val incidentService: IncidentService,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
@@ -62,6 +64,7 @@ class TemperatureHumidityProcessor(
             featureRepository = featureRepository,
             eventConditionRepository = eventConditionRepository,
             eventPublisher = eventPublisher,
+            incidentService = incidentService,
         )
         insertSensorData(data, siteId, deviceId, data.timestamp)
     }

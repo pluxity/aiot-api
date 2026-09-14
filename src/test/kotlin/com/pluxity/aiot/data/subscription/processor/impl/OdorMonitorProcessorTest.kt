@@ -9,6 +9,9 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -32,6 +35,8 @@ class OdorMonitorProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
+    private val incidentRepository: IncidentRepository,
 ) : BehaviorSpec({
         extension(SpringExtension(SpringTestLifecycleMode.Root))
 
@@ -45,6 +50,7 @@ class OdorMonitorProcessorTest(
                 messageSenderMock,
                 writeApi,
                 eventConditionRepository,
+                incidentService,
             )
 
         Given("화장실 악취 감지기: 암모니아 기준치(GE 25) 이벤트 조건") {
@@ -72,7 +78,12 @@ class OdorMonitorProcessorTest(
                     eventHistories.first().fieldKey shouldBe "NH3"
                     eventHistories.first().value shouldBe 30.0
                     eventHistories.first().eventName shouldBe "WARNING_NH3"
-                    eventHistories.first().status shouldBe EventStatus.ACTIVE
+                    incidentRepository
+                        .findBySourceTypeAndSourceId(
+                            IncidentSourceType.SENSOR,
+                            eventHistories.first().requiredId,
+                        )?.status shouldBe
+                        EventStatus.ACTIVE
                 }
             }
 

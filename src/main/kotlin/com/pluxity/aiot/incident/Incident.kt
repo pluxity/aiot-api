@@ -16,10 +16,6 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
-/**
- * 센서·CCTV·AI마이크 이벤트를 하나의 조치 워크플로우로 묶는 관리 단위.
- * 원본 이벤트는 각자의 테이블에 남고, (sourceType, sourceId)로 가리킨다.
- */
 @Entity
 @Table(
     name = "incident",

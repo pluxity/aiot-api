@@ -49,7 +49,6 @@ object EventMetrics {
     val ALL = listOf(ACTIVE, IN_PROGRESS, RESOLVED)
 }
 
-/** incident에 센서 원본(EventHistory)을 left join 한 목록 행. 센서가 아니면 센서 전용 컬럼은 null */
 data class IncidentRow(
     val eventId: Long,
     val sourceType: IncidentSourceType,

@@ -106,7 +106,7 @@ class EdsEventService(
         )
     }
 
-    /** EDS는 자체 포맷으로 시각을 주지만 배포별로 ISO를 쓰는 경우도 있어 둘 다 받고, 실패하면 수신 시각으로 대체한다 */
+    // 배포별로 EDS 포맷과 ISO가 섞여 온다. 하나로 줄이면 안 된다
     private fun parseEventStart(eventStart: String): LocalDateTime =
         runCatching { LocalDateTime.parse(eventStart, EDS_TIME_FORMAT) }
             .recoverCatching { OffsetDateTime.parse(eventStart).toLocalDateTime() }

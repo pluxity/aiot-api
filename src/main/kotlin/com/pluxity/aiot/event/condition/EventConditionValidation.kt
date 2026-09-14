@@ -39,6 +39,22 @@ object EventConditionValidators {
             )
     }
 
+    val validateSensorTypeSupported: Validator<EventCondition> = { condition ->
+        runCatching { SensorType.fromObjectId(condition.objectId) }
+            .fold(
+                onSuccess = { sensorType ->
+                    if (sensorType.eventConditionSupported) {
+                        ValidationResult.Valid
+                    } else {
+                        ValidationResult.Invalid(
+                            "SensorType '${sensorType.description}' (objectId: ${condition.objectId})은 이벤트 조건을 설정할 수 없습니다",
+                        )
+                    }
+                },
+                onFailure = { ValidationResult.Valid },
+            )
+    }
+
     val validateFieldKey: Validator<EventCondition> = { condition ->
         runCatching { SensorType.fromObjectId(condition.objectId) }
             .fold(
@@ -159,6 +175,7 @@ object EventConditionValidators {
 
     fun validateAll(condition: EventCondition): ValidationResult =
         validateObjectId(condition)
+            .and(validateSensorTypeSupported(condition))
             .and(validateFieldKey(condition))
             .and(validateBooleanType(condition))
             .and(validateSingleType(condition))

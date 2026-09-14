@@ -170,6 +170,25 @@ abstract class ProcessorTestHelper(
     }
 
     /**
+     * EventCondition 없이 Site & Feature만 생성. 단말 값만으로 판정하는 센서용
+     */
+    fun setupDevice(
+        objectId: String,
+        deviceId: String,
+    ): TestSetup {
+        val site = siteRepository.save(SiteFixture.create(name = "테스트 현장 $deviceId"))
+        featureRepository.save(
+            FeatureFixture.create(
+                deviceId = deviceId,
+                objectId = objectId,
+                name = "$objectId 센서",
+                site = site,
+            ),
+        )
+        return TestSetup(SensorType.fromObjectId(objectId), site.requiredId)
+    }
+
+    /**
      * 더미 센서 데이터 생성
      */
     fun createSensorData(

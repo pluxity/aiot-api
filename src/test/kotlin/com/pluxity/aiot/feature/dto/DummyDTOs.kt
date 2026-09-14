@@ -44,12 +44,14 @@ fun dummyDeviceTypeResponse(
     description: String = "온도계",
     version: String = "1.0",
     profiles: List<DeviceProfileResponse> = listOf(dummyDeviceProfileResponse()),
+    eventConditionSupported: Boolean = true,
 ) = DeviceTypeResponse(
     id = id,
     objectId = objectId,
     description = description,
     version = version,
     profiles = profiles,
+    eventConditionSupported = eventConditionSupported,
 )
 
 fun dummyDeviceProfileResponse(

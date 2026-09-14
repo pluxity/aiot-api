@@ -12,6 +12,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -23,6 +24,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.springframework.boot.test.context.SpringBootTest
@@ -40,119 +44,167 @@ class WasteFillLevelProcessorTest(
 ) : BehaviorSpec({
         extension(SpringExtension(SpringTestLifecycleMode.Root))
 
-        // Mocks
-        val writeApiMock = Mockito.mock(WriteApi::class.java)
-        val messageSenderMock = Mockito.mock(StompMessageSender::class.java)
+        fun newHelper(
+            writeApiMock: WriteApi = Mockito.mock(WriteApi::class.java),
+            messageSenderMock: StompMessageSender = mockk(relaxed = true),
+        ) = WasteFillLevelProcessorTestHelper(
+            siteRepository,
+            featureRepository,
+            eventHistoryRepository,
+            messageSenderMock,
+            writeApiMock,
+            eventConditionRepository,
+        )
 
-        // Helper 초기화
-        val helper =
-            WasteFillLevelProcessorTestHelper(
-                siteRepository,
-                featureRepository,
-                eventHistoryRepository,
-                messageSenderMock,
-                writeApiMock,
-                eventConditionRepository,
-            )
-
-        Given("쓰레기 적재 감지기: ActualFilling 만재 조건(GE 60cm)") {
-            When("ActualFilling = 70cm - 조건 충족") {
+        Given("쓰레기 적재 감지기: 단말이 보고한 HighThreshold 기준 만재 판정") {
+            When("ActualFilling(20) < HighThreshold(30)") {
                 val deviceId = "WFL_001"
+                val messageSenderMock = mockk<StompMessageSender>(relaxed = true)
+                val helper = newHelper(messageSenderMock = messageSenderMock)
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
 
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
+                helper.createProcessor().process(
+                    deviceId,
+                    setup.sensorType,
+                    setup.siteId,
+                    helper.createSensorData(containerModuleId = 1, actualFilling = 20, highThreshold = 30),
+                )
 
-                val sensorData = helper.createSensorData(containerModuleId = 1, actualFilling = 70)
-                val processor = helper.createProcessor()
+                Then("WARNING 이벤트가 즉시 저장되고 알림이 전송된다") {
+                    val histories = eventHistoryRepository.findByDeviceId(deviceId)
+                    histories shouldHaveSize 1
+                    val history = histories.first()
+                    history.fieldKey shouldBe "ActualFilling"
+                    history.value shouldBe 20.0
+                    history.unit shouldBe "cm"
+                    history.level shouldBe ConditionLevel.WARNING
+                    history.eventName shouldBe "WARNING_ActualFilling"
+                    history.minValue shouldBe 30.0
+                    history.guideMessage shouldBe WasteFillLevelProcessor.FULL_GUIDE_MESSAGE
+                    history.status shouldBe EventStatus.ACTIVE
 
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
 
-                Then("만재 이벤트가 저장된다") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 1
-                    eventHistories.first().fieldKey shouldBe "ActualFilling"
-                    eventHistories.first().value shouldBe 70.0
-                    eventHistories.first().unit shouldBe "cm"
-                    eventHistories.first().eventName shouldBe "WARNING_ActualFilling"
-                    eventHistories.first().status shouldBe EventStatus.ACTIVE
+                    val payload = slot<SensorAlarmPayload>()
+                    verify(exactly = 1) { messageSenderMock.sendSensorAlarm(capture(payload)) }
+                    payload.captured.level shouldBe "WARNING"
+                    payload.captured.guideMessage shouldBe WasteFillLevelProcessor.FULL_GUIDE_MESSAGE
                 }
             }
 
-            When("ActualFilling = 30cm - 조건 미충족") {
+            When("ActualFilling(50) >= HighThreshold(30)") {
                 val deviceId = "WFL_002"
+                val helper = newHelper()
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
 
-                val setup =
-                    helper.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
-
-                val sensorData = helper.createSensorData(containerModuleId = 1, actualFilling = 30)
-                val processor = helper.createProcessor()
-
-                processor.process(deviceId, setup.sensorType, setup.siteId, sensorData)
+                helper.createProcessor().process(
+                    deviceId,
+                    setup.sensorType,
+                    setup.siteId,
+                    helper.createSensorData(containerModuleId = 1, actualFilling = 50, highThreshold = 30),
+                )
 
                 Then("이벤트가 발생하지 않고 NORMAL 상태") {
-                    val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
-                    eventHistories shouldHaveSize 0
+                    eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 0
 
                     val feature = helper.featureRepository.findByDeviceId(deviceId)
                     feature.shouldNotBeNull()
                     feature.eventStatus shouldBe "NORMAL"
                 }
             }
+
+            When("ActualFilling == HighThreshold") {
+                val deviceId = "WFL_003"
+                val helper = newHelper()
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
+
+                helper.createProcessor().process(
+                    deviceId,
+                    setup.sensorType,
+                    setup.siteId,
+                    helper.createSensorData(actualFilling = 30, highThreshold = 30),
+                )
+
+                Then("경계값은 만재로 보지 않는다") {
+                    eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 0
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "NORMAL"
+                }
+            }
+
+            When("만재 후 비워져 ActualFilling이 HighThreshold 이상으로 돌아옴") {
+                val deviceId = "WFL_004"
+                val helper = newHelper()
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.sensorType, setup.siteId, helper.createSensorData(actualFilling = 10, highThreshold = 30))
+
+                Then("WARNING이 NORMAL로 해제되고 같은 상태의 재수신은 이력을 늘리지 않는다") {
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
+
+                    processor.process(
+                        deviceId,
+                        setup.sensorType,
+                        setup.siteId,
+                        helper.createSensorData(actualFilling = 15, highThreshold = 30),
+                    )
+                    eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 1
+
+                    processor.process(
+                        deviceId,
+                        setup.sensorType,
+                        setup.siteId,
+                        helper.createSensorData(actualFilling = 80, highThreshold = 30),
+                    )
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "NORMAL"
+                }
+            }
+        }
+
+        Given("쓰레기 적재 감지기: 판단 근거가 부족한 페이로드") {
+            When("경보 발생 후 HighThreshold가 빠진 페이로드가 수신됨") {
+                val deviceId = "WFL_005"
+                val helper = newHelper()
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
+                val processor = helper.createProcessor()
+
+                processor.process(deviceId, setup.sensorType, setup.siteId, helper.createSensorData(actualFilling = 10, highThreshold = 30))
+
+                Then("경보 상태가 유지된다") {
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
+
+                    processor.process(deviceId, setup.sensorType, setup.siteId, helper.createSensorData(actualFilling = 90))
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
+
+                    processor.process(
+                        deviceId,
+                        setup.sensorType,
+                        setup.siteId,
+                        helper.createSensorData(containerModuleId = 1, highThreshold = 30),
+                    )
+                    helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
+                }
+            }
         }
 
         Given("쓰레기 적재 감지기: InfluxDB 적재") {
             When("ContainerModuleId, ActualFilling, HighThreshold가 모두 수신됨") {
-                val deviceId = "WFL_003"
-                val localWriteApiMock = Mockito.mock(WriteApi::class.java)
-                val localHelper =
-                    WasteFillLevelProcessorTestHelper(
-                        siteRepository,
-                        featureRepository,
-                        eventHistoryRepository,
-                        messageSenderMock,
-                        localWriteApiMock,
-                        eventConditionRepository,
-                    )
+                val deviceId = "WFL_006"
+                val writeApiMock = Mockito.mock(WriteApi::class.java)
+                val helper = newHelper(writeApiMock = writeApiMock)
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
 
-                val setup =
-                    localHelper.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
-
-                val sensorData =
-                    localHelper.createSensorData(
-                        containerModuleId = 2,
-                        actualFilling = 45,
-                        highThreshold = 80,
-                    )
-                localHelper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+                helper.createProcessor().process(
+                    deviceId,
+                    setup.sensorType,
+                    setup.siteId,
+                    helper.createSensorData(containerModuleId = 2, actualFilling = 45, highThreshold = 80),
+                )
 
                 Then("세 개의 measurement가 fieldKey 태그와 함께 기록된다") {
                     val captor = ArgumentCaptor.forClass(WasteFillLevel::class.java)
                     Mockito
-                        .verify(localWriteApiMock, Mockito.times(3))
+                        .verify(writeApiMock, Mockito.times(3))
                         .writeMeasurement(Mockito.eq(WritePrecision.S), captor.capture())
 
                     val written = captor.allValues
@@ -164,35 +216,16 @@ class WasteFillLevelProcessorTest(
             }
 
             When("ActualFilling이 없는 데이터가 수신됨") {
-                val deviceId = "WFL_004"
-                val localWriteApiMock = Mockito.mock(WriteApi::class.java)
-                val localHelper =
-                    WasteFillLevelProcessorTestHelper(
-                        siteRepository,
-                        featureRepository,
-                        eventHistoryRepository,
-                        messageSenderMock,
-                        localWriteApiMock,
-                        eventConditionRepository,
-                    )
+                val deviceId = "WFL_007"
+                val writeApiMock = Mockito.mock(WriteApi::class.java)
+                val helper = newHelper(writeApiMock = writeApiMock)
+                val setup = helper.setupDevice(SensorType.WASTE_FILL_LEVEL.objectId, deviceId)
 
-                val setup =
-                    localHelper.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
-
-                val sensorData = localHelper.createSensorData(containerModuleId = 3)
-                localHelper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
+                helper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, helper.createSensorData(containerModuleId = 3))
 
                 Then("ContainerModuleId만 기록되고 이벤트는 발생하지 않는다") {
                     Mockito
-                        .verify(localWriteApiMock, Mockito.times(1))
+                        .verify(writeApiMock, Mockito.times(1))
                         .writeMeasurement(Mockito.eq(WritePrecision.S), Mockito.any(WasteFillLevel::class.java))
 
                     eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 0
@@ -200,129 +233,40 @@ class WasteFillLevelProcessorTest(
             }
         }
 
-        Given("쓰레기 적재 감지기: 이벤트 조건 대상이 아닌 항목") {
-            When("HighThreshold로 이벤트 조건을 등록하려 함") {
-                Then("SensorType의 프로필에 없어 저장이 거부된다") {
+        Given("쓰레기 적재 감지기: 사용자 이벤트 조건 차단") {
+            When("ActualFilling으로 이벤트 조건을 등록하려 함") {
+                Then("SensorType이 조건 설정을 지원하지 않아 거부된다") {
                     val exception =
                         shouldThrowAny {
                             EventCondition(
-                                fieldKey = DeviceProfileEnum.HIGH_THRESHOLD.fieldKey,
+                                fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
                                 objectId = SensorType.WASTE_FILL_LEVEL.objectId,
                                 isActivate = true,
                                 level = ConditionLevel.WARNING,
                                 conditionType = ConditionType.SINGLE,
-                                operator = Operator.GE,
-                                thresholdValue = 60.0,
+                                operator = Operator.LE,
+                                thresholdValue = 30.0,
                                 notificationEnabled = true,
                             )
                         }
-                    exception.message shouldContain "HighThreshold"
+                    exception.message shouldContain "이벤트 조건을 설정할 수 없습니다"
                 }
             }
 
-            When("ContainerModuleId로 이벤트 조건을 등록하려 함") {
-                Then("마찬가지로 저장이 거부된다") {
+            When("HighThreshold로 이벤트 조건을 등록하려 함") {
+                Then("마찬가지로 거부된다") {
                     shouldThrowAny {
                         EventCondition(
-                            fieldKey = DeviceProfileEnum.CONTAINER_MODULE_ID.fieldKey,
+                            fieldKey = DeviceProfileEnum.HIGH_THRESHOLD.fieldKey,
                             objectId = SensorType.WASTE_FILL_LEVEL.objectId,
                             isActivate = true,
                             level = ConditionLevel.WARNING,
                             conditionType = ConditionType.SINGLE,
                             operator = Operator.GE,
-                            thresholdValue = 1.0,
+                            thresholdValue = 60.0,
                             notificationEnabled = true,
                         )
                     }
-                }
-            }
-
-            When("HighThreshold가 담긴 데이터가 수신됨") {
-                val deviceId = "WFL_005"
-                val writeApiMock = Mockito.mock(WriteApi::class.java)
-                val localHelper =
-                    WasteFillLevelProcessorTestHelper(
-                        siteRepository,
-                        featureRepository,
-                        eventHistoryRepository,
-                        messageSenderMock,
-                        writeApiMock,
-                        eventConditionRepository,
-                    )
-
-                val setup =
-                    localHelper.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
-
-                val sensorData = localHelper.createSensorData(actualFilling = 30, highThreshold = 80)
-                localHelper.createProcessor().process(deviceId, setup.sensorType, setup.siteId, sensorData)
-
-                Then("이벤트는 발생하지 않지만 값은 InfluxDB에 적재된다") {
-                    eventHistoryRepository.findByDeviceId(deviceId) shouldHaveSize 0
-
-                    val captor = ArgumentCaptor.forClass(WasteFillLevel::class.java)
-                    Mockito
-                        .verify(writeApiMock, Mockito.times(2))
-                        .writeMeasurement(Mockito.eq(WritePrecision.S), captor.capture())
-                    captor.allValues.map { it.fieldKey } shouldBe listOf("ActualFilling", "HighThreshold")
-                }
-            }
-        }
-
-        Given("쓰레기 적재 감지기: 조건 대상 값이 없는 페이로드") {
-            When("경보 발생 후 ActualFilling이 빠진 페이로드가 수신됨") {
-                val deviceId = "WFL_006"
-                val helper2 =
-                    WasteFillLevelProcessorTestHelper(
-                        siteRepository,
-                        featureRepository,
-                        eventHistoryRepository,
-                        messageSenderMock,
-                        Mockito.mock(WriteApi::class.java),
-                        eventConditionRepository,
-                    )
-
-                val setup =
-                    helper2.setupDeviceWithCondition(
-                        objectId = SensorType.WASTE_FILL_LEVEL.objectId,
-                        deviceId = deviceId,
-                        eventLevel = ConditionLevel.WARNING,
-                        minValue = "60.0",
-                        maxValue = null,
-                        isBoolean = false,
-                        fieldKey = DeviceProfileEnum.ACTUAL_FILLING.fieldKey,
-                    )
-
-                val processor = helper2.createProcessor()
-                processor.process(
-                    deviceId,
-                    setup.sensorType,
-                    setup.siteId,
-                    helper2.createSensorData(actualFilling = 70),
-                )
-
-                // ProjectConfig가 InstancePerLeaf라 Then이 여러 개면 When 본문이 재실행된다.
-                // Feature를 insert하는 컨테이너이므로 검증은 하나의 Then에 모은다
-                Then("판단 근거가 없으므로 경보 상태가 유지된다") {
-                    helper2.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
-
-                    processor.process(
-                        deviceId,
-                        setup.sensorType,
-                        setup.siteId,
-                        helper2.createSensorData(containerModuleId = 1, highThreshold = 80),
-                    )
-
-                    val feature = helper2.featureRepository.findByDeviceId(deviceId)
-                    feature.shouldNotBeNull()
-                    feature.eventStatus shouldBe "WARNING"
                 }
             }
         }

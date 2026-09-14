@@ -112,8 +112,8 @@ object SensorMetrics {
     val CLIMATE = SensorType.TEMPERATURE_HUMIDITY.deviceProfiles.map { it.toMetricDefinition() }
 
     /**
-     * 조회 대상은 이벤트 조건 대상(deviceProfiles)보다 넓다.
-     * ContainerModuleId와 HighThreshold는 적재/조회만 하고 조건 평가에는 쓰지 않는다.
+     * 조회 대상은 deviceProfiles보다 넓다.
+     * ContainerModuleId는 식별 값이고 HighThreshold는 단말이 보고하는 만재 기준값이라 사용자 조건 대상이 아니다.
      */
     val WASTE_FILL_LEVEL =
         (

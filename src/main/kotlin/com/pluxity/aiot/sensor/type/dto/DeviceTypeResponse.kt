@@ -8,6 +8,7 @@ data class DeviceTypeResponse(
     var description: String,
     var version: String,
     var profiles: List<DeviceProfileResponse>,
+    var eventConditionSupported: Boolean,
 )
 
 fun SensorType.toDeviceTypeResponse() =
@@ -17,4 +18,5 @@ fun SensorType.toDeviceTypeResponse() =
         description = this.description,
         version = this.version,
         profiles = this.deviceProfiles.map { it.toResponse() },
+        eventConditionSupported = this.eventConditionSupported,
     )

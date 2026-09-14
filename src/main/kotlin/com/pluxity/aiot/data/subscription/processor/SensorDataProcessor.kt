@@ -56,7 +56,7 @@ interface SensorDataProcessor {
         value: Double,
         fieldUnit: String,
         fieldDescription: String,
-        condition: EventCondition,
+        trigger: EventTrigger,
         feature: Feature,
         parsedDate: LocalDateTime,
         messageSender: StompMessageSender,
@@ -64,18 +64,18 @@ interface SensorDataProcessor {
         featureRepository: FeatureRepository,
         eventPublisher: ApplicationEventPublisher,
     ) {
-        val minValue = condition.thresholdValue ?: condition.leftValue ?: 0.0
-        val maxValue = condition.rightValue ?: 0.0
+        val minValue = trigger.minValue
+        val maxValue = trigger.maxValue
 
-        val eventName = "${condition.level.name}_$fieldKey"
+        val eventName = "${trigger.level.name}_$fieldKey"
 
-        if (feature.eventStatus == condition.level.toString()) {
+        if (feature.eventStatus == trigger.level.toString()) {
             log.info { "이벤트 상태가 이전과 동일 deviceId: $deviceId, status: ${feature.eventStatus}" }
             return
         }
 
         // Feature의 이벤트 상태 업데이트
-        updateFeatureEventStatus(feature, condition.level.toString(), featureRepository)
+        updateFeatureEventStatus(feature, trigger.level.toString(), featureRepository)
 
         // 이벤트 이력 저장
         val eventHistory =
@@ -91,10 +91,10 @@ interface SensorDataProcessor {
                     occurredAt = parsedDate,
                     minValue = minValue,
                     maxValue = maxValue,
-                    guideMessage = condition.guideMessage,
+                    guideMessage = trigger.guideMessage,
                     longitude = feature.longitude,
                     latitude = feature.latitude,
-                    level = condition.level,
+                    level = trigger.level,
                 ),
             )
 
@@ -102,7 +102,7 @@ interface SensorDataProcessor {
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
                 "$fieldUnit - $eventName"
 
-        if (condition.notificationEnabled) {
+        if (trigger.notificationEnabled) {
             feature.site?.let {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
@@ -115,13 +115,13 @@ interface SensorDataProcessor {
                         status = eventHistory.status.name,
                         eventName = eventName,
                         fieldKey = fieldKey,
-                        guideMessage = condition.guideMessage,
+                        guideMessage = trigger.guideMessage,
                         longitude = requireNotNull(feature.longitude) { "Feature(${feature.id}) longitude is null (not ready)" },
                         latitude = requireNotNull(feature.latitude) { "Feature(${feature.id}) latitude is null (not ready)" },
                         updatedAt = eventHistory.updatedAt.toString(),
                         updatedBy = eventHistory.updatedBy,
                         value = value,
-                        level = condition.level.name,
+                        level = trigger.level.name,
                         siteId = it.id,
                         siteName = it.name,
                         sensorDescription = sensorType.description,
@@ -138,11 +138,11 @@ interface SensorDataProcessor {
                             siteName = it.name,
                             deviceId = deviceId,
                             sensorType = sensorType,
-                            level = condition.level,
+                            level = trigger.level,
                             fieldDescription = fieldDescription,
                             value = value,
                             unit = fieldUnit,
-                            guideMessage = condition.guideMessage,
+                            guideMessage = trigger.guideMessage,
                             occurredAt = parsedDate,
                         ),
                     )
@@ -208,7 +208,7 @@ interface SensorDataProcessor {
             value = winner.value.toEventHistoryValue(),
             fieldUnit = winner.deviceProfile.unit,
             fieldDescription = winner.deviceProfile.description,
-            condition = winner.condition,
+            trigger = winner.condition.toEventTrigger(),
             feature = feature,
             parsedDate = parsedDate,
             messageSender = messageSender,

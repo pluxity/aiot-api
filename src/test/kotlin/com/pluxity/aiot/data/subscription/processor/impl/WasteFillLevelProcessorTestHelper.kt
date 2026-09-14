@@ -34,7 +34,6 @@ class WasteFillLevelProcessorTestHelper(
             messageSenderMock,
             eventHistoryRepository,
             featureRepository,
-            eventConditionRepository,
             eventPublisherMock,
             writeApiMock,
         )

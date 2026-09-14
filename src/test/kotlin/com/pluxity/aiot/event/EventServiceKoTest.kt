@@ -1,14 +1,15 @@
 package com.pluxity.aiot.event
 
-import com.pluxity.aiot.action.entity.dummyEventHistory
-import com.pluxity.aiot.action.entity.dummyEventHistoryRow
+import com.pluxity.aiot.action.entity.dummyIncident
+import com.pluxity.aiot.action.entity.dummyIncidentRow
 import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.EventService.EventListDto
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventStatus
-import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.site.entity.dummySite
@@ -18,6 +19,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -26,14 +28,14 @@ import java.time.LocalDateTime
 class EventServiceKoTest :
     BehaviorSpec({
 
-        val eventHistoryRepository: EventHistoryRepository = mockk()
+        val incidentRepository: IncidentRepository = mockk()
         val siteRepository: SiteRepository = mockk()
         val jdbcTemplate: NamedParameterJdbcTemplate = mockk()
         val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
 
         val eventService =
             EventService(
-                eventHistoryRepository,
+                incidentRepository,
                 siteRepository,
                 jdbcTemplate,
                 eventStatusChangeNotifier,
@@ -45,33 +47,35 @@ class EventServiceKoTest :
                 val to = "20240131235959"
                 val siteId = 1L
                 val result = EventStatus.ACTIVE
-                val sites =
+                val rows =
                     listOf(
-                        dummySite(id = 1L),
-                        dummySite(id = 2L),
-                    )
-                val eventHistories =
-                    listOf(
-                        dummyEventHistoryRow(),
-                        dummyEventHistoryRow(),
+                        dummyIncidentRow(eventId = 2L),
+                        dummyIncidentRow(
+                            eventId = 1L,
+                            sourceType = IncidentSourceType.CCTV,
+                            objectId = null,
+                            fieldKey = null,
+                            value = null,
+                            eventName = null,
+                            title = "배회",
+                            level = ConditionLevel.WARNING,
+                        ),
                     )
 
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns listOf(dummySite(id = 1L), dummySite(id = 2L))
                 every {
-                    siteRepository.findAllByOrderByCreatedAtDesc()
-                } returns sites
-
-                every {
-                    eventHistoryRepository.findEventListWithPaging(
+                    incidentRepository.findEventListWithPaging(
                         from,
                         to,
                         siteId,
                         result,
                         ConditionLevel.CAUTION,
                         SensorType.WASTE_FILL_LEVEL,
+                        IncidentSourceType.SENSOR,
                         listOf(1L, 2L),
                         20,
                     )
-                } returns eventHistories
+                } returns rows
 
                 val results =
                     eventService.findAll(
@@ -81,39 +85,68 @@ class EventServiceKoTest :
                         result,
                         ConditionLevel.CAUTION,
                         SensorType.WASTE_FILL_LEVEL,
+                        IncidentSourceType.SENSOR,
                         size = 20,
                     )
 
-                Then("이벤트 목록 반환") {
+                Then("이벤트 목록 반환, 센서가 아닌 행은 title로 eventName을 만든다") {
                     results.content.size shouldBe 2
+                    results.content[0].sourceType shouldBe "SENSOR"
+                    results.content[0].eventName shouldBe "CAUTION_Temperature"
+                    results.content[0].profileDescription shouldBe "온도"
+                    results.content[1].sourceType shouldBe "CCTV"
+                    results.content[1].eventName shouldBe "WARNING_배회"
+                    results.content[1].profileDescription shouldBe "배회"
+                    results.content[1].value shouldBe null
                 }
             }
 
             When("필터 없이 조회 요청") {
-                val sites = listOf(dummySite(id = 1L))
-                val eventHistories = listOf(dummyEventHistoryRow())
-
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns listOf(dummySite(id = 1L))
                 every {
-                    siteRepository.findAllByOrderByCreatedAtDesc()
-                } returns sites
-
-                every {
-                    eventHistoryRepository.findEventListWithPaging(
+                    incidentRepository.findEventListWithPaging(
                         null,
                         null,
                         null,
                         null,
-                        ConditionLevel.CAUTION,
-                        SensorType.WASTE_FILL_LEVEL,
+                        null,
+                        null,
+                        null,
                         listOf(1L),
                         20,
                     )
-                } returns eventHistories
+                } returns listOf(dummyIncidentRow())
 
-                val results = eventService.findAll(null, null, null, null, ConditionLevel.CAUTION, SensorType.WASTE_FILL_LEVEL, 20)
+                val results = eventService.findAll(null, null, null, null, null, null, null, 20)
 
                 Then("전체 이벤트 목록 반환") {
                     results.content.size shouldBe 1
+                }
+            }
+
+            When("권한이 있는 현장이 하나도 없음") {
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns emptyList()
+
+                val results = eventService.findAll(null, null, null, null, null, null, null, 20)
+
+                Then("쿼리 없이 빈 목록을 돌려준다") {
+                    results.content shouldBe emptyList()
+                    results.hasNext shouldBe false
+                    verify(exactly = 0) {
+                        incidentRepository.findEventListWithPaging(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                        )
+                    }
                 }
             }
         }
@@ -122,16 +155,17 @@ class EventServiceKoTest :
             When("유효한 ID와 상태로 변경 요청") {
                 val eventId = 1L
                 val newResult = EventStatus.RESOLVED
-                val eventHistory = dummyEventHistory(id = eventId)
+                val incident = dummyIncident(id = eventId)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 eventService.updateStatus(eventId, newResult)
 
-                Then("상태 변경 성공") {
-                    eventHistory.status shouldBe newResult
+                Then("상태 변경 성공, 알림 발송") {
+                    incident.status shouldBe newResult
+                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
                 }
             }
 
@@ -140,7 +174,7 @@ class EventServiceKoTest :
                 val newResult = EventStatus.RESOLVED
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
+                    incidentRepository.findByIdOrNull(eventId)
                 } returns null
 
                 val exception =
@@ -148,8 +182,8 @@ class EventServiceKoTest :
                         eventService.updateStatus(eventId, newResult)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
         }
@@ -157,16 +191,16 @@ class EventServiceKoTest :
         Given("이벤트를 ID로 조회할 때") {
             When("유효한 ID로 조회 요청") {
                 val eventId = 1L
-                val eventHistory = dummyEventHistory(id = eventId)
+                val incident = dummyIncident(id = eventId)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 val result = eventService.findById(eventId)
 
                 Then("이벤트 반환") {
-                    result shouldBe eventHistory
+                    result shouldBe incident
                     result.id shouldBe eventId
                 }
             }
@@ -175,7 +209,7 @@ class EventServiceKoTest :
                 val eventId = 999L
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
+                    incidentRepository.findByIdOrNull(eventId)
                 } returns null
 
                 val exception =
@@ -183,8 +217,8 @@ class EventServiceKoTest :
                         eventService.findById(eventId)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
         }

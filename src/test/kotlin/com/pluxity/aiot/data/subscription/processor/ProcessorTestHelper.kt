@@ -12,6 +12,7 @@ import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.fixture.FeatureFixture
 import com.pluxity.aiot.fixture.SiteFixture
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
 import org.springframework.context.ApplicationEventPublisher
@@ -111,6 +112,7 @@ abstract class ProcessorTestHelper(
     protected val eventConditionRepository: EventConditionRepository,
     protected val messageSenderMock: StompMessageSender,
     protected val writeApiMock: WriteApi,
+    protected val incidentService: IncidentService,
 ) {
     protected var eventPublisherMock = ApplicationEventPublisher { _ -> }
 

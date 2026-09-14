@@ -5,6 +5,7 @@ import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.constant.ErrorCode.NOT_FOUND_SITE
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.incident.IncidentRepository
 import com.pluxity.aiot.site.dto.SiteRequest
 import com.pluxity.aiot.site.dto.SiteResponse
 import com.pluxity.aiot.site.dto.toSiteResponse
@@ -22,6 +23,7 @@ class SiteService(
     private val siteRepository: SiteRepository,
     private val siteSensorManagerRepository: SiteSensorManagerRepository,
     private val fileService: FileService,
+    private val incidentRepository: IncidentRepository,
 ) {
     companion object {
         private const val SITE_PATH: String = "sites/"
@@ -85,6 +87,7 @@ class SiteService(
     fun delete(id: Long) {
         val site = findById(id)
         siteSensorManagerRepository.deleteAllBySiteId(id)
+        incidentRepository.detachSite(id)
         siteRepository.delete(site)
     }
 

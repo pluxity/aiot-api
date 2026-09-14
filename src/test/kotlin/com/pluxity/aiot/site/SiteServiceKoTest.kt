@@ -4,6 +4,7 @@ import com.pluxity.aiot.file.dto.FileResponse
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.incident.IncidentRepository
 import com.pluxity.aiot.site.dto.SiteRequest
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrow
@@ -24,11 +25,13 @@ class SiteServiceKoTest :
         val siteRepository: SiteRepository = mockk()
         val fileService: FileService = mockk()
         val siteSensorManagerRepository: SiteSensorManagerRepository = mockk(relaxed = true)
+        val incidentRepository: IncidentRepository = mockk(relaxed = true)
         val siteService =
             SiteService(
                 siteRepository,
                 siteSensorManagerRepository,
                 fileService,
+                incidentRepository,
             )
 
         Given("Site 생성 기능") {
@@ -238,7 +241,8 @@ class SiteServiceKoTest :
 
                 siteService.delete(1L)
 
-                Then("성공적으로 삭제된다") {
+                Then("incident 연결을 풀고 삭제한다") {
+                    verify(exactly = 1) { incidentRepository.detachSite(1L) }
                     verify(exactly = 1) { siteRepository.delete(site) }
                 }
             }

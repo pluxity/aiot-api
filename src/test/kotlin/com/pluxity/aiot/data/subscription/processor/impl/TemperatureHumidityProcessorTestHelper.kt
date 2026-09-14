@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.site.SiteRepository
 
@@ -20,6 +21,7 @@ class TemperatureHumidityProcessorTestHelper(
     messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
 ) : ProcessorTestHelper(
         siteRepository,
         featureRepository,
@@ -27,6 +29,7 @@ class TemperatureHumidityProcessorTestHelper(
         eventConditionRepository,
         messageSenderMock,
         writeApiMock,
+        incidentService,
     ) {
     /**
      * Temperature 조건으로 DeviceType 생성
@@ -61,6 +64,7 @@ class TemperatureHumidityProcessorTestHelper(
             featureRepository,
             eventConditionRepository,
             eventPublisherMock,
+            incidentService,
             writeApiMock,
         )
 }

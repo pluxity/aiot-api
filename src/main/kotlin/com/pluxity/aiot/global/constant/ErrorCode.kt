@@ -37,7 +37,7 @@ enum class ErrorCode(
     INVALID_EVENT_CONDITION(HttpStatus.BAD_REQUEST, "%s"),
     INVALID_DATE_TIME_FORMAT(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않습니다: 형식:%s, 입력:%s"),
 
-    NOT_FOUND_EVENT_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Event History를 찾을 수 없습니다."),
+    NOT_FOUND_INCIDENT(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트를 찾을 수 없습니다."),
     NOT_FOUND_ACTION_HISTORY(HttpStatus.NOT_FOUND, "ID가 %s인 Action History를 찾을 수 없습니다."),
     NOT_FOUND_EVENT_CONDITION(HttpStatus.NOT_FOUND, "ID가 %s인 이벤트 조건을 찾을 수 없습니다."),
     NOT_FOUND_FILE(HttpStatus.NOT_FOUND, "ID가 %s인 파일을 찾을 수 없습니다."),

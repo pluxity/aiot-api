@@ -8,6 +8,9 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -30,6 +33,8 @@ class TemperatureHumidityProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
+    private val incidentRepository: IncidentRepository,
 ) : BehaviorSpec({
         extension(SpringExtension(SpringTestLifecycleMode.Root))
 
@@ -46,6 +51,7 @@ class TemperatureHumidityProcessorTest(
                 messageSenderMock,
                 writeApiMock,
                 eventConditionRepository,
+                incidentService,
             )
 
         Given("온습도계 센서 데이터 처리 및 이벤트 이력 저장") {
@@ -78,7 +84,15 @@ class TemperatureHumidityProcessorTest(
                     eventHistory.eventName shouldBe "WARNING_Temperature"
                     eventHistory.minValue shouldBe 25.0
                     eventHistory.maxValue shouldBe 30.0
-                    eventHistory.status shouldBe EventStatus.ACTIVE
+
+                    val incident = incidentRepository.findBySourceTypeAndSourceId(IncidentSourceType.SENSOR, eventHistory.requiredId)
+                    incident.shouldNotBeNull()
+                    incident.status shouldBe EventStatus.ACTIVE
+                    incident.deviceId shouldBe deviceId
+                    incident.deviceName shouldBe "온습도계"
+                    incident.title shouldBe "온도"
+                    incident.level shouldBe ConditionLevel.WARNING
+                    incident.site?.id shouldBe setup.siteId
                 }
             }
 
@@ -457,7 +471,12 @@ class TemperatureHumidityProcessorTest(
                     val actualValue = eventHistories.first().value
                     actualValue.shouldNotBeNull()
                     (actualValue in 81.37..81.39) shouldBe true
-                    eventHistories.first().status shouldBe EventStatus.ACTIVE
+                    incidentRepository
+                        .findBySourceTypeAndSourceId(
+                            IncidentSourceType.SENSOR,
+                            eventHistories.first().requiredId,
+                        )?.status shouldBe
+                        EventStatus.ACTIVE
                 }
             }
 
@@ -589,7 +608,8 @@ class TemperatureHumidityProcessorTest(
                     val eventHistories = eventHistoryRepository.findByDeviceId(deviceId)
                     eventHistories shouldHaveSize 1
                     eventHistories[0].eventName shouldBe "DANGER_Temperature"
-                    eventHistories[0].status shouldBe EventStatus.ACTIVE
+                    incidentRepository.findBySourceTypeAndSourceId(IncidentSourceType.SENSOR, eventHistories[0].requiredId)?.status shouldBe
+                        EventStatus.ACTIVE
                 }
             }
         }

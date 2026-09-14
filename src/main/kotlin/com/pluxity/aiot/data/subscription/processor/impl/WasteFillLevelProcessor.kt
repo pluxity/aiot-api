@@ -11,6 +11,7 @@ import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -25,6 +26,7 @@ class WasteFillLevelProcessor(
     private val eventHistoryRepository: EventHistoryRepository,
     private val featureRepository: FeatureRepository,
     private val eventPublisher: ApplicationEventPublisher,
+    private val incidentService: IncidentService,
     private val writeApi: WriteApi,
 ) : SensorDataProcessor {
     companion object {
@@ -90,6 +92,7 @@ class WasteFillLevelProcessor(
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,
             eventPublisher = eventPublisher,
+            incidentService = incidentService,
         )
     }
 

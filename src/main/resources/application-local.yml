@@ -13,11 +13,10 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     show-sql: false
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        default_batch_fetch_size: 100
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
 
 domain:
   url: ${API_URL:http://localhost:8080}

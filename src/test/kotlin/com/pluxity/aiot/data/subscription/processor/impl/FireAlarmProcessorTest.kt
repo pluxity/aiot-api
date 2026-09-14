@@ -9,6 +9,9 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -32,6 +35,8 @@ class FireAlarmProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
+    private val incidentRepository: IncidentRepository,
 ) : BehaviorSpec({
         extension(SpringExtension(SpringTestLifecycleMode.Root))
 
@@ -48,6 +53,7 @@ class FireAlarmProcessorTest(
                 messageSenderMock,
                 writeApiMock,
                 eventConditionRepository,
+                incidentService,
             )
 
         Given("화재 감지 센서: EQUALS true 조건") {
@@ -76,7 +82,12 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 1.0
                     eventHistories.first().eventName shouldBe "DANGER_Fire Alarm"
-                    eventHistories.first().status shouldBe EventStatus.ACTIVE
+                    incidentRepository
+                        .findBySourceTypeAndSourceId(
+                            IncidentSourceType.SENSOR,
+                            eventHistories.first().requiredId,
+                        )?.status shouldBe
+                        EventStatus.ACTIVE
                 }
             }
 
@@ -164,7 +175,12 @@ class FireAlarmProcessorTest(
                     eventHistories.first().fieldKey shouldBe "Fire Alarm"
                     eventHistories.first().value shouldBe 0.0
                     eventHistories.first().eventName shouldBe "WARNING_Fire Alarm"
-                    eventHistories.first().status shouldBe EventStatus.ACTIVE
+                    incidentRepository
+                        .findBySourceTypeAndSourceId(
+                            IncidentSourceType.SENSOR,
+                            eventHistories.first().requiredId,
+                        )?.status shouldBe
+                        EventStatus.ACTIVE
                 }
             }
         }

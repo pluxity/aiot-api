@@ -1,13 +1,13 @@
 package com.pluxity.aiot.action
 
 import com.pluxity.aiot.event.EventStatusChangeNotifier
-import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
-import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.file.extensions.getFileMapById
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.incident.Incident
+import com.pluxity.aiot.incident.IncidentRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class ActionHistoryService(
     private val actionHistoryRepository: ActionHistoryRepository,
-    private val eventHistoryRepository: EventHistoryRepository,
+    private val incidentRepository: IncidentRepository,
     private val actionHistoryFileRepository: ActionHistoryFileRepository,
     private val fileService: FileService,
     private val eventStatusChangeNotifier: EventStatusChangeNotifier,
@@ -24,14 +24,14 @@ class ActionHistoryService(
         private const val ACTION_HISTORIES: String = "action-histories/"
     }
 
-    private fun findEventHistoryById(id: Long): EventHistory =
-        eventHistoryRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_HISTORY, id)
+    private fun findIncidentById(id: Long): Incident =
+        incidentRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_INCIDENT, id)
 
     private fun findActionHistoryById(
         eventId: Long,
         id: Long,
     ): ActionHistory =
-        actionHistoryRepository.findByIdAndEventHistory(id, findEventHistoryById(eventId))
+        actionHistoryRepository.findByIdAndIncident(id, findIncidentById(eventId))
             ?: throw CustomException(ErrorCode.NOT_FOUND_ACTION_HISTORY, id)
 
     @Transactional
@@ -39,12 +39,12 @@ class ActionHistoryService(
         eventId: Long,
         requestDto: ActionHistoryRequest,
     ): Long {
-        val eventHistory = findEventHistoryById(eventId)
+        val incident = findIncidentById(eventId)
 
         val savedActionHistory =
             actionHistoryRepository.save(
                 ActionHistory(
-                    eventHistory = eventHistory,
+                    incident = incident,
                     content = requestDto.content,
                 ),
             )
@@ -65,15 +65,14 @@ class ActionHistoryService(
                 }
             actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
-        eventHistory.changeStatus(EventStatus.RESOLVED)
-        eventStatusChangeNotifier.notifyStatusChanged(eventHistory, eventId, EventStatus.RESOLVED.name)
+        incident.changeStatus(EventStatus.RESOLVED)
+        eventStatusChangeNotifier.notifyStatusChanged(incident)
         return savedActionHistory.requiredId
     }
 
     @Transactional(readOnly = true)
     fun findAll(eventId: Long): List<ActionHistoryResponse> {
-        val eventHistory = findEventHistoryById(eventId)
-        val histories = actionHistoryRepository.findByEventHistory(eventHistory)
+        val histories = actionHistoryRepository.findByIncident(findIncidentById(eventId))
         if (histories.isEmpty()) return emptyList()
 
         val historyFiles = histories.flatMap { it.historyFiles }

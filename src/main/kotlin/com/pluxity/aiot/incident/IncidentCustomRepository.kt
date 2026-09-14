@@ -1,18 +1,18 @@
-package com.pluxity.aiot.event.repository
+package com.pluxity.aiot.incident
 
 import com.pluxity.aiot.event.condition.ConditionLevel
-import com.pluxity.aiot.event.dto.EventHistoryRow
+import com.pluxity.aiot.event.dto.IncidentRow
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.sensor.type.SensorType
 
-interface EventHistoryRepositoryCustom {
+interface IncidentCustomRepository {
     fun findEventList(
         from: String?,
         to: String?,
         siteId: Long? = null,
         status: EventStatus? = null,
         siteIds: List<Long>,
-    ): List<EventHistoryRow>
+    ): List<IncidentRow>
 
     fun findEventListWithPaging(
         from: String?,
@@ -21,9 +21,10 @@ interface EventHistoryRepositoryCustom {
         status: EventStatus? = null,
         level: ConditionLevel? = null,
         sensorType: SensorType? = null,
+        sourceType: IncidentSourceType? = null,
         siteIds: List<Long>,
         size: Int,
         lastId: Long? = null,
         lastStatus: EventStatus? = null,
-    ): List<EventHistoryRow>
+    ): List<IncidentRow>
 }

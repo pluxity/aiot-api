@@ -16,6 +16,8 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -63,6 +65,7 @@ interface SensorDataProcessor {
         eventHistoryRepository: EventHistoryRepository,
         featureRepository: FeatureRepository,
         eventPublisher: ApplicationEventPublisher,
+        incidentService: IncidentService,
     ) {
         val minValue = trigger.minValue
         val maxValue = trigger.maxValue
@@ -98,6 +101,21 @@ interface SensorDataProcessor {
                 ),
             )
 
+        val incident =
+            incidentService.open(
+                sourceType = IncidentSourceType.SENSOR,
+                sourceId = eventHistory.requiredId,
+                site = feature.site,
+                deviceId = deviceId,
+                deviceName = sensorType.description,
+                title = fieldDescription,
+                level = trigger.level,
+                occurredAt = parsedDate,
+                latitude = feature.latitude,
+                longitude = feature.longitude,
+                guideMessage = trigger.guideMessage,
+            )
+
         val message =
             "[$deviceId] $fieldDescription: ${String.format("%.1f", value)} " +
                 "$fieldUnit - $eventName"
@@ -106,20 +124,22 @@ interface SensorDataProcessor {
             feature.site?.let {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
-                        eventId = eventHistory.requiredId,
+                        eventId = incident.requiredId,
+                        sourceType = incident.sourceType.name,
+                        title = incident.title,
                         deviceId = deviceId,
                         objectId = sensorType.objectId,
                         occurredAt = parsedDate.toString(),
                         minValue = minValue,
                         maxValue = maxValue,
-                        status = eventHistory.status.name,
+                        status = incident.status.name,
                         eventName = eventName,
                         fieldKey = fieldKey,
                         guideMessage = trigger.guideMessage,
                         longitude = requireNotNull(feature.longitude) { "Feature(${feature.id}) longitude is null (not ready)" },
                         latitude = requireNotNull(feature.latitude) { "Feature(${feature.id}) latitude is null (not ready)" },
-                        updatedAt = eventHistory.updatedAt.toString(),
-                        updatedBy = eventHistory.updatedBy,
+                        updatedAt = incident.updatedAt.toString(),
+                        updatedBy = incident.updatedBy,
                         value = value,
                         level = trigger.level.name,
                         siteId = it.id,
@@ -133,7 +153,7 @@ interface SensorDataProcessor {
                 runCatching {
                     eventPublisher.publishEvent(
                         SensorEventNotified(
-                            eventId = eventHistory.requiredId,
+                            eventId = incident.requiredId,
                             siteId = it.requiredId,
                             siteName = it.name,
                             deviceId = deviceId,
@@ -146,7 +166,7 @@ interface SensorDataProcessor {
                             occurredAt = parsedDate,
                         ),
                     )
-                }.onFailure { e -> log.error(e) { "이벤트 알림 발행 실패 (eventId=${eventHistory.requiredId})" } }
+                }.onFailure { e -> log.error(e) { "이벤트 알림 발행 실패 (eventId=${incident.requiredId})" } }
             }
         }
 
@@ -171,6 +191,7 @@ interface SensorDataProcessor {
         featureRepository: FeatureRepository,
         eventConditionRepository: EventConditionRepository,
         eventPublisher: ApplicationEventPublisher,
+        incidentService: IncidentService,
     ) {
         val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
 
@@ -215,6 +236,7 @@ interface SensorDataProcessor {
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,
             eventPublisher = eventPublisher,
+            incidentService = incidentService,
         )
     }
 

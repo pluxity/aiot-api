@@ -1,12 +1,13 @@
 package com.pluxity.aiot.action
 
 import com.pluxity.aiot.action.entity.dummyActionHistory
-import com.pluxity.aiot.action.entity.dummyEventHistory
+import com.pluxity.aiot.action.entity.dummyIncident
 import com.pluxity.aiot.event.EventStatusChangeNotifier
-import com.pluxity.aiot.event.repository.EventHistoryRepository
+import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.incident.IncidentRepository
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -22,7 +23,7 @@ class ActionHistoryServiceKoTest :
     BehaviorSpec({
 
         val actionHistoryRepository: ActionHistoryRepository = mockk()
-        val eventHistoryRepository: EventHistoryRepository = mockk()
+        val incidentRepository: IncidentRepository = mockk()
         val actionHistoryFileRepository: ActionHistoryFileRepository = mockk()
         val fileService: FileService = mockk(relaxed = true)
         val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
@@ -30,7 +31,7 @@ class ActionHistoryServiceKoTest :
         val actionHistoryService =
             ActionHistoryService(
                 actionHistoryRepository,
-                eventHistoryRepository,
+                incidentRepository,
                 actionHistoryFileRepository,
                 fileService,
                 eventStatusChangeNotifier,
@@ -40,19 +41,21 @@ class ActionHistoryServiceKoTest :
             When("유효한 요청으로 조치 등록 요청") {
                 val id = 10L
                 val request = ActionHistoryRequest("조치")
-                val eventHistory = dummyEventHistory()
+                val incident = dummyIncident()
                 every {
-                    eventHistoryRepository.findByIdOrNull(any())
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(any())
+                } returns incident
 
                 every {
                     actionHistoryRepository.save(any())
-                } returns dummyActionHistory(id = id, eventHistory = eventHistory)
+                } returns dummyActionHistory(id = id, incident = incident)
 
                 val saveId = actionHistoryService.save(1L, request)
 
-                Then("성공") {
+                Then("성공하고 incident가 조치완료로 바뀐다") {
                     saveId shouldBe id
+                    incident.status shouldBe EventStatus.RESOLVED
+                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
                 }
             }
 
@@ -60,12 +63,12 @@ class ActionHistoryServiceKoTest :
                 val id = 10L
                 val fileIds = listOf(1L, 2L)
                 val request = ActionHistoryRequest("조치", fileIds)
-                val eventHistory = dummyEventHistory()
-                val savedActionHistory = dummyActionHistory(id = id, eventHistory = eventHistory)
+                val incident = dummyIncident()
+                val savedActionHistory = dummyActionHistory(id = id, incident = incident)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(any())
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(any())
+                } returns incident
 
                 every {
                     actionHistoryRepository.save(any())
@@ -100,7 +103,7 @@ class ActionHistoryServiceKoTest :
                 val request = ActionHistoryRequest("조치")
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(any())
+                    incidentRepository.findByIdOrNull(any())
                 } returns null
 
                 val exception =
@@ -108,8 +111,8 @@ class ActionHistoryServiceKoTest :
                         actionHistoryService.save(eventId, request)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
         }
@@ -117,19 +120,19 @@ class ActionHistoryServiceKoTest :
         Given("조치 목록을 조회할 때") {
             When("유효한 eventId로 조회 요청") {
                 val eventId = 1L
-                val eventHistory = dummyEventHistory(id = 1L)
+                val incident = dummyIncident(id = 1L)
                 val actionHistories =
                     listOf(
-                        dummyActionHistory(id = 1L, eventHistory = eventHistory),
-                        dummyActionHistory(id = 2L, eventHistory = eventHistory),
+                        dummyActionHistory(id = 1L, incident = incident),
+                        dummyActionHistory(id = 2L, incident = incident),
                     )
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByEventHistory(eventHistory)
+                    actionHistoryRepository.findByIncident(incident)
                 } returns actionHistories
 
                 val result = actionHistoryService.findAll(eventId)
@@ -141,14 +144,14 @@ class ActionHistoryServiceKoTest :
 
             When("조치가 없는 eventId로 조회 요청") {
                 val eventId = 1L
-                val eventHistory = dummyEventHistory(id = eventId)
+                val incident = dummyIncident(id = eventId)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByEventHistory(eventHistory)
+                    actionHistoryRepository.findByIncident(incident)
                 } returns emptyList()
 
                 val result = actionHistoryService.findAll(eventId)
@@ -162,7 +165,7 @@ class ActionHistoryServiceKoTest :
                 val eventId = 999L
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
+                    incidentRepository.findByIdOrNull(eventId)
                 } returns null
 
                 val exception =
@@ -170,8 +173,8 @@ class ActionHistoryServiceKoTest :
                         actionHistoryService.findAll(eventId)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
         }
@@ -181,15 +184,15 @@ class ActionHistoryServiceKoTest :
                 val eventId = 1L
                 val actionId = 10L
                 val request = ActionHistoryRequest("수정된 조치")
-                val eventHistory = dummyEventHistory(id = eventId)
-                val actionHistory = dummyActionHistory(id = actionId, eventHistory = eventHistory)
+                val incident = dummyIncident(id = eventId)
+                val actionHistory = dummyActionHistory(id = actionId, incident = incident)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
+                    actionHistoryRepository.findByIdAndIncident(actionId, incident)
                 } returns actionHistory
 
                 actionHistoryService.update(eventId, actionId, request)
@@ -203,15 +206,15 @@ class ActionHistoryServiceKoTest :
                 val eventId = 1L
                 val actionId = 10L
                 val request = ActionHistoryRequest("수정된 조치", listOf(1L, 2L))
-                val eventHistory = dummyEventHistory(id = eventId)
-                val actionHistory = dummyActionHistory(id = actionId, eventHistory = eventHistory)
+                val incident = dummyIncident(id = eventId)
+                val actionHistory = dummyActionHistory(id = actionId, incident = incident)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
+                    actionHistoryRepository.findByIdAndIncident(actionId, incident)
                 } returns actionHistory
 
                 every {
@@ -235,7 +238,7 @@ class ActionHistoryServiceKoTest :
                 val request = ActionHistoryRequest("수정된 조치")
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
+                    incidentRepository.findByIdOrNull(eventId)
                 } returns null
 
                 val exception =
@@ -243,8 +246,8 @@ class ActionHistoryServiceKoTest :
                         actionHistoryService.update(eventId, actionId, request)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
 
@@ -252,14 +255,14 @@ class ActionHistoryServiceKoTest :
                 val eventId = 1L
                 val actionId = 999L
                 val request = ActionHistoryRequest("수정된 조치")
-                val eventHistory = dummyEventHistory(id = eventId)
+                val incident = dummyIncident(id = eventId)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
+                    actionHistoryRepository.findByIdAndIncident(actionId, incident)
                 } returns null
 
                 val exception =
@@ -277,15 +280,15 @@ class ActionHistoryServiceKoTest :
             When("유효한 요청으로 삭제 요청") {
                 val eventId = 1L
                 val actionId = 10L
-                val eventHistory = dummyEventHistory(id = eventId)
-                val actionHistory = dummyActionHistory(id = actionId, eventHistory = eventHistory)
+                val incident = dummyIncident(id = eventId)
+                val actionHistory = dummyActionHistory(id = actionId, incident = incident)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
+                    actionHistoryRepository.findByIdAndIncident(actionId, incident)
                 } returns actionHistory
 
                 every {
@@ -309,7 +312,7 @@ class ActionHistoryServiceKoTest :
                 val actionId = 10L
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
+                    incidentRepository.findByIdOrNull(eventId)
                 } returns null
 
                 val exception =
@@ -317,22 +320,22 @@ class ActionHistoryServiceKoTest :
                         actionHistoryService.delete(eventId, actionId)
                     }
 
-                Then("NOT_FOUND_EVENT_HISTORY 예외 발생") {
-                    exception.message shouldBe ErrorCode.NOT_FOUND_EVENT_HISTORY.getMessage().format(eventId)
+                Then("NOT_FOUND_INCIDENT 예외 발생") {
+                    exception.message shouldBe ErrorCode.NOT_FOUND_INCIDENT.getMessage().format(eventId)
                 }
             }
 
             When("잘못된 actionId로 삭제 요청") {
                 val eventId = 1L
                 val actionId = 999L
-                val eventHistory = dummyEventHistory(id = eventId)
+                val incident = dummyIncident(id = eventId)
 
                 every {
-                    eventHistoryRepository.findByIdOrNull(eventId)
-                } returns eventHistory
+                    incidentRepository.findByIdOrNull(eventId)
+                } returns incident
 
                 every {
-                    actionHistoryRepository.findByIdAndEventHistory(actionId, eventHistory)
+                    actionHistoryRepository.findByIdAndIncident(actionId, incident)
                 } returns null
 
                 val exception =

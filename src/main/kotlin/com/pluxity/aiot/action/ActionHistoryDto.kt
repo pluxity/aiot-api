@@ -22,13 +22,13 @@ data class ActionHistoryResponse(
 fun ActionHistory.toActionHistoryResponse(fileMap: Map<Long, FileResponse>): ActionHistoryResponse =
     ActionHistoryResponse(
         id = this.id,
-        deviceId = this.eventHistory.deviceId,
-        eventName = this.eventHistory.eventName,
-        eventHistoryId = this.eventHistory.id,
+        deviceId = this.incident.deviceId,
+        eventName = "${this.incident.level.name}_${this.incident.title}",
+        eventHistoryId = this.incident.id,
         content = this.content,
         files = this.historyFiles.mapNotNull { fileMap[it.fileId] },
-        longitude = this.eventHistory.longitude,
-        latitude = this.eventHistory.latitude,
+        longitude = this.incident.longitude,
+        latitude = this.incident.latitude,
         baseResponse = this.toBaseResponse(),
     )
 

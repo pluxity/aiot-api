@@ -1,10 +1,15 @@
 package com.pluxity.aiot.mic
 
+import com.pluxity.aiot.base.entity.withId
+import com.pluxity.aiot.event.condition.ConditionLevel
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.mic.dto.MicEventData
 import com.pluxity.aiot.mic.dto.MicEventLabel
 import com.pluxity.aiot.mic.dto.MicEventLabelName
 import com.pluxity.aiot.mic.dto.MicEventSource
 import com.pluxity.aiot.mic.dto.MicLocation
+import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -42,14 +47,37 @@ private fun eventData(
 class MicEventServiceKoTest :
     BehaviorSpec({
 
+        val micRepository: MicRepository = mockk(relaxed = true)
+        val incidentService: IncidentService = mockk(relaxed = true)
+
         Given("AI 마이크 이벤트 저장") {
             When("정상 이벤트가 수신됨") {
                 val repository: MicEventRepository = mockk(relaxed = true)
                 every { repository.existsByEventId(any()) } returns false
                 val saved = slot<MicEvent>()
-                every { repository.save(capture(saved)) } answers { saved.captured }
+                every { repository.save(capture(saved)) } answers { saved.captured.withId(42L) }
+                val site = dummySite(id = 3L)
+                every { micRepository.findByVendorMicId("d00c8e3364a34439183e3462e773354a1") } returns
+                    Mic(vendorMicId = "d00c8e3364a34439183e3462e773354a1", name = "등록된 마이크", site = site)
 
-                MicEventService(repository).saveEvent(eventData())
+                MicEventService(repository, micRepository, incidentService).saveEvent(eventData())
+
+                Then("incident가 WARNING으로 열리고 라벨 한글명이 제목이 된다") {
+                    verify(exactly = 1) {
+                        incidentService.open(
+                            sourceType = IncidentSourceType.MIC,
+                            sourceId = 42L,
+                            site = site,
+                            deviceId = "d00c8e3364a34439183e3462e773354a1",
+                            deviceName = "Example Mic (715)",
+                            title = "대화(여성)",
+                            level = ConditionLevel.WARNING,
+                            occurredAt = LocalDateTime.of(2024, 1, 1, 9, 0, 0),
+                            latitude = 37.546344,
+                            longitude = 126.944322,
+                        )
+                    }
+                }
 
                 Then("라벨·신뢰도·좌표가 저장된다") {
                     saved.captured.eventId shouldBe "23d6ec74155f4eb187b4e7301b71b5d9"
@@ -78,10 +106,10 @@ class MicEventServiceKoTest :
                 val repository: MicEventRepository = mockk(relaxed = true)
                 every { repository.existsByEventId(any()) } returns false
                 val saved = slot<MicEvent>()
-                every { repository.save(capture(saved)) } answers { saved.captured }
+                every { repository.save(capture(saved)) } answers { saved.captured.withId(1L) }
 
                 val before = LocalDateTime.now()
-                MicEventService(repository).saveEvent(eventData(createdAt = null))
+                MicEventService(repository, micRepository, incidentService).saveEvent(eventData(createdAt = null))
 
                 Then("수신 시각으로 대체된다") {
                     (saved.captured.occurredAt >= before) shouldBe true
@@ -92,10 +120,10 @@ class MicEventServiceKoTest :
                 val repository: MicEventRepository = mockk(relaxed = true)
                 every { repository.existsByEventId(any()) } returns false
                 val saved = slot<MicEvent>()
-                every { repository.save(capture(saved)) } answers { saved.captured }
+                every { repository.save(capture(saved)) } answers { saved.captured.withId(1L) }
 
                 val before = LocalDateTime.now()
-                MicEventService(repository).saveEvent(eventData(createdAt = "not-a-date"))
+                MicEventService(repository, micRepository, incidentService).saveEvent(eventData(createdAt = "not-a-date"))
 
                 Then("예외 없이 수신 시각으로 대체된다") {
                     (saved.captured.occurredAt >= before) shouldBe true
@@ -106,17 +134,19 @@ class MicEventServiceKoTest :
                 val repository: MicEventRepository = mockk(relaxed = true)
                 every { repository.existsByEventId(any()) } returns true
 
-                MicEventService(repository).saveEvent(eventData())
+                val incidents: IncidentService = mockk(relaxed = true)
+                MicEventService(repository, micRepository, incidents).saveEvent(eventData())
 
-                Then("중복 저장하지 않는다") {
+                Then("중복 저장하지 않고 incident도 열지 않는다") {
                     verify(exactly = 0) { repository.save(any()) }
+                    verify(exactly = 0) { incidents.open(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
                 }
             }
 
             When("마이크 정보가 없는 이벤트가 수신됨") {
                 val repository: MicEventRepository = mockk(relaxed = true)
 
-                MicEventService(repository).saveEvent(eventData(micId = null))
+                MicEventService(repository, micRepository, incidentService).saveEvent(eventData(micId = null))
 
                 Then("저장하지 않고 무시한다") {
                     verify(exactly = 0) { repository.save(any()) }
@@ -128,9 +158,9 @@ class MicEventServiceKoTest :
                 val repository: MicEventRepository = mockk(relaxed = true)
                 every { repository.existsByEventId(any()) } returns false
                 val saved = slot<MicEvent>()
-                every { repository.save(capture(saved)) } answers { saved.captured }
+                every { repository.save(capture(saved)) } answers { saved.captured.withId(1L) }
 
-                MicEventService(repository).saveEvent(eventData(noises = emptyList()))
+                MicEventService(repository, micRepository, incidentService).saveEvent(eventData(noises = emptyList()))
 
                 Then("평균 계산에서 NaN이 나오지 않는다") {
                     saved.captured.maxNoise shouldBe null

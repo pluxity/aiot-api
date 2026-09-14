@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.Query
 interface MicRepository : JpaRepository<Mic, Long> {
     @Query("select m from Mic m left join fetch m.site")
     fun findAllWithSite(): List<Mic>
+
+    fun findByVendorMicId(vendorMicId: String): Mic?
 }

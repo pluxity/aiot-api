@@ -1,7 +1,10 @@
 package com.pluxity.aiot.mic
 
+import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.global.response.PageResponse
 import com.pluxity.aiot.global.response.toPageResponse
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.mic.dto.MicEventData
 import com.pluxity.aiot.mic.dto.MicEventResponse
 import com.pluxity.aiot.mic.dto.toResponse
@@ -21,6 +24,8 @@ private val log = KotlinLogging.logger {}
 @Transactional(readOnly = true)
 class MicEventService(
     private val micEventRepository: MicEventRepository,
+    private val micRepository: MicRepository,
+    private val incidentService: IncidentService,
 ) {
     fun findAll(
         page: Int,
@@ -48,22 +53,37 @@ class MicEventService(
 
         val noises = eventData.noises
 
-        micEventRepository.save(
-            MicEvent(
-                eventId = eventData.id,
-                micId = micId,
-                micName = eventData.mic.name,
-                labelId = eventData.label?.id,
-                labelNameKo = eventData.label?.name?.ko,
-                labelNameEn = eventData.label?.name?.en,
-                confidence = eventData.confidence,
-                latitude = eventData.mic.location?.latitude,
-                longitude = eventData.mic.location?.longitude,
-                noises = noises,
-                maxNoise = noises?.maxOrNull(),
-                avgNoise = noises?.takeIf { it.isNotEmpty() }?.average(),
-                occurredAt = parseOccurredAt(eventData.createdAt),
-            ),
+        val saved =
+            micEventRepository.save(
+                MicEvent(
+                    eventId = eventData.id,
+                    micId = micId,
+                    micName = eventData.mic.name,
+                    labelId = eventData.label?.id,
+                    labelNameKo = eventData.label?.name?.ko,
+                    labelNameEn = eventData.label?.name?.en,
+                    confidence = eventData.confidence,
+                    latitude = eventData.mic.location?.latitude,
+                    longitude = eventData.mic.location?.longitude,
+                    noises = noises,
+                    maxNoise = noises?.maxOrNull(),
+                    avgNoise = noises?.takeIf { it.isNotEmpty() }?.average(),
+                    occurredAt = parseOccurredAt(eventData.createdAt),
+                ),
+            )
+
+        val mic = micRepository.findByVendorMicId(micId)
+        incidentService.open(
+            sourceType = IncidentSourceType.MIC,
+            sourceId = saved.requiredId,
+            site = mic?.site,
+            deviceId = micId,
+            deviceName = saved.micName ?: mic?.name,
+            title = saved.labelNameKo ?: saved.labelNameEn ?: "소음 감지",
+            level = ConditionLevel.WARNING,
+            occurredAt = saved.occurredAt,
+            latitude = saved.latitude ?: mic?.latitude,
+            longitude = saved.longitude ?: mic?.longitude,
         )
     }
 

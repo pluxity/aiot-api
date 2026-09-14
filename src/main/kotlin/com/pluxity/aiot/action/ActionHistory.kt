@@ -1,7 +1,7 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.global.entity.BaseEntity
+import com.pluxity.aiot.incident.Incident
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
@@ -13,8 +13,8 @@ import jakarta.persistence.Table
 @Table(name = "action_history")
 class ActionHistory(
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_history_id", nullable = false)
-    val eventHistory: EventHistory,
+    @JoinColumn(name = "incident_id", nullable = false)
+    val incident: Incident,
     var content: String,
 ) : BaseEntity() {
     @OneToMany(mappedBy = "actionHistory")

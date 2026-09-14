@@ -6,6 +6,7 @@ import com.pluxity.aiot.event.condition.EventConditionRepository
 import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.site.SiteRepository
 
 /**
@@ -18,6 +19,7 @@ class WasteFillLevelProcessorTestHelper(
     messageSenderMock: StompMessageSender,
     writeApiMock: WriteApi,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
 ) : ProcessorTestHelper(
         siteRepository,
         featureRepository,
@@ -25,6 +27,7 @@ class WasteFillLevelProcessorTestHelper(
         eventConditionRepository,
         messageSenderMock,
         writeApiMock,
+        incidentService,
     ) {
     /**
      * WasteFillLevelProcessor 인스턴스 생성
@@ -35,6 +38,7 @@ class WasteFillLevelProcessorTestHelper(
             eventHistoryRepository,
             featureRepository,
             eventPublisherMock,
+            incidentService,
             writeApiMock,
         )
 }

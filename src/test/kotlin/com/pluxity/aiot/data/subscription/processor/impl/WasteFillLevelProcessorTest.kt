@@ -13,6 +13,9 @@ import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.global.messaging.StompMessageSender
 import com.pluxity.aiot.global.messaging.dto.SensorAlarmPayload
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -41,6 +44,8 @@ class WasteFillLevelProcessorTest(
     featureRepository: FeatureRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     eventConditionRepository: EventConditionRepository,
+    incidentService: IncidentService,
+    private val incidentRepository: IncidentRepository,
 ) : BehaviorSpec({
         extension(SpringExtension(SpringTestLifecycleMode.Root))
 
@@ -54,6 +59,7 @@ class WasteFillLevelProcessorTest(
             messageSenderMock,
             writeApiMock,
             eventConditionRepository,
+            incidentService,
         )
 
         Given("쓰레기 적재 감지기: 단말이 보고한 HighThreshold 기준 만재 판정") {
@@ -81,7 +87,8 @@ class WasteFillLevelProcessorTest(
                     history.eventName shouldBe "WARNING_ActualFilling"
                     history.minValue shouldBe 30.0
                     history.guideMessage shouldBe WasteFillLevelProcessor.FULL_GUIDE_MESSAGE
-                    history.status shouldBe EventStatus.ACTIVE
+                    incidentRepository.findBySourceTypeAndSourceId(IncidentSourceType.SENSOR, history.requiredId)?.status shouldBe
+                        EventStatus.ACTIVE
 
                     helper.featureRepository.findByDeviceId(deviceId)?.eventStatus shouldBe "WARNING"
 

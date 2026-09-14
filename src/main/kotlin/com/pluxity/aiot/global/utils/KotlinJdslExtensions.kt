@@ -11,6 +11,11 @@ import org.springframework.data.domain.Pageable
 fun <T : Any> KotlinJdslJpqlExecutor.findAllNotNull(init: Jpql.() -> JpqlQueryable<SelectQuery<T>>): List<T> =
     this.findAll(init = init).filterNotNull()
 
+fun <T : Any> KotlinJdslJpqlExecutor.findAllNotNull(
+    pageable: Pageable,
+    init: Jpql.() -> JpqlQueryable<SelectQuery<T>>,
+): List<T> = this.findAll(pageable, init = init).filterNotNull()
+
 fun <T : Any> KotlinJdslJpqlExecutor.findPageNotNull(
     pageable: Pageable,
     init: Jpql.() -> JpqlQueryable<SelectQuery<T>>,

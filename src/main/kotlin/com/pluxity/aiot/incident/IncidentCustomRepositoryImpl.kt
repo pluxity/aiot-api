@@ -1,10 +1,7 @@
 package com.pluxity.aiot.incident
 
 import com.linecorp.kotlinjdsl.dsl.jpql.Jpql
-import com.linecorp.kotlinjdsl.dsl.jpql.jpql
 import com.linecorp.kotlinjdsl.querymodel.jpql.predicate.Predicate
-import com.linecorp.kotlinjdsl.render.jpql.JpqlRenderContext
-import com.linecorp.kotlinjdsl.support.spring.data.jpa.extension.createQuery
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.dto.IncidentRow
@@ -14,14 +11,12 @@ import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.global.utils.findAllNotNull
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
-import jakarta.persistence.EntityManager
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
 
 @Repository
 class IncidentCustomRepositoryImpl(
     private val kotlinJdslJpqlExecutor: KotlinJdslJpqlExecutor,
-    private val entityManager: EntityManager,
-    private val renderContext: JpqlRenderContext,
 ) : IncidentCustomRepository {
     override fun findEventList(
         from: String?,
@@ -56,9 +51,9 @@ class IncidentCustomRepositoryImpl(
         size: Int,
         lastId: Long?,
         lastStatus: EventStatus?,
-    ): List<IncidentRow> {
-        val query =
-            jpql {
+    ): List<IncidentRow> =
+        kotlinJdslJpqlExecutor
+            .findAllNotNull(PageRequest.of(0, size + 1)) {
                 selectIncidentRow()
                     .where(
                         and(
@@ -77,12 +72,6 @@ class IncidentCustomRepositoryImpl(
                         path(Incident::id).desc(),
                     )
             }
-
-        return entityManager
-            .createQuery(query, renderContext)
-            .apply { maxResults = size + 1 }
-            .resultList
-    }
 
     private fun Jpql.selectIncidentRow() =
         selectNew<IncidentRow>(

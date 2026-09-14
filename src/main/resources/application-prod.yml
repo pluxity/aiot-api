@@ -13,10 +13,14 @@ spring:
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: update #FIXME: flyway 사용하면 여기 바꿔야함
+      ddl-auto: validate
     properties:
       hibernate:
         default_batch_fetch_size: 100
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
 
 domain:
   url: ${API_URL:}

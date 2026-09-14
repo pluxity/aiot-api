@@ -119,7 +119,13 @@ class IncidentCustomRepositoryTest(
 
             When("sourceType, sensorType, level, 기간 필터로 조회") {
                 val bySource = incidentRepository.findEventListWithPaging(null, null, sourceType = IncidentSourceType.CCTV, size = 10)
-                val bySensor = incidentRepository.findEventListWithPaging(null, null, sensorType = SensorType.TEMPERATURE_HUMIDITY, size = 10)
+                val bySensor =
+                    incidentRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        sensorType = SensorType.TEMPERATURE_HUMIDITY,
+                        size = 10,
+                    )
                 val byOtherSensor = incidentRepository.findEventListWithPaging(null, null, sensorType = SensorType.FIRE, size = 10)
                 val byLevel = incidentRepository.findEventListWithPaging(null, null, level = ConditionLevel.WARNING, size = 10)
                 val byRange = incidentRepository.findEventListWithPaging("20260914090500", "20260914091500", size = 10)

@@ -254,7 +254,7 @@ class AiotService(
                     .header("Content-Type", "application/json;ty=23")
                     .body(body)
                     .retrieve() // 비-2xx면 RestClientResponseException을 던진다. 409 재시도 경로가 이걸 받는다
-                    .body(String::class.java)
+                    .body<String>()
             }
         log.info { "'$uri/$subscriptionName' Subscribe Result : '$respBody'" }
         updateFeatureSubscriptionTime(deviceId)
@@ -381,7 +381,7 @@ class AiotService(
                         response.statusCode.is2xxSuccessful
                     }
             }
-        if (succeeded == true) {
+        if (succeeded) {
             updateFeatureSubscriptionTime(deviceId)
         }
     }

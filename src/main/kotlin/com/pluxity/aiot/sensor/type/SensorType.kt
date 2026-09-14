@@ -11,6 +11,7 @@ enum class SensorType(
     val measureName: String = "",
     val abbreviation: AbbreviationData,
     val deviceProfiles: List<DeviceProfileEnum>,
+    val eventConditionSupported: Boolean = true,
 ) {
     TEMPERATURE_HUMIDITY(
         1,
@@ -38,6 +39,8 @@ enum class SensorType(
         "waste_fill_level",
         AbbreviationData("wfl", "쓰레기 적재 감지기"),
         listOf(DeviceProfileEnum.ACTUAL_FILLING),
+        // 단말이 보고하는 HighThreshold로 만재를 판정하므로 사용자 조건을 받지 않는다
+        eventConditionSupported = false,
     ),
     FOREST_FIRE(
         4,

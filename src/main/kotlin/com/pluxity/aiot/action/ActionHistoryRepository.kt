@@ -1,13 +1,13 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.incident.Incident
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface ActionHistoryRepository : JpaRepository<ActionHistory, Long> {
-    fun findByEventHistory(eventHistory: EventHistory): List<ActionHistory>
+    fun findByIncident(incident: Incident): List<ActionHistory>
 
-    fun findByIdAndEventHistory(
+    fun findByIdAndIncident(
         id: Long,
-        eventHistory: EventHistory,
+        incident: Incident,
     ): ActionHistory?
 }

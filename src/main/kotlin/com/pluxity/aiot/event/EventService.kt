@@ -11,14 +11,14 @@ import com.pluxity.aiot.event.dto.EventMetrics
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.event.dto.toEventCursorPageResponse
 import com.pluxity.aiot.event.dto.toEventResponse
-import com.pluxity.aiot.event.entity.EventHistory
 import com.pluxity.aiot.event.entity.EventStatus
-import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.utils.DateTimeUtils
+import com.pluxity.aiot.incident.Incident
+import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
-import com.pluxity.aiot.site.SiteRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
@@ -29,8 +29,7 @@ import java.time.format.DateTimeFormatter
 @Service
 @Transactional(readOnly = true)
 class EventService(
-    private val eventHistoryRepository: EventHistoryRepository,
-    private val siteRepository: SiteRepository,
+    private val incidentRepository: IncidentRepository,
     private val jdbcTemplate: NamedParameterJdbcTemplate,
     private val eventStatusChangeNotifier: EventStatusChangeNotifier,
 ) {
@@ -41,6 +40,7 @@ class EventService(
         status: EventStatus?,
         level: ConditionLevel?,
         sensorType: SensorType?,
+        sourceType: IncidentSourceType?,
         size: Int,
         lastId: Long? = null,
         lastStatus: EventStatus? = null,
@@ -49,10 +49,9 @@ class EventService(
             throw CustomException(ErrorCode.INVALID_CURSOR_PARAMETERS, lastId, lastStatus)
         }
 
-        val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
         val eventList =
-            eventHistoryRepository
-                .findEventListWithPaging(from, to, siteId, status, level, sensorType, siteIds, size, lastId, lastStatus)
+            incidentRepository
+                .findEventListWithPaging(from, to, siteId, status, level, sensorType, sourceType, size, lastId, lastStatus)
                 .map { it.toEventResponse() }
         val hasNext = eventList.size > size
         return eventList.toEventCursorPageResponse(hasNext)
@@ -63,13 +62,12 @@ class EventService(
         id: Long,
         result: EventStatus,
     ) {
-        val eventHistory = findById(id)
-        eventHistory.changeStatus(result)
-        eventStatusChangeNotifier.notifyStatusChanged(eventHistory, id, result.name)
+        val incident = findById(id)
+        incident.changeStatus(result)
+        eventStatusChangeNotifier.notifyStatusChanged(incident)
     }
 
-    fun findById(id: Long): EventHistory =
-        eventHistoryRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_EVENT_HISTORY, id)
+    fun findById(id: Long): Incident = incidentRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_INCIDENT, id)
 
     fun getPeriodData(
         interval: DataInterval,
@@ -160,7 +158,7 @@ class EventService(
             COUNT(*) FILTER (WHERE e.status = '${EventStatus.IN_PROGRESS.name}')   AS ${EventStatus.IN_PROGRESS.querySelector},
             COUNT(*) FILTER (WHERE e.status = '${EventStatus.RESOLVED.name}') AS ${EventStatus.RESOLVED.querySelector}
         FROM buckets b
-        LEFT JOIN event_history e
+        LEFT JOIN incident e
           ON e.occurred_at >= b.bucket_start
          AND e.occurred_at <  b.bucket_start + (interval '1 ${interval.pgUnit}')::interval
         GROUP BY b.bucket_start

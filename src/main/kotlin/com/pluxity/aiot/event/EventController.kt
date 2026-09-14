@@ -7,6 +7,7 @@ import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.global.response.DataResponseBody
 import com.pluxity.aiot.global.response.ErrorResponseBody
+import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -52,6 +53,8 @@ class EventController(
         @RequestParam("level", required = false) level: ConditionLevel?,
         @Parameter(description = "센서 타입", required = false)
         @RequestParam("sensorType", required = false) sensorType: SensorType?,
+        @Parameter(description = "이벤트 출처(SENSOR, CCTV, MIC)", required = false)
+        @RequestParam("sourceType", required = false) sourceType: IncidentSourceType?,
         @Parameter(description = "페이지당 개수", example = "20")
         @RequestParam("size") size: Int = 20,
         @Parameter(description = "마지막 ID", example = "1")
@@ -59,7 +62,9 @@ class EventController(
         @Parameter(description = "마지막 status", example = "1")
         @RequestParam("lastStatus") lastStatus: EventStatus?,
     ): ResponseEntity<DataResponseBody<EventCursorPageResponse>> =
-        ResponseEntity.ok(DataResponseBody(eventService.findAll(from, to, siteId, status, level, sensorType, size, lastId, lastStatus)))
+        ResponseEntity.ok(
+            DataResponseBody(eventService.findAll(from, to, siteId, status, level, sensorType, sourceType, size, lastId, lastStatus)),
+        )
 
     @Operation(summary = "이벤트 상태 수정", description = "ID로 특정 이벤트의 상태를 수정합니다.")
     @ApiResponses(

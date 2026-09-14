@@ -6,17 +6,12 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
+/** 센서 조건 판정 원본. 조치 상태는 Incident가 가진다 */
 @Entity
-@Table(
-    name = "event_history",
-    indexes = [
-        Index(name = "event_history_idx_event_status_id_desc", columnList = "status, id"),
-    ],
-)
+@Table(name = "event_history")
 class EventHistory(
     @Column(nullable = false)
     var deviceId: String,
@@ -41,11 +36,4 @@ class EventHistory(
     var latitude: Double? = null,
     @Enumerated(EnumType.STRING)
     var level: ConditionLevel? = null,
-) : BaseEntity() {
-    @Enumerated(EnumType.STRING)
-    var status: EventStatus = EventStatus.ACTIVE
-
-    fun changeStatus(status: EventStatus) {
-        this.status = status
-    }
-}
+) : BaseEntity()

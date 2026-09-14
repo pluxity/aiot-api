@@ -4,73 +4,78 @@ import com.pluxity.aiot.action.ActionHistory
 import com.pluxity.aiot.base.entity.withAudit
 import com.pluxity.aiot.base.entity.withId
 import com.pluxity.aiot.event.condition.ConditionLevel
-import com.pluxity.aiot.event.dto.EventHistoryRow
-import com.pluxity.aiot.event.entity.EventHistory
+import com.pluxity.aiot.event.dto.IncidentRow
 import com.pluxity.aiot.event.entity.EventStatus
+import com.pluxity.aiot.incident.Incident
+import com.pluxity.aiot.incident.IncidentSourceType
+import com.pluxity.aiot.site.Site
 import java.time.LocalDateTime
 
 fun dummyActionHistory(
     id: Long = 999L,
-    eventHistory: EventHistory = dummyEventHistory(),
+    incident: Incident = dummyIncident(),
     content: String = "content",
 ) = ActionHistory(
-    eventHistory = eventHistory,
+    incident = incident,
     content = content,
 ).withAudit().withId(id)
 
-fun dummyEventHistory(
+fun dummyIncident(
     id: Long = 999L,
+    sourceType: IncidentSourceType = IncidentSourceType.SENSOR,
+    sourceId: Long = 1L,
+    site: Site? = null,
     deviceId: String = "SNIOT-P-THM-001",
-    objectId: String = "34954",
-    sensorDescription: String = "온습도계",
-    fieldKey: String = "Temperature",
-    value: Double = 4.9,
-    unit: String = "°C",
-    eventName: String = "CAUTION_Temperature",
+    deviceName: String? = "온습도계",
+    title: String = "온도",
+    level: ConditionLevel = ConditionLevel.CAUTION,
     occurredAt: LocalDateTime = LocalDateTime.now(),
-    minValue: Double? = null,
-    maxValue: Double? = null,
-    eventStatus: EventStatus = EventStatus.ACTIVE,
+    latitude: Double? = 37.0,
+    longitude: Double? = 127.0,
     guideMessage: String? = null,
-    level: ConditionLevel? = ConditionLevel.CAUTION,
-) = EventHistory(
+    status: EventStatus = EventStatus.ACTIVE,
+) = Incident(
+    sourceType = sourceType,
+    sourceId = sourceId,
+    site = site,
     deviceId = deviceId,
-    objectId = objectId,
-    sensorDescription = sensorDescription,
-    fieldKey = fieldKey,
-    value = value,
-    unit = unit,
-    eventName = eventName,
-    occurredAt = occurredAt,
-    minValue = minValue,
-    maxValue = maxValue,
-    guideMessage = guideMessage,
+    deviceName = deviceName,
+    title = title,
     level = level,
-).apply { status = eventStatus }.withId(id)
+    occurredAt = occurredAt,
+    latitude = latitude,
+    longitude = longitude,
+    guideMessage = guideMessage,
+).apply { changeStatus(status) }.withAudit().withId(id)
 
-fun dummyEventHistoryRow(
+fun dummyIncidentRow(
     eventId: Long = 999L,
+    sourceType: IncidentSourceType = IncidentSourceType.SENSOR,
     deviceId: String = "SNIOT-P-THM-001",
-    objectId: String = "34954",
+    deviceName: String? = "온습도계",
+    title: String = "온도",
+    objectId: String? = "34954",
     occurredAt: LocalDateTime = LocalDateTime.now(),
     minValue: Double? = null,
     maxValue: Double? = null,
     status: EventStatus = EventStatus.ACTIVE,
-    eventName: String = "CAUTION_Temperature",
-    fieldKey: String = "Temperature",
+    eventName: String? = "CAUTION_Temperature",
+    fieldKey: String? = "Temperature",
     guideMessage: String? = null,
     longitude: Double? = null,
     latitude: Double? = null,
-    updatedBy: String = "system",
+    updatedBy: String? = "system",
     updatedAt: LocalDateTime = LocalDateTime.now(),
-    value: Double = 4.9,
+    value: Double? = 4.9,
     level: ConditionLevel = ConditionLevel.CAUTION,
-    siteId: Long = 1,
-    siteName: String = "현장",
-    sensorDescription: String = "온습도계",
-) = EventHistoryRow(
+    siteId: Long? = 1,
+    siteName: String? = "현장",
+) = IncidentRow(
     eventId = eventId,
+    sourceType = sourceType,
     deviceId = deviceId,
+    deviceName = deviceName,
+    title = title,
     objectId = objectId,
     occurredAt = occurredAt,
     minValue = minValue,
@@ -87,5 +92,4 @@ fun dummyEventHistoryRow(
     level = level,
     siteId = siteId,
     siteName = siteName,
-    sensorDescription = sensorDescription,
 )

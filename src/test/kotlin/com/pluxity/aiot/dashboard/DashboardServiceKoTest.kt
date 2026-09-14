@@ -1,10 +1,10 @@
 package com.pluxity.aiot.dashboard
 
-import com.pluxity.aiot.action.entity.dummyEventHistoryRow
+import com.pluxity.aiot.action.entity.dummyIncidentRow
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventStatus
-import com.pluxity.aiot.event.repository.EventHistoryRepository
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.incident.IncidentRepository
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.core.spec.style.BehaviorSpec
@@ -16,13 +16,13 @@ class DashboardServiceKoTest :
     BehaviorSpec({
         val featureRepository: FeatureRepository = mockk()
         val siteRepository: SiteRepository = mockk()
-        val eventHistoryRepository: EventHistoryRepository = mockk()
+        val incidentRepository: IncidentRepository = mockk()
 
         val dashboardService =
             DashboardService(
                 featureRepository = featureRepository,
                 siteRepository = siteRepository,
-                eventHistoryRepository = eventHistoryRepository,
+                incidentRepository = incidentRepository,
             )
 
         Given("센서 요약 조회") {
@@ -77,18 +77,15 @@ class DashboardServiceKoTest :
 
         Given("이벤트 요약 조회") {
             When("기간과 현장 필터로 조회하면") {
-                val sites = listOf(dummySite(id = 1L, name = "Site A"))
-                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns sites
-
                 val activeRow =
-                    dummyEventHistoryRow(
+                    dummyIncidentRow(
                         eventId = 1L,
                         status = EventStatus.ACTIVE,
                         level = ConditionLevel.WARNING,
                         fieldKey = "Temperature",
                     )
                 val resolvedRow =
-                    dummyEventHistoryRow(
+                    dummyIncidentRow(
                         eventId = 2L,
                         status = EventStatus.RESOLVED,
                         level = ConditionLevel.CAUTION,
@@ -96,10 +93,9 @@ class DashboardServiceKoTest :
                     )
 
                 every {
-                    eventHistoryRepository.findEventList(
+                    incidentRepository.findEventList(
                         from = "20240101",
                         to = "20240131",
-                        siteIds = listOf(1L),
                     )
                 } returns listOf(activeRow, resolvedRow)
 

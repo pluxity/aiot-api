@@ -125,6 +125,8 @@ interface SensorDataProcessor {
                 messageSender.sendSensorAlarm(
                     SensorAlarmPayload(
                         eventId = incident.requiredId,
+                        sourceType = incident.sourceType.name,
+                        title = incident.title,
                         deviceId = deviceId,
                         objectId = sensorType.objectId,
                         occurredAt = parsedDate.toString(),

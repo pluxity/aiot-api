@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/device-types")
 @Tag(name = "Device Type Controller", description = "디바이스 종류 관리 API")
 class DeviceTypeController {
-    @Operation(summary = "디바이스 종류 목록 조회", description = "모든 디바이스 종류 목록을 조회합니다")
+    @Operation(summary = "디바이스 종류 목록 조회", description = "이벤트 조건을 설정할 수 있는 디바이스 종류 목록을 조회합니다")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "목록 조회 성공"),
@@ -37,5 +37,11 @@ class DeviceTypeController {
     )
     @GetMapping
     fun findAll(): ResponseEntity<DataResponseBody<List<DeviceTypeResponse>>> =
-        ResponseEntity.ok(DataResponseBody(SensorType.entries.map { it.toDeviceTypeResponse() }))
+        ResponseEntity.ok(
+            DataResponseBody(
+                SensorType.entries
+                    .filter { it.eventConditionSupported }
+                    .map { it.toDeviceTypeResponse() },
+            ),
+        )
 }

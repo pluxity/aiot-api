@@ -1,6 +1,6 @@
 # 이벤트 통합 관리(incident) 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 센서(EventHistory)·CCTV(EdsEvent)·AI마이크(MicEvent) 이벤트를 `incident` 테이블 하나로 모아 `/events` API에서 공통 조치 워크플로우(미조치/조치중/조치완료, 조치 이력)를 제공한다.
 
@@ -34,9 +34,9 @@
 - Produces: `Incident.changeStatus(EventStatus)`, `Incident.status`, `Incident.site`
 - site가 null이고 좌표가 있으면 `siteRepository.findFirstByPointInPolygon`으로 보완한다.
 
-- [ ] 엔티티 작성 (unique(source_type, source_id), index(status,id), index(site_id, occurred_at))
-- [ ] IncidentServiceKoTest: site 보완, 좌표 없음, 저장값 검증
-- [ ] 커밋 `feat: incident 엔티티와 생성 서비스 추가`
+- [x] 엔티티 작성 (unique(source_type, source_id), index(status,id), index(site_id, occurred_at))
+- [x] IncidentServiceKoTest: site 보완, 좌표 없음, 저장값 검증
+- [x] 커밋 `feat: incident 엔티티와 생성 서비스 추가`
 
 ### Task 2: 센서 이벤트 → incident 생성, 알림 ID를 incident ID로
 
@@ -50,9 +50,9 @@
 - SensorAlarmPayload.eventId, SensorEventNotified.eventId = incident.requiredId
 - Incident: deviceId=deviceId, deviceName=sensorType.description, title=fieldDescription, level=trigger.level, site=feature.site
 
-- [ ] processEvent에서 EventHistory 저장 직후 `incidentService.open(SENSOR, eventHistory.requiredId, ...)`
-- [ ] 프로세서 테스트: `incidentRepository.findBySourceTypeAndSourceId` 로 검증
-- [ ] 커밋 `feat: 센서 이벤트 발생 시 incident 생성`
+- [x] processEvent에서 EventHistory 저장 직후 `incidentService.open(SENSOR, eventHistory.requiredId, ...)`
+- [x] 프로세서 테스트: `incidentRepository.findBySourceTypeAndSourceId` 로 검증
+- [x] 커밋 `feat: 센서 이벤트 발생 시 incident 생성`
 
 ### Task 3: /events 조회·상태 변경·통계·대시보드를 incident 기준으로
 
@@ -72,7 +72,7 @@
 - time-series SQL: `event_history` → `incident`
 - `EventStatusChangeNotifier.notifyStatusChanged(incident: Incident)`; site는 incident.site, 없으면 좌표 폴리곤
 
-- [ ] 커밋 `feat: /events 목록·상태·통계·대시보드를 incident 기준으로 전환`
+- [x] 커밋 `feat: /events 목록·상태·통계·대시보드를 incident 기준으로 전환`
 
 ### Task 4: ActionHistory FK를 incident로
 
@@ -80,8 +80,8 @@
 - Modify: `action/ActionHistory.kt` (`incident: Incident`, join column `incident_id`), `action/ActionHistoryRepository.kt` (`findByIncident`, `findByIdAndIncident`), `action/ActionHistoryService.kt`
 - Test: `action/ActionHistoryServiceKoTest.kt`, `action/entity/DummyEntities.kt`
 
-- [ ] 조치 등록 시 `incident.changeStatus(RESOLVED)` + notifier
-- [ ] 커밋 `feat: 조치 이력을 incident에 연결`
+- [x] 조치 등록 시 `incident.changeStatus(RESOLVED)` + notifier
+- [x] 커밋 `feat: 조치 이력을 incident에 연결`
 
 ### Task 5: CCTV·MIC 이벤트 → incident 생성
 
@@ -95,7 +95,7 @@
 - MIC: deviceId=micId, deviceName=micName, title=labelNameKo ?: labelNameEn ?: "소음 감지", occurredAt=micEvent.occurredAt
 - EdsEvent 갱신(진행중/종료) 경로에서는 incident를 건드리지 않는다
 
-- [ ] 커밋 `feat: CCTV·AI마이크 이벤트 발생 시 incident 생성`
+- [x] 커밋 `feat: CCTV·AI마이크 이벤트 발생 시 incident 생성`
 
 ### Task 6: 수동 마이그레이션 SQL
 
@@ -104,9 +104,9 @@
 
 내용: incident 테이블 생성(Hibernate 스키마와 동일) → event_history에서 백필(feature 조인으로 site_id) → action_history.incident_id 추가·백필·NOT NULL → event_history_id, event_history.status·인덱스 제거.
 
-- [ ] 커밋 `docs: incident 전환 수동 마이그레이션 SQL`
+- [x] 커밋 `docs: incident 전환 수동 마이그레이션 SQL`
 
 ### Task 7: 전체 테스트·spotless·PR
 
-- [ ] `./gradlew spotlessApply test`
-- [ ] PR → develop, squash 머지 여부는 사용자 확인
+- [x] `./gradlew spotlessApply test`
+- [x] PR → develop, squash 머지 여부는 사용자 확인

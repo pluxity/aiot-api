@@ -27,7 +27,8 @@ class DashboardService(
         from: String?,
         to: String?,
     ): Map<EventStatus, List<EventResponse>> {
-        val eventList = incidentRepository.findEventList(from = from, to = to)
+        val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
+        val eventList = if (siteIds.isEmpty()) emptyList() else incidentRepository.findEventList(from = from, to = to, siteIds = siteIds)
         val events = mutableMapOf<EventStatus, List<EventResponse>>()
         EventStatus.entries.forEach { result ->
             events[result] = eventList.filter { it.status == result }.map { it.toEventResponse() }

@@ -100,6 +100,32 @@ class EdsEventServiceKoTest :
                 }
             }
 
+            When("event_start가 UTC 오프셋이 붙은 ISO 형식으로 옴") {
+                every { edsEventRepository.findByEventIdAndEventStatusNot(102, EdsEventStatus.ENDED) } returns null
+                val saved = slot<EdsEvent>()
+                every { edsEventRepository.save(capture(saved)) } answers { saved.captured.withId(11L) }
+                every { cctvRepository.findByEdsCameraId("CAM-01") } returns null
+
+                service.saveEvent(eventData(id = 102, eventStart = "2026-09-14T01:00:00Z"), thumbnailFileId = null)
+
+                Then("KST로 변환해 저장한다") {
+                    verify(exactly = 1) {
+                        incidentService.open(
+                            sourceType = IncidentSourceType.CCTV,
+                            sourceId = 11L,
+                            site = null,
+                            deviceId = "CAM-01",
+                            deviceName = "CAM-01",
+                            title = "배회",
+                            level = ConditionLevel.WARNING,
+                            occurredAt = LocalDateTime.of(2026, 9, 14, 10, 0, 0),
+                            latitude = 37.01,
+                            longitude = 127.01,
+                        )
+                    }
+                }
+            }
+
             When("진행 중인 이벤트의 종료 알림이 옴") {
                 val existing =
                     EdsEvent(

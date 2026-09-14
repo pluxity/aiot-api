@@ -90,11 +90,11 @@ class IncidentCustomRepositoryTest(
                 )
 
             When("필터 없이 페이징 조회") {
-                val rows = incidentRepository.findEventListWithPaging(null, null, size = 10)
+                val rows = incidentRepository.findEventListWithPaging(null, null, siteIds = listOf(site.requiredId), size = 10)
 
-                Then("status asc, id desc 순으로 세 건이 나오고 센서 행만 원본 값이 채워진다") {
-                    rows shouldHaveSize 3
-                    rows.map { it.eventId } shouldBe listOf(cctv.requiredId, sensor.requiredId, mic.requiredId)
+                Then("권한 범위 현장의 두 건만 status asc, id desc 순으로 나오고 센서 행만 원본 값이 채워진다") {
+                    rows shouldHaveSize 2
+                    rows.map { it.eventId } shouldBe listOf(cctv.requiredId, sensor.requiredId)
 
                     val sensorRow = rows.first { it.sourceType == IncidentSourceType.SENSOR }
                     sensorRow.objectId shouldBe SensorType.TEMPERATURE_HUMIDITY.objectId
@@ -110,44 +110,84 @@ class IncidentCustomRepositoryTest(
                     cctvRow.fieldKey shouldBe null
                     cctvRow.value shouldBe null
                     cctvRow.title shouldBe "배회"
+                }
+            }
 
-                    val micRow = rows.first { it.sourceType == IncidentSourceType.MIC }
-                    micRow.siteId shouldBe null
-                    micRow.status shouldBe EventStatus.RESOLVED
+            When("현장이 없는 incident는") {
+                val rows = incidentRepository.findEventListWithPaging(null, null, siteIds = listOf(site.requiredId), size = 10)
+
+                Then("권한 범위로 걸러져 목록에 나오지 않는다") {
+                    rows.none { it.eventId == mic.requiredId } shouldBe true
                 }
             }
 
             When("sourceType, sensorType, level, 기간 필터로 조회") {
-                val bySource = incidentRepository.findEventListWithPaging(null, null, sourceType = IncidentSourceType.CCTV, size = 10)
+                val bySource =
+                    incidentRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        sourceType = IncidentSourceType.CCTV,
+                        siteIds = listOf(site.requiredId),
+                        size = 10,
+                    )
                 val bySensor =
                     incidentRepository.findEventListWithPaging(
                         null,
                         null,
                         sensorType = SensorType.TEMPERATURE_HUMIDITY,
+                        siteIds = listOf(site.requiredId),
                         size = 10,
                     )
-                val byOtherSensor = incidentRepository.findEventListWithPaging(null, null, sensorType = SensorType.FIRE, size = 10)
-                val byLevel = incidentRepository.findEventListWithPaging(null, null, level = ConditionLevel.WARNING, size = 10)
-                val byRange = incidentRepository.findEventListWithPaging("20260914090500", "20260914091500", size = 10)
-                val bySite = incidentRepository.findEventListWithPaging(null, null, siteId = site.requiredId, size = 10)
+                val byOtherSensor =
+                    incidentRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        sensorType = SensorType.FIRE,
+                        siteIds = listOf(site.requiredId),
+                        size = 10,
+                    )
+                val byLevel =
+                    incidentRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        level = ConditionLevel.WARNING,
+                        siteIds = listOf(site.requiredId),
+                        size = 10,
+                    )
+                val byRange =
+                    incidentRepository.findEventListWithPaging(
+                        "20260914090500",
+                        "20260914091500",
+                        siteIds = listOf(site.requiredId),
+                        size = 10,
+                    )
+                val bySite =
+                    incidentRepository.findEventListWithPaging(
+                        null,
+                        null,
+                        siteId = site.requiredId,
+                        siteIds = listOf(site.requiredId),
+                        size = 10,
+                    )
 
                 Then("각 필터가 해당 행만 남긴다") {
                     bySource.map { it.eventId } shouldBe listOf(cctv.requiredId)
                     bySensor.map { it.eventId } shouldBe listOf(sensor.requiredId)
                     byOtherSensor shouldHaveSize 0
-                    byLevel.map { it.eventId } shouldBe listOf(cctv.requiredId, mic.requiredId)
+                    byLevel.map { it.eventId } shouldBe listOf(cctv.requiredId)
                     byRange.map { it.eventId } shouldBe listOf(cctv.requiredId)
                     bySite.map { it.eventId } shouldBe listOf(cctv.requiredId, sensor.requiredId)
                 }
             }
 
             When("커서로 두 번째 페이지 조회") {
-                val first = incidentRepository.findEventListWithPaging(null, null, size = 1)
+                val first = incidentRepository.findEventListWithPaging(null, null, siteIds = listOf(site.requiredId), size = 1)
                 val next = first.last()
                 val second =
                     incidentRepository.findEventListWithPaging(
                         null,
                         null,
+                        siteIds = listOf(site.requiredId),
                         size = 1,
                         lastId = next.eventId,
                         lastStatus = next.status,
@@ -160,10 +200,10 @@ class IncidentCustomRepositoryTest(
             }
 
             When("대시보드용 전체 조회") {
-                val rows = incidentRepository.findEventList(null, null)
+                val rows = incidentRepository.findEventList(null, null, siteIds = listOf(site.requiredId))
 
                 Then("id 내림차순 전체") {
-                    rows.map { it.eventId } shouldBe listOf(mic.requiredId, cctv.requiredId, sensor.requiredId)
+                    rows.map { it.eventId } shouldBe listOf(cctv.requiredId, sensor.requiredId)
                 }
             }
         }

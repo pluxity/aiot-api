@@ -28,6 +28,7 @@ class IncidentCustomRepositoryImpl(
         to: String?,
         siteId: Long?,
         status: EventStatus?,
+        siteIds: List<Long>,
     ): List<IncidentRow> =
         kotlinJdslJpqlExecutor
             .findAllNotNull {
@@ -38,6 +39,7 @@ class IncidentCustomRepositoryImpl(
                             filterByTo(to),
                             filterBySiteId(siteId),
                             filterByStatus(status),
+                            path(Site::id).`in`(siteIds),
                         ),
                     ).orderBy(path(Incident::id).desc())
             }
@@ -50,6 +52,7 @@ class IncidentCustomRepositoryImpl(
         level: ConditionLevel?,
         sensorType: SensorType?,
         sourceType: IncidentSourceType?,
+        siteIds: List<Long>,
         size: Int,
         lastId: Long?,
         lastStatus: EventStatus?,
@@ -66,6 +69,7 @@ class IncidentCustomRepositoryImpl(
                             level?.let { path(Incident::level).eq(it) },
                             sourceType?.let { path(Incident::sourceType).eq(it) },
                             sensorType?.let { path(EventHistory::objectId).eq(it.objectId) },
+                            path(Site::id).`in`(siteIds),
                             cursorCondition(lastId, lastStatus),
                         ),
                     ).orderBy(

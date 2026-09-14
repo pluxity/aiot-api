@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val log = KotlinLogging.logger {}
@@ -35,6 +36,7 @@ class EdsEventService(
     companion object {
         private const val EDS_EVENTS: String = "eds-events/"
         private val EDS_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss.SSS")
+        private val KST = ZoneId.of("Asia/Seoul")
     }
 
     fun findAll(
@@ -109,7 +111,7 @@ class EdsEventService(
     // 배포별로 EDS 포맷과 ISO가 섞여 온다. 하나로 줄이면 안 된다
     private fun parseEventStart(eventStart: String): LocalDateTime =
         runCatching { LocalDateTime.parse(eventStart, EDS_TIME_FORMAT) }
-            .recoverCatching { OffsetDateTime.parse(eventStart).toLocalDateTime() }
+            .recoverCatching { OffsetDateTime.parse(eventStart).atZoneSameInstant(KST).toLocalDateTime() }
             .recoverCatching { LocalDateTime.parse(eventStart) }
             .getOrElse {
                 log.warn { "EDS 이벤트 시작 시각 파싱 실패, 수신 시각으로 대체합니다: $eventStart" }

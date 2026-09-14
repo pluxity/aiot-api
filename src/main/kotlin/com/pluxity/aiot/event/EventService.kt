@@ -8,6 +8,7 @@ import com.pluxity.aiot.data.enum.DataInterval
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.dto.EventCursorPageResponse
 import com.pluxity.aiot.event.dto.EventMetrics
+import com.pluxity.aiot.event.dto.EventResponse
 import com.pluxity.aiot.event.dto.EventTimeSeriesDataResponse
 import com.pluxity.aiot.event.dto.toEventCursorPageResponse
 import com.pluxity.aiot.event.dto.toEventResponse
@@ -19,6 +20,7 @@ import com.pluxity.aiot.incident.Incident
 import com.pluxity.aiot.incident.IncidentRepository
 import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
+import com.pluxity.aiot.site.SiteRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
@@ -30,6 +32,7 @@ import java.time.format.DateTimeFormatter
 @Transactional(readOnly = true)
 class EventService(
     private val incidentRepository: IncidentRepository,
+    private val siteRepository: SiteRepository,
     private val jdbcTemplate: NamedParameterJdbcTemplate,
     private val eventStatusChangeNotifier: EventStatusChangeNotifier,
 ) {
@@ -49,9 +52,13 @@ class EventService(
             throw CustomException(ErrorCode.INVALID_CURSOR_PARAMETERS, lastId, lastStatus)
         }
 
+        // 권한이 있는 현장만 조회된다. 이 목록 없이 쿼리하면 다른 현장의 이벤트가 노출된다
+        val siteIds = siteRepository.findAllByOrderByCreatedAtDesc().mapNotNull { it.id }
+        if (siteIds.isEmpty()) return emptyList<EventResponse>().toEventCursorPageResponse(false)
+
         val eventList =
             incidentRepository
-                .findEventListWithPaging(from, to, siteId, status, level, sensorType, sourceType, size, lastId, lastStatus)
+                .findEventListWithPaging(from, to, siteId, status, level, sensorType, sourceType, siteIds, size, lastId, lastStatus)
                 .map { it.toEventResponse() }
         val hasNext = eventList.size > size
         return eventList.toEventCursorPageResponse(hasNext)

@@ -11,6 +11,8 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.incident.IncidentRepository
 import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
+import com.pluxity.aiot.site.SiteRepository
+import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -27,12 +29,14 @@ class EventServiceKoTest :
     BehaviorSpec({
 
         val incidentRepository: IncidentRepository = mockk()
+        val siteRepository: SiteRepository = mockk()
         val jdbcTemplate: NamedParameterJdbcTemplate = mockk()
         val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
 
         val eventService =
             EventService(
                 incidentRepository,
+                siteRepository,
                 jdbcTemplate,
                 eventStatusChangeNotifier,
             )
@@ -58,6 +62,7 @@ class EventServiceKoTest :
                         ),
                     )
 
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns listOf(dummySite(id = 1L), dummySite(id = 2L))
                 every {
                     incidentRepository.findEventListWithPaging(
                         from,
@@ -67,6 +72,7 @@ class EventServiceKoTest :
                         ConditionLevel.CAUTION,
                         SensorType.WASTE_FILL_LEVEL,
                         IncidentSourceType.SENSOR,
+                        listOf(1L, 2L),
                         20,
                     )
                 } returns rows
@@ -96,6 +102,7 @@ class EventServiceKoTest :
             }
 
             When("필터 없이 조회 요청") {
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns listOf(dummySite(id = 1L))
                 every {
                     incidentRepository.findEventListWithPaging(
                         null,
@@ -105,6 +112,7 @@ class EventServiceKoTest :
                         null,
                         null,
                         null,
+                        listOf(1L),
                         20,
                     )
                 } returns listOf(dummyIncidentRow())
@@ -113,6 +121,32 @@ class EventServiceKoTest :
 
                 Then("전체 이벤트 목록 반환") {
                     results.content.size shouldBe 1
+                }
+            }
+
+            When("권한이 있는 현장이 하나도 없음") {
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns emptyList()
+
+                val results = eventService.findAll(null, null, null, null, null, null, null, 20)
+
+                Then("쿼리 없이 빈 목록을 돌려준다") {
+                    results.content shouldBe emptyList()
+                    results.hasNext shouldBe false
+                    verify(exactly = 0) {
+                        incidentRepository.findEventListWithPaging(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                        )
+                    }
                 }
             }
         }

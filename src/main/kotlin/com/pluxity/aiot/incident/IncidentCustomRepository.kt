@@ -11,6 +11,7 @@ interface IncidentCustomRepository {
         to: String?,
         siteId: Long? = null,
         status: EventStatus? = null,
+        siteIds: List<Long>,
     ): List<IncidentRow>
 
     fun findEventListWithPaging(
@@ -21,6 +22,7 @@ interface IncidentCustomRepository {
         level: ConditionLevel? = null,
         sensorType: SensorType? = null,
         sourceType: IncidentSourceType? = null,
+        siteIds: List<Long>,
         size: Int,
         lastId: Long? = null,
         lastStatus: EventStatus? = null,

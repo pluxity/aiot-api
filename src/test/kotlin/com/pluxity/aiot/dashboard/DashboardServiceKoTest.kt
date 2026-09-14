@@ -77,6 +77,8 @@ class DashboardServiceKoTest :
 
         Given("이벤트 요약 조회") {
             When("기간과 현장 필터로 조회하면") {
+                every { siteRepository.findAllByOrderByCreatedAtDesc() } returns listOf(dummySite(id = 1L, name = "Site A"))
+
                 val activeRow =
                     dummyIncidentRow(
                         eventId = 1L,
@@ -96,6 +98,7 @@ class DashboardServiceKoTest :
                     incidentRepository.findEventList(
                         from = "20240101",
                         to = "20240131",
+                        siteIds = listOf(1L),
                     )
                 } returns listOf(activeRow, resolvedRow)
 

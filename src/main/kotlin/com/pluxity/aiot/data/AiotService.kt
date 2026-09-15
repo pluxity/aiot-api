@@ -7,8 +7,8 @@ import com.pluxity.aiot.data.dto.MobiusLocationResponse
 import com.pluxity.aiot.data.dto.MobiusUrilResponse
 import com.pluxity.aiot.data.dto.SubscriptionM2mSub
 import com.pluxity.aiot.data.dto.SubscriptionRequest
+import com.pluxity.aiot.data.subscription.dto.MobiusDataReportResponse
 import com.pluxity.aiot.data.subscription.dto.SubscriptionCinResponse
-import com.pluxity.aiot.data.subscription.dto.SubscriptionRepListResponse
 import com.pluxity.aiot.feature.FeatureQueryService
 import com.pluxity.aiot.feature.FeatureRepository
 import com.pluxity.aiot.feature.FeatureStatusWriter
@@ -42,6 +42,7 @@ private val log = KotlinLogging.logger {}
 // Object Instance 총수를 넘겨야 한다. 상한에 걸리면 뒤쪽 디바이스가 조용히 빠진다
 private const val DISCOVERY_LIMIT = 100_000
 private const val OBJECT_INSTANCE_LABEL = "objectVersion:1.0"
+private const val MOBIUS_ORIGIN = "S_AIoT_Application"
 
 @Service
 class AiotService(
@@ -65,12 +66,16 @@ class AiotService(
     @Volatile
     private var client: RestClient = createMobiusClient(mobiusConfigService.currentUrl)
 
+    /** X-M2M-RI는 요청 식별자라 요청마다 새 값이어야 한다. defaultHeaders에 두면 클라이언트 생성 시각에 고정된다. */
     private fun createMobiusClient(baseUrl: String): RestClient =
         restClientFactory
             .createClient(baseUrl)
             .mutate()
             .defaultHeaders { headers ->
-                headers.setAll(createMobiusHeaders())
+                headers.set("X-M2M-Origin", MOBIUS_ORIGIN)
+                headers.set("Accept", "application/json")
+            }.requestInitializer { request ->
+                request.headers.set("X-M2M-RI", Instant.now().epochSecond.toString())
             }.build()
 
     /**
@@ -235,13 +240,6 @@ class AiotService(
         abbrMap: Map<String, AbbreviationData>,
     ): String = parseDeviceName(deviceId, abbrMap)
 
-    private fun createMobiusHeaders(): Map<String, String> =
-        mapOf(
-            "X-M2M-RI" to Instant.now().epochSecond.toString(),
-            "X-M2M-Origin" to "S_AIoT_Application",
-            "Accept" to "*/*",
-        )
-
     fun updateFeatureSubscriptionTime(deviceId: String) {
         val feature =
             featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
@@ -331,9 +329,10 @@ class AiotService(
         mobiusLimiter {
             client
                 .get()
-                .uri("/$deviceId/$objectId/data-report?rcn=4&ty=4&lvl=1&cra=$startStr&crb=$endStr")
+                .uri("/$deviceId/$objectId/data-report?rcn=8&ty=4&lvl=1&cra=$startStr&crb=$endStr")
                 .retrieve()
-                .body<SubscriptionRepListResponse>()
+                .body<MobiusDataReportResponse>()
+                ?.cnt
                 ?.cin
         }
 

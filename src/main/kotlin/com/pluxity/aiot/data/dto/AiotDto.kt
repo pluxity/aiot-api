@@ -17,8 +17,8 @@ data class MobiusCinResponse(
 )
 
 data class MobiusConResponse(
-    @field:JsonProperty("Battery Level")
-    val batteryLevel: Int,
+    @field:JsonProperty("BatteryLevel")
+    val batteryLevel: Int? = null,
 )
 
 data class MobiusUrilResponse(

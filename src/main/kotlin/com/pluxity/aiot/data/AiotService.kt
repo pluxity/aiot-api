@@ -44,6 +44,9 @@ private const val DISCOVERY_LIMIT = 100_000
 private const val OBJECT_INSTANCE_LABEL = "objectVersion:1.0"
 private const val MOBIUS_ORIGIN = "S_AIoT_Application"
 
+/** 모든 장비에 공통으로 달리는 AIoTDevice Object. 배터리는 여기에만 보고된다 */
+private const val DEVICE_OBJECT_INSTANCE = "34950_1.0_0"
+
 @Service
 class AiotService(
     private val featureRepository: FeatureRepository,
@@ -166,7 +169,7 @@ class AiotService(
         mobiusLimiter {
             client
                 .get()
-                .uri("/$deviceId/3_1.2_0/data-report/la")
+                .uri("/$deviceId/$DEVICE_OBJECT_INSTANCE/data-report/la")
                 .exchange { _, response ->
                     if (!response.statusCode.is2xxSuccessful) {
                         null

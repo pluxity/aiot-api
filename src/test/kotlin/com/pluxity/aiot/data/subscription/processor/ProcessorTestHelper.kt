@@ -220,7 +220,7 @@ abstract class ProcessorTestHelper(
         SubscriptionConResponse(
             temperature = temperature,
             humidity = humidity,
-            timestamp = timestamp,
+            reportedTimestamp = timestamp,
             period = 60,
             fireAlarm = fireAlarm,
             containerModuleId = containerModuleId,

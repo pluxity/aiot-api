@@ -21,9 +21,15 @@ data class SubscriptionRepResponse(
     val cin: SubscriptionCinResponse,
 )
 
+/** con.Timestamp는 규격상 선택이라 악취 단말은 안 보낸다. 빠지면 cin 생성 시각 ct로 채운다. */
 data class SubscriptionCinResponse(
-    val con: SubscriptionConResponse,
-)
+    val ct: String? = null,
+    @field:JsonProperty("con")
+    private val rawCon: SubscriptionConResponse,
+) {
+    val con: SubscriptionConResponse
+        get() = if (rawCon.reportedTimestamp != null) rawCon else rawCon.copy(reportedTimestamp = ct)
+}
 
 data class SubscriptionConResponse(
     @field:JsonProperty("Temperature")
@@ -33,7 +39,7 @@ data class SubscriptionConResponse(
     @field:JsonProperty("Reporting Period")
     val period: Int = 300,
     @field:JsonProperty("Timestamp")
-    val timestamp: String,
+    val reportedTimestamp: String? = null,
     @field:JsonProperty("Fire Alarm")
     val fireAlarm: Boolean?,
     @field:JsonProperty("ContainerModuleId")
@@ -72,7 +78,10 @@ data class SubscriptionConResponse(
     val uvi: Int? = null,
     @field:JsonProperty("LED Light")
     val ledLight: Int? = null,
-)
+) {
+    val timestamp: String
+        get() = checkNotNull(reportedTimestamp) { "Timestamp도 ct도 없는 알림" }
+}
 
 data class MobiusDataReportResponse(
     @field:JsonProperty("m2m:cnt")

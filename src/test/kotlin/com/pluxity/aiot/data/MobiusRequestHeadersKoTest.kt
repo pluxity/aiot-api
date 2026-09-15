@@ -6,22 +6,24 @@ import com.pluxity.aiot.feature.FeatureStatusWriter
 import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.mobius.MobiusConfigService
-import com.pluxity.aiot.mobius.MobiusUrlUpdatedEvent
 import com.sun.net.httpserver.HttpServer
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import java.net.InetSocketAddress
-import java.util.concurrent.atomic.AtomicInteger
+import java.time.Instant
+import java.util.concurrent.CopyOnWriteArrayList
 
-/** 주소를 바꿔도 client가 생성 시점 주소에 묶여 있으면 옛 서버로 계속 동기화한다. */
-class MobiusUrlSwitchKoTest :
+class MobiusRequestHeadersKoTest :
     BehaviorSpec({
-        fun mobiusServer(hits: AtomicInteger): HttpServer =
+        val received = CopyOnWriteArrayList<Map<String, String?>>()
+        val server =
             HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
                 createContext("/") { exchange ->
-                    hits.incrementAndGet()
+                    received +=
+                        listOf("X-M2M-RI", "X-M2M-Origin", "Accept").associateWith { exchange.requestHeaders.getFirst(it) }
                     val body = """{"m2m:uril":["Mobius/AE/SNIOT-P-WFL-001/34957_1.0_0"]}"""
                     exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
                     exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
@@ -29,41 +31,37 @@ class MobiusUrlSwitchKoTest :
                 }
                 start()
             }
-
-        val oldHits = AtomicInteger()
-        val newHits = AtomicInteger()
-        val oldServer = mobiusServer(oldHits)
-        val newServer = mobiusServer(newHits)
         val factory = RestClientFactory()
 
         afterSpec {
             factory.destroy()
-            oldServer.stop(0)
-            newServer.stop(0)
+            server.stop(0)
         }
 
-        Given("옛 주소로 만들어진 Mobius 클라이언트") {
+        Given("Mobius 클라이언트") {
             val aiotService =
                 AiotService(
                     mockk<FeatureRepository>(relaxed = true),
                     mockk<FeatureQueryService>(relaxed = true),
                     mockk<FeatureStatusWriter>(relaxed = true),
-                    mockk<MobiusConfigService> { every { currentUrl } returns "http://127.0.0.1:${oldServer.address.port}" },
+                    mockk<MobiusConfigService> { every { currentUrl } returns "http://127.0.0.1:${server.address.port}" },
                     factory,
                     ServerDomainProperties(url = "http://domain"),
                 )
 
-            When("주소 변경 이벤트를 받으면") {
-                oldHits.set(0)
-                newHits.set(0)
-                aiotService.handleMobiusUrlUpdated(MobiusUrlUpdatedEvent("http://127.0.0.1:${newServer.address.port}"))
+            When("동기화 요청을 보내면") {
+                val before = Instant.now().epochSecond
+                aiotService.checkSynchronization()
+                val after = Instant.now().epochSecond
+                val headers = received.single()
 
-                Then("새 주소로 동기화한다") {
-                    newHits.get() shouldBe 1
+                Then("규격 공통 헤더를 붙인다") {
+                    headers["X-M2M-Origin"] shouldBe "S_AIoT_Application"
+                    headers["Accept"] shouldBe "application/json"
                 }
 
-                Then("옛 주소로는 더 이상 요청하지 않는다") {
-                    oldHits.get() shouldBe 0
+                Then("X-M2M-RI는 요청 시각의 Unix timestamp다") {
+                    headers["X-M2M-RI"]!!.toLong() shouldBeInRange before..after
                 }
             }
         }

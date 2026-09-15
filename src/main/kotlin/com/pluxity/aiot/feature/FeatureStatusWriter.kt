@@ -1,5 +1,6 @@
 package com.pluxity.aiot.feature
 
+import com.pluxity.aiot.data.MobiusDevice
 import com.pluxity.aiot.data.dto.DeviceStatus
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -43,32 +44,22 @@ class FeatureStatusWriter(
 
     /** 목록이 비어 있으면 로컬 Feature가 전량 삭제되므로 호출 전에 걸러야 한다. */
     @Transactional
-    fun applyPaths(uril: List<String>) {
-        val objectIds = SensorType.entries.map { it.objectId }
+    fun applyDevices(devices: List<MobiusDevice>) {
         val existFeatures = featureRepository.findAll()
         val existFeatureMap = existFeatures.associateBy { it.deviceId }
 
         val features =
-            uril
-                .asSequence()
-                .filter { path -> objectIds.any(path::contains) }
-                .filter { it.count { char -> char == '/' } == 3 }
-                .filterNot { it.contains("3_1.2_0") }
-                .filterNot { it.contains("P-TST") }
-                .map { path ->
-                    val splitPaths = path.split("/")
-                    val (deviceId, sensorId) = splitPaths[2] to splitPaths[3]
-                    val deviceType = SensorType.fromObjectId(sensorId.take(5))
+            devices
+                .map { device ->
+                    val deviceType = SensorType.fromObjectId(device.objectId.take(5))
                     val parsedName =
-                        parseDeviceName(deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
-                    existFeatureMap[deviceId]?.apply {
-                        updateInfo(parsedName, sensorId)
-                    } ?: Feature(deviceId = deviceId, name = parsedName, objectId = sensorId)
-                }.associateBy { it.deviceId }
-                .values
-                .toList()
+                        parseDeviceName(device.deviceId, mapOf(deviceType.abbreviation.abbreviationKey to deviceType.abbreviation))
+                    existFeatureMap[device.deviceId]?.apply {
+                        updateInfo(parsedName, device.objectId)
+                    } ?: Feature(deviceId = device.deviceId, name = parsedName, objectId = device.objectId)
+                }
 
-        val removedIds = existFeatures.mapNotNull { it.deviceId } - features.map { it.deviceId }.toSet()
+        val removedIds = existFeatures.mapNotNull { it.deviceId } - devices.map { it.deviceId }.toSet()
         featureRepository.deleteAllByDeviceIdIn(removedIds)
         featureRepository.saveAll(features)
     }

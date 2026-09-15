@@ -17,13 +17,13 @@ data class MobiusCinResponse(
 )
 
 data class MobiusConResponse(
-    @field:JsonProperty("Battery Level")
-    val batteryLevel: Int,
+    @field:JsonProperty("BatteryLevel")
+    val batteryLevel: Int? = null,
 )
 
 data class MobiusUrilResponse(
     @field:JsonProperty("m2m:uril")
-    val uril: List<String>,
+    val uril: List<String> = emptyList(),
 )
 
 data class MobiusLocationResponse(
@@ -49,6 +49,7 @@ data class SubscriptionM2mSub(
 
 data class SubscriptionEnc(
     val net: List<Int> = listOf(3),
+    val chty: List<Int> = listOf(4),
 )
 
 /** 동기화 단계 사이로 넘기는 값. 엔티티를 넘기면 detached가 되어 변경이 flush되지 않는다. */

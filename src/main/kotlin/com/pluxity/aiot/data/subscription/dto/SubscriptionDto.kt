@@ -74,6 +74,11 @@ data class SubscriptionConResponse(
     val ledLight: Int? = null,
 )
 
+data class MobiusDataReportResponse(
+    @field:JsonProperty("m2m:cnt")
+    val cnt: SubscriptionRepListResponse? = null,
+)
+
 data class SubscriptionRepListResponse(
     @field:JsonProperty("m2m:cin")
     val cin: List<SubscriptionCinResponse>?,

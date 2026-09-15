@@ -12,8 +12,8 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 
 /**
- * 구독 알림 처리는 트랜잭션 밖에서 Feature를 읽는다. site는 LAZY 프록시라
- * id 외의 접근은 세션이 없어 터진다. 실제 세션 경계로만 드러나므로 mock으로는 못 잡는다.
+ * 구독 알림 처리는 트랜잭션 밖에서 Feature를 읽고, 프로세서 캐시에 며칠씩 들고 있는다.
+ * site가 LAZY 프록시로 남아 있으면 세션이 없어 터진다. 실제 세션 경계로만 드러나므로 mock으로는 못 잡는다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -42,8 +42,12 @@ class FeatureLazySiteIdKoTest(
             When("트랜잭션 밖에서 조회해 siteId를 읽으면") {
                 val feature = featureRepository.findByDeviceId("SNIOT-P-WFL-001")!!
 
-                Then("프록시를 초기화하지 않고 id를 돌려준다") {
+                Then("siteId를 돌려준다") {
                     feature.requiredSiteId shouldBe siteId
+                }
+
+                Then("알림 payload에 쓰는 site 이름도 읽힌다") {
+                    feature.site?.name shouldBe "현장"
                 }
             }
         }

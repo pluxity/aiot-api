@@ -20,5 +20,7 @@ interface FeatureRepository :
 
     fun findByIsActiveTrueAndSiteIsNotNull(): List<Feature>
 
+    /** 알림 처리 경로가 트랜잭션 밖에서 site 이름까지 읽고 캐시에 오래 들고 있어 프록시로 두면 안 된다. */
+    @EntityGraph(attributePaths = ["site"])
     fun findByDeviceId(deviceId: String): Feature?
 }

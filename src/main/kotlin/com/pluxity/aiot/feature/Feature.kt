@@ -41,8 +41,10 @@ class Feature(
 
     @Column
     var subscriptionTime: LocalDateTime? = null
+
+    /** site는 LAZY 프록시다. id 외의 접근(requiredId 포함)은 세션 밖에서 터진다. */
     val requiredSiteId: Long
-        get() = checkNotNull(site) { "Feature.site is null (not ready)" }.requiredId
+        get() = checkNotNull(site?.id) { "Feature.site is null (not ready)" }
 
     fun updateActive(isActive: Boolean) {
         this.isActive = isActive

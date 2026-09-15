@@ -60,8 +60,3 @@ llm:
     base-url: ${LLM_API_BASE_URL:http://192.168.10.181:8000}
     # 생성이 오래 걸린다. 단위 없는 숫자는 ms로 해석된다
     response-timeout: 3m
-
-# 임시. 내부망 운영 서버가 받은 Mobius 알림을 넘길 개발 서버 주소. 비우면 전달하지 않는다
-subscription:
-  forward:
-    url: ${SUBSCRIPTION_FORWARD_URL:}

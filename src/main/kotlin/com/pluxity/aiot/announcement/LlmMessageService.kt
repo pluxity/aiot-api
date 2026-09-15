@@ -10,6 +10,7 @@ import com.pluxity.aiot.announcement.dto.LlmResponse
 import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.logging.withMdc
 import com.pluxity.aiot.global.properties.InfluxdbProperties
 import com.pluxity.aiot.global.properties.LlmProperties
 import com.pluxity.aiot.sensor.type.DeviceProfileEnum
@@ -17,6 +18,7 @@ import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.Site
 import com.pluxity.aiot.site.SiteRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.slf4j.MDC
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -67,17 +69,20 @@ class LlmMessageService(
         val yesterday = today.minusDays(1)
 
         // 3. 각 사이트별로 병렬로 메시지 생성
+        val mdc = MDC.getCopyOfContextMap()
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             sites
                 .map { site ->
                     executor.submit {
-                        semaphore.acquire()
-                        try {
-                            generateMessageForSite(site, yesterday, today, targetHour)
-                        } catch (e: Exception) {
-                            log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
-                        } finally {
-                            semaphore.release()
+                        withMdc(mdc) {
+                            semaphore.acquire()
+                            try {
+                                generateMessageForSite(site, yesterday, today, targetHour)
+                            } catch (e: Exception) {
+                                log.error(e) { "사이트 ${site.name}(ID: ${site.id})의 LLM 메시지 생성 중 오류 발생" }
+                            } finally {
+                                semaphore.release()
+                            }
                         }
                     }
                     // close()는 완료를 기다려주지만 실패를 알려주지 않는다

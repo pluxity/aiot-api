@@ -1,6 +1,9 @@
 package com.pluxity.aiot.mic
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.pluxity.aiot.global.logging.TraceIdFilter
+import com.pluxity.aiot.global.logging.newTraceId
+import com.pluxity.aiot.global.logging.withMdcEntry
 import com.pluxity.aiot.global.properties.MicProperties
 import com.pluxity.aiot.mic.dto.MicEventData
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -51,7 +54,8 @@ class MicWebSocketClient(
                             .filter { it.type == WebSocketMessage.Type.TEXT }
                             .map { it.payloadAsText }
                             .publishOn(Schedulers.boundedElastic())
-                            .doOnNext { handleMessage(it) }
+                            // 수신 메시지는 상류가 없어 메시지마다 traceId를 새로 발급한다
+                            .doOnNext { withMdcEntry(TraceIdFilter.KEY, newTraceId()) { handleMessage(it) } }
                             .doOnError { e -> log.error(e) { "AI 마이크 WebSocket 오류" } }
                             .doOnComplete { log.info { "AI 마이크 WebSocket 연결 종료" } }
                             .then()

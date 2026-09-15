@@ -1,5 +1,6 @@
 package com.pluxity.aiot.global.config
 
+import com.pluxity.aiot.global.logging.MdcTaskDecorator
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -51,6 +52,7 @@ class AsyncConfig {
     fun taskExecutor(): AsyncTaskExecutor =
         SimpleAsyncTaskExecutor("app-async-").apply {
             setVirtualThreads(true)
+            setTaskDecorator(MdcTaskDecorator)
             setTaskTerminationTimeout(SHUTDOWN_WAIT_MILLIS)
         }
 

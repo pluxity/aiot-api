@@ -64,7 +64,7 @@ class WasteFillLevelProcessor(
     ) {
         val actualFilling = data.actualFilling?.toDouble() ?: return
         val highThreshold = data.highThreshold?.toDouble() ?: return
-        val feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
+        val feature = loadFeature(deviceId, featureRepository)
 
         if (actualFilling >= highThreshold) {
             updateFeatureEventStatus(feature, ConditionLevel.NORMAL.toString(), featureRepository)

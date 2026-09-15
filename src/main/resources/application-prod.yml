@@ -20,6 +20,11 @@ spring:
 domain:
   url: ${API_URL:}
 
+# 임시. 내부망 운영 서버가 받은 Mobius 알림을 넘길 개발 서버 주소. 비우면 전달 필터가 등록되지 않는다
+subscription:
+  forward:
+    url: ${SUBSCRIPTION_FORWARD_URL:}
+
 influx:
   url: http://${INFLUX_HOST:localhost}:8086
   token: ${INFLUX_TOKEN:PxevysKSGHQQfl-1E65Kh-fgNeuz-didiMUzcpRV85eX30VNZQLUDnCeUE0c3ZoGdRZ1oHVClS_tPLfskfcEgA==}

@@ -17,14 +17,14 @@ import java.net.InetSocketAddress
 class BatterySyncKoTest :
     BehaviorSpec({
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/has-battery/3_1.2_0/data-report/la") { exchange ->
-            val body = """{"m2m:cin":{"con":{"Battery Level":42}}}"""
+        server.createContext("/has-battery/34950_1.0_0/data-report/la") { exchange ->
+            val body = """{"m2m:cin":{"con":{"ModelNumber":"TrashLevel","BatteryLevel":42,"BatteryStatus":0}}}"""
             exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
             exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
             exchange.responseBody.use { it.write(body.toByteArray()) }
         }
-        // 배터리 항목이 없으면 Mobius가 404를 준다
-        server.createContext("/no-battery/3_1.2_0/data-report/la") { exchange ->
+        // 보고가 한 번도 없으면 Mobius가 404 "there is no <cin> resource"를 준다
+        server.createContext("/no-battery/34950_1.0_0/data-report/la") { exchange ->
             exchange.sendResponseHeaders(404, -1)
             exchange.close()
         }

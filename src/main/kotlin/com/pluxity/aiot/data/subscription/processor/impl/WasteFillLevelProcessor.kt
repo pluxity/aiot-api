@@ -87,7 +87,7 @@ class WasteFillLevelProcessor(
                     maxValue = 0.0,
                 ),
             feature = feature,
-            parsedDate = DateTimeUtils.safeParseFromTimestamp(data.timestamp),
+            parsedDate = DateTimeUtils.parseUtcToKst(data.timestamp),
             messageSender = messageSender,
             eventHistoryRepository = eventHistoryRepository,
             featureRepository = featureRepository,

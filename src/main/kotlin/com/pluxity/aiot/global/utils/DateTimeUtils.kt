@@ -27,7 +27,13 @@ object DateTimeUtils {
 
     fun formatToTimestamp(input: LocalDateTime): String = input.format(formatter)
 
-    fun safeParseFromTimestamp(timestamp: String): LocalDateTime = LocalDateTime.parse(timestamp, formatter)
+    /** Mobius의 Timestamp·ct는 UTC다. 그대로 저장하면 이력이 9시간 이르게 보인다. */
+    fun parseUtcToKst(timestamp: String): LocalDateTime =
+        LocalDateTime
+            .parse(timestamp, formatter)
+            .atOffset(ZoneOffset.UTC)
+            .atZoneSameInstant(ZoneId.of("Asia/Seoul"))
+            .toLocalDateTime()
 
     fun toIsoTimeFromKst(kstString: String): Instant {
         val localDateTime =

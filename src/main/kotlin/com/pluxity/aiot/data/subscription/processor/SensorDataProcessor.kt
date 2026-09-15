@@ -193,7 +193,7 @@ interface SensorDataProcessor {
         eventPublisher: ApplicationEventPublisher,
         incidentService: IncidentService,
     ) {
-        val parsedDate = DateTimeUtils.safeParseFromTimestamp(timestamp)
+        val parsedDate = DateTimeUtils.parseUtcToKst(timestamp)
 
         // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
         val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)

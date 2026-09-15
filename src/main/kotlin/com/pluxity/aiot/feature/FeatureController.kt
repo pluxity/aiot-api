@@ -133,9 +133,12 @@ class FeatureController(
         ],
     )
     @PostMapping("/sync")
-    fun checkSync(): ResponseEntity<Void> {
+    fun checkSync(
+        @Parameter(description = "Mobius 좌표로 위치·site를 덮어쓸지 여부. false면 위치는 유지하고 배터리만 갱신")
+        @RequestParam(defaultValue = "true") overwriteLocation: Boolean,
+    ): ResponseEntity<Void> {
         aiotService.checkSynchronization()
-        aiotService.statusSynchronize()
+        aiotService.statusSynchronize(overwriteLocation)
         aiotService.subscription()
         return ResponseEntity.noContent().build()
     }

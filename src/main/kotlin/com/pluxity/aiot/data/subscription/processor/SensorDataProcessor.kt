@@ -22,19 +22,11 @@ import com.pluxity.aiot.sensor.type.DeviceProfileEnum
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDateTime
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 
 private val log = KotlinLogging.logger {}
 
 interface SensorDataProcessor {
-    companion object {
-        private val featureCache: ConcurrentMap<String, Feature> = ConcurrentHashMap()
-        private val featureCacheExpiryMap: ConcurrentMap<String, Long> = ConcurrentHashMap()
-    }
-
     fun getObjectId(): String
 
     fun process(
@@ -195,8 +187,8 @@ interface SensorDataProcessor {
     ) {
         val parsedDate = DateTimeUtils.parseUtcToKst(timestamp)
 
-        // 해당 디바이스 ID로 Feature 찾기 (캐시 사용)
-        val feature: Feature = getFeatureFromCacheOrDb(deviceId, featureRepository)
+        // 해당 디바이스 ID로 Feature 찾기
+        val feature: Feature = loadFeature(deviceId, featureRepository)
 
         // 조건 대상 항목이 하나도 오지 않았다면 판단 근거가 없으므로 상태를 그대로 둔다
         val evaluable =
@@ -248,27 +240,14 @@ interface SensorDataProcessor {
         val condition: EventCondition,
     )
 
-    fun getFeatureFromCacheOrDb(
+    /**
+     * 알림마다 새로 읽는다. 캐시에 둔 객체로 상태를 비교하면 DB에서 갱신된 상태를 못 보고
+     * 같은 경보를 알림마다 다시 만든다.
+     */
+    fun loadFeature(
         deviceId: String,
         featureRepository: FeatureRepository,
-    ): Feature {
-        val currentTime = System.currentTimeMillis()
-
-        // 캐시에 있고 만료되지 않은 경우 캐시된 값 반환
-        if (featureCache.containsKey(deviceId)) {
-            val expiryTime: Long? = featureCacheExpiryMap[deviceId]
-            if (expiryTime != null && currentTime < expiryTime) {
-                return featureCache[deviceId] ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
-            }
-        }
-
-        // 캐시에 없거나 만료된 경우, DB에서 조회 후 캐시 업데이트
-        val feature =
-            featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
-        featureCache[deviceId] = feature
-        featureCacheExpiryMap[deviceId] = currentTime + 864_000_000L
-        return feature
-    }
+    ): Feature = featureRepository.findByDeviceId(deviceId) ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE_BY_DEVICE_ID, deviceId)
 
     fun updateFeatureEventStatus(
         feature: Feature?,
@@ -276,11 +255,8 @@ interface SensorDataProcessor {
         featureRepository: FeatureRepository,
     ) {
         feature?.let {
-            val dbFeature =
-                featureRepository.findByIdOrNull(feature.requiredId)
-                    ?: throw CustomException(ErrorCode.NOT_FOUND_FEATURE, feature.id)
-            dbFeature.updateEventStatus(eventStatus)
-            featureRepository.save(dbFeature)
+            it.updateEventStatus(eventStatus)
+            featureRepository.save(it)
         }
     }
 

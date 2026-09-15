@@ -21,21 +21,9 @@ data class MobiusConResponse(
     val batteryLevel: Int,
 )
 
-data class MobiusChildContainersResponse(
-    @field:JsonProperty("m2m:ae")
-    val ae: MobiusChildContainers? = null,
-)
-
-data class MobiusChildContainers(
-    @field:JsonProperty("m2m:cnt")
-    val containers: List<MobiusContainer> = emptyList(),
-)
-
-data class MobiusContainer(
-    val ri: String,
-    val rn: String,
-    val pi: String,
-    val lbl: List<String> = emptyList(),
+data class MobiusUrilResponse(
+    @field:JsonProperty("m2m:uril")
+    val uril: List<String> = emptyList(),
 )
 
 data class MobiusLocationResponse(

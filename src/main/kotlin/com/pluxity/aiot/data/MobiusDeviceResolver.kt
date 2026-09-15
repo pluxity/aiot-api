@@ -1,6 +1,5 @@
 package com.pluxity.aiot.data
 
-import com.pluxity.aiot.data.dto.MobiusContainer
 import com.pluxity.aiot.sensor.type.SensorType
 
 data class MobiusDevice(
@@ -16,28 +15,22 @@ object MobiusDeviceResolver {
     private val excludedDeviceMarkers = listOf("P-TST", "P-THM")
 
     /**
-     * 디바이스 하나에 Object Instance가 여럿 달릴 수 있다(온습도계에 FillingLevel까지 붙어 있음).
-     * deviceId 약어(THM, WFL…)와 맞는 Object를 우선하고, 없으면 아는 Object 중 첫 것을 쓴다.
+     * 경로는 "Mobius/{AE}/{deviceId}/{objectInstance}" 형식이다.
+     * 디바이스 하나에 Object Instance가 여럿 달릴 수 있어 deviceId 약어(WFL, BOS…)와 맞는 Object를 우선하고,
+     * 없으면 아는 Object 중 첫 것을 쓴다.
      */
-    fun resolve(
-        devices: List<MobiusContainer>,
-        objects: List<MobiusContainer>,
-    ): List<MobiusDevice> {
-        val objectsByParent = objects.groupBy { it.pi }
-        return devices
-            .filterNot { device -> excludedDeviceMarkers.any { device.rn.contains(it) } }
-            .mapNotNull { device ->
-                val candidates =
-                    objectsByParent[device.ri]
-                        .orEmpty()
-                        .map { it.rn }
-                        .filter { it.take(5) in knownObjectIds }
-                        .sorted()
-                val preferred = preferredObjectId(device.rn)
+    fun resolve(uril: List<String>): List<MobiusDevice> =
+        uril
+            .map { it.trimStart('/').split('/') }
+            .filter { it.size == 4 }
+            .groupBy({ it[2] }, { it[3] })
+            .filterKeys { deviceId -> excludedDeviceMarkers.none { deviceId.contains(it) } }
+            .mapNotNull { (deviceId, objectInstances) ->
+                val candidates = objectInstances.filter { it.take(5) in knownObjectIds }.sorted()
+                val preferred = preferredObjectId(deviceId)
                 val chosen = candidates.firstOrNull { it.take(5) == preferred } ?: candidates.firstOrNull()
-                chosen?.let { MobiusDevice(deviceId = device.rn, objectId = it) }
+                chosen?.let { MobiusDevice(deviceId = deviceId, objectId = it) }
             }
-    }
 
     private fun preferredObjectId(deviceId: String): String? =
         deviceId

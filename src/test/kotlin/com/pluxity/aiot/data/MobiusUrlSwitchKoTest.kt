@@ -22,11 +22,7 @@ class MobiusUrlSwitchKoTest :
             HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
                 createContext("/") { exchange ->
                     hits.incrementAndGet()
-                    val body =
-                        """{"m2m:ae":{"m2m:cnt":[
-                          {"ri":"dev1","rn":"SNIOT-P-WFL-001","pi":"AE","lbl":["networkControllerId:SLENO-NC"]},
-                          {"ri":"obj1","rn":"34957_1.0_0","pi":"dev1","lbl":["objectVersion:1.0"]}
-                        ]}}"""
+                    val body = """{"m2m:uril":["Mobius/AE/SNIOT-P-WFL-001/34957_1.0_0"]}"""
                     exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
                     exchange.sendResponseHeaders(200, body.toByteArray().size.toLong())
                     exchange.responseBody.use { it.write(body.toByteArray()) }
@@ -63,8 +59,7 @@ class MobiusUrlSwitchKoTest :
                 aiotService.handleMobiusUrlUpdated(MobiusUrlUpdatedEvent("http://127.0.0.1:${newServer.address.port}"))
 
                 Then("새 주소로 동기화한다") {
-                    // 디바이스 목록과 Object Instance 목록을 각각 한 번씩 받는다
-                    newHits.get() shouldBe 2
+                    newHits.get() shouldBe 1
                 }
 
                 Then("옛 주소로는 더 이상 요청하지 않는다") {

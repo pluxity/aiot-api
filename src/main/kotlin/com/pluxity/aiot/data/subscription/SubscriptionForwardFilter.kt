@@ -1,6 +1,7 @@
 package com.pluxity.aiot.data.subscription
 
 import com.pluxity.aiot.global.config.RestClientFactory
+import com.pluxity.aiot.global.logging.MdcTaskDecorator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
 import jakarta.servlet.FilterChain
@@ -56,17 +57,19 @@ class SubscriptionForwardFilter(
 
     private fun forward(body: ByteArray) {
         if (body.isEmpty()) return
-        executor.execute {
-            runCatching {
-                client
-                    .post()
-                    .uri("/subscription")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .toBodilessEntity()
-            }.onFailure { e -> log.warn(e) { "개발 서버로 알림 전달 실패: ${properties.url}" } }
-        }
+        executor.execute(
+            MdcTaskDecorator.decorate {
+                runCatching {
+                    client
+                        .post()
+                        .uri("/subscription")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .toBodilessEntity()
+                }.onFailure { e -> log.warn(e) { "개발 서버로 알림 전달 실패: ${properties.url}" } }
+            },
+        )
     }
 
     @PreDestroy

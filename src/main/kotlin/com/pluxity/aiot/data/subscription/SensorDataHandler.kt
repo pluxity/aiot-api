@@ -3,6 +3,8 @@ package com.pluxity.aiot.data.subscription
 import com.pluxity.aiot.data.subscription.dto.SubscriptionSgnResponse
 import com.pluxity.aiot.data.subscription.processor.SensorDataProcessor
 import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.global.logging.DEVICE_ID_KEY
+import com.pluxity.aiot.global.logging.withMdcEntry
 import com.pluxity.aiot.sensor.type.SensorType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
@@ -26,6 +28,15 @@ class SensorDataHandler(
         }
         val deviceId = surParts[2]
         val objectId = surParts[3].split("_")[0]
+
+        withMdcEntry(DEVICE_ID_KEY, deviceId) { process(deviceId, objectId, sgn) }
+    }
+
+    private fun process(
+        deviceId: String,
+        objectId: String,
+        sgn: SubscriptionSgnResponse,
+    ) {
         val feature =
             featureRepository.findByDeviceId(deviceId) ?: run {
                 log.warn { "deviceId에 해당하는 Feature가 없습니다: $deviceId" }

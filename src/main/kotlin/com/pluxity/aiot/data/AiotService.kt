@@ -17,11 +17,13 @@ import com.pluxity.aiot.global.config.NgrokConfig
 import com.pluxity.aiot.global.config.RestClientFactory
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
+import com.pluxity.aiot.global.logging.withMdc
 import com.pluxity.aiot.global.properties.ServerDomainProperties
 import com.pluxity.aiot.mobius.MobiusConfigService
 import com.pluxity.aiot.mobius.MobiusUrlUpdatedEvent
 import com.pluxity.aiot.sensor.type.AbbreviationData
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
@@ -156,14 +158,17 @@ class AiotService(
         fetch: (String) -> T?,
     ): Map<String, T?> =
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            val mdc = MDC.getCopyOfContextMap()
             deviceIds
                 .map { deviceId ->
                     executor.submit<Pair<String, T?>?> {
-                        try {
-                            deviceId to fetch(deviceId)
-                        } catch (e: Exception) {
-                            log.error(e) { "$label 데이터 가져오기 실패: $deviceId" }
-                            null
+                        withMdc(mdc) {
+                            try {
+                                deviceId to fetch(deviceId)
+                            } catch (e: Exception) {
+                                log.error(e) { "$label 데이터 가져오기 실패: $deviceId" }
+                                null
+                            }
                         }
                     }
                 }.mapNotNull { it.get() }

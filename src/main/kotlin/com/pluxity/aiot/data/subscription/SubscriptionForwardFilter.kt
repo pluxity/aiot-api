@@ -6,6 +6,7 @@ import jakarta.annotation.PreDestroy
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -23,10 +24,13 @@ data class SubscriptionForwardProperties(
 
 /**
  * 임시 기능. 운영 서버는 내부망이라 Mobius 알림이 개발 서버까지 오지 않는다.
- * 받은 본문을 바이트 그대로 개발 서버에 넘긴다. url이 비어 있으면 아무 것도 하지 않는다.
+ * 받은 본문을 바이트 그대로 개발 서버에 넘긴다.
  * 운영 처리 성패와 무관하게 넘기고, 전달 실패는 로그만 남긴다.
+ *
+ * 주소가 비어 있지 않을 때만 빈이 만들어진다. ConditionalOnProperty는 빈 문자열도 존재로 보므로 쓰지 않는다.
  */
 @Component
+@ConditionalOnExpression("'\${subscription.forward.url:}' != ''")
 class SubscriptionForwardFilter(
     private val properties: SubscriptionForwardProperties,
     private val restClientFactory: RestClientFactory,
@@ -35,7 +39,7 @@ class SubscriptionForwardFilter(
     private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        properties.url.isBlank() || request.method != "POST" || !request.requestURI.endsWith("/subscription")
+        request.method != "POST" || !request.requestURI.endsWith("/subscription")
 
     override fun doFilterInternal(
         request: HttpServletRequest,

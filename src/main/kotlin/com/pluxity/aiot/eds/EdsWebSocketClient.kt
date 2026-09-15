@@ -3,6 +3,9 @@ package com.pluxity.aiot.eds
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pluxity.aiot.eds.dto.EdsCrowdCountData
 import com.pluxity.aiot.eds.dto.EdsEventData
+import com.pluxity.aiot.global.logging.TraceIdFilter
+import com.pluxity.aiot.global.logging.newTraceId
+import com.pluxity.aiot.global.logging.withMdcEntry
 import com.pluxity.aiot.global.properties.EdsProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -52,7 +55,8 @@ class EdsWebSocketClient(
                             .filter { it.type == WebSocketMessage.Type.TEXT }
                             .map { it.payloadAsText }
                             .publishOn(Schedulers.boundedElastic())
-                            .doOnNext { handleMessage(it) }
+                            // 수신 메시지는 상류가 없어 메시지마다 traceId를 새로 발급한다
+                            .doOnNext { withMdcEntry(TraceIdFilter.KEY, newTraceId()) { handleMessage(it) } }
                             .doOnError { e -> log.error(e) { "EDS WebSocket 오류" } }
                             .doOnComplete { log.info { "EDS WebSocket 연결 종료" } }
                             .then()

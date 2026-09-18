@@ -110,14 +110,8 @@ class AiotService(
         featureStatusWriter.applyDevices(fetchMobiusDevices())
     }
 
-    /** 화면에서 손으로 맞춘 위치를 지키려면 overwriteLocation을 끈다. 그러면 배터리만 갱신한다. */
-    fun statusSynchronize(overwriteLocation: Boolean = true) {
+    fun statusSynchronize() {
         val deviceIds = featureQueryService.findAllDeviceIds()
-        if (!overwriteLocation) {
-            log.info { "총 ${deviceIds.size}개의 Feature 위치 유지, 배터리만 동기화" }
-            featureStatusWriter.applyBatteryLevels(fetchAllBatteryLevels(deviceIds))
-            return
-        }
         log.info { "총 ${deviceIds.size}개의 Feature 위치 동기화 시작" }
 
         featureStatusWriter.applyStatuses(fetchAllStatuses(deviceIds))

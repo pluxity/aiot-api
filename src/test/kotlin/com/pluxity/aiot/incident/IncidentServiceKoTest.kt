@@ -138,6 +138,22 @@ class IncidentServiceKoTest :
                 }
             }
 
+            When("센서 값이 이미 정상으로 돌아와 feature가 NORMAL인데 더 높은 레벨의 미조치 incident가 남아 있으면") {
+                val resolved = dummyIncident(id = 6L, deviceId = "DEV-6", level = ConditionLevel.WARNING)
+                val remaining = dummyIncident(id = 7L, deviceId = "DEV-6", level = ConditionLevel.DANGER)
+                val feature = dummyFeature(deviceId = "DEV-6", eventStatus = "NORMAL")
+                every { featureRepository.findByDeviceId("DEV-6") } returns feature
+                every {
+                    incidentRepository.findAllByDeviceIdAndSourceTypeAndStatusNot("DEV-6", IncidentSourceType.SENSOR, EventStatus.RESOLVED)
+                } returns listOf(resolved, remaining)
+
+                service.changeStatus(resolved, EventStatus.RESOLVED)
+
+                Then("과거 경보 레벨로 다시 올리지 않고 NORMAL을 유지한다") {
+                    feature.eventStatus shouldBe "NORMAL"
+                }
+            }
+
             When("feature가 DISCONNECTED 상태이면") {
                 val incident = dummyIncident(id = 3L, deviceId = "DEV-3", level = ConditionLevel.WARNING)
                 val feature = dummyFeature(deviceId = "DEV-3", eventStatus = "DISCONNECTED")

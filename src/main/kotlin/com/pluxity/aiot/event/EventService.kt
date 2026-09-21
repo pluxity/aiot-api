@@ -18,6 +18,7 @@ import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.global.utils.DateTimeUtils
 import com.pluxity.aiot.incident.Incident
 import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -34,7 +35,7 @@ class EventService(
     private val incidentRepository: IncidentRepository,
     private val siteRepository: SiteRepository,
     private val jdbcTemplate: NamedParameterJdbcTemplate,
-    private val eventStatusChangeNotifier: EventStatusChangeNotifier,
+    private val incidentService: IncidentService,
 ) {
     fun findAll(
         from: String?,
@@ -69,9 +70,7 @@ class EventService(
         id: Long,
         result: EventStatus,
     ) {
-        val incident = findById(id)
-        incident.changeStatus(result)
-        eventStatusChangeNotifier.notifyStatusChanged(incident)
+        incidentService.changeStatus(findById(id), result)
     }
 
     fun findById(id: Long): Incident = incidentRepository.findByIdOrNull(id) ?: throw CustomException(ErrorCode.NOT_FOUND_INCIDENT, id)

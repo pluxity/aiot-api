@@ -1,7 +1,11 @@
 package com.pluxity.aiot.incident
 
+import com.pluxity.aiot.action.entity.dummyIncident
+import com.pluxity.aiot.event.EventStatusChangeNotifier
 import com.pluxity.aiot.event.condition.ConditionLevel
 import com.pluxity.aiot.event.entity.EventStatus
+import com.pluxity.aiot.feature.FeatureRepository
+import com.pluxity.aiot.feature.entity.dummyFeature
 import com.pluxity.aiot.site.SiteRepository
 import com.pluxity.aiot.site.entity.dummySite
 import io.kotest.core.spec.style.BehaviorSpec
@@ -17,7 +21,9 @@ class IncidentServiceKoTest :
     BehaviorSpec({
         val incidentRepository: IncidentRepository = mockk()
         val siteRepository: SiteRepository = mockk()
-        val service = IncidentService(incidentRepository, siteRepository)
+        val featureRepository: FeatureRepository = mockk()
+        val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
+        val service = IncidentService(incidentRepository, siteRepository, featureRepository, eventStatusChangeNotifier)
 
         val saved = slot<Incident>()
         every { incidentRepository.save(capture(saved)) } answers { saved.captured }
@@ -94,6 +100,77 @@ class IncidentServiceKoTest :
 
                 Then("site는 null로 저장된다") {
                     saved.captured.site.shouldBeNull()
+                }
+            }
+        }
+
+        Given("incident 상태를 바꿀 때") {
+            When("센서 incident를 RESOLVED로 바꾸고 같은 디바이스에 남은 미조치 incident가 없으면") {
+                val incident = dummyIncident(id = 1L, deviceId = "DEV-1", level = ConditionLevel.WARNING)
+                val feature = dummyFeature(deviceId = "DEV-1", eventStatus = "WARNING")
+                every { featureRepository.findByDeviceId("DEV-1") } returns feature
+                every {
+                    incidentRepository.findAllByDeviceIdAndSourceTypeAndStatusNot("DEV-1", IncidentSourceType.SENSOR, EventStatus.RESOLVED)
+                } returns listOf(incident)
+
+                service.changeStatus(incident, EventStatus.RESOLVED)
+
+                Then("feature 상태가 NORMAL로 돌아가고 상태 변경 알림을 보낸다") {
+                    incident.status shouldBe EventStatus.RESOLVED
+                    feature.eventStatus shouldBe "NORMAL"
+                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
+                }
+            }
+
+            When("센서 incident를 RESOLVED로 바꿨는데 같은 디바이스에 더 높은 레벨의 미조치 incident가 남아 있으면") {
+                val resolved = dummyIncident(id = 1L, deviceId = "DEV-2", level = ConditionLevel.WARNING)
+                val remaining = dummyIncident(id = 2L, deviceId = "DEV-2", level = ConditionLevel.DANGER)
+                val feature = dummyFeature(deviceId = "DEV-2", eventStatus = "DANGER")
+                every { featureRepository.findByDeviceId("DEV-2") } returns feature
+                every {
+                    incidentRepository.findAllByDeviceIdAndSourceTypeAndStatusNot("DEV-2", IncidentSourceType.SENSOR, EventStatus.RESOLVED)
+                } returns listOf(resolved, remaining)
+
+                service.changeStatus(resolved, EventStatus.RESOLVED)
+
+                Then("feature 상태는 남은 incident의 레벨을 따른다") {
+                    feature.eventStatus shouldBe "DANGER"
+                }
+            }
+
+            When("feature가 DISCONNECTED 상태이면") {
+                val incident = dummyIncident(id = 3L, deviceId = "DEV-3", level = ConditionLevel.WARNING)
+                val feature = dummyFeature(deviceId = "DEV-3", eventStatus = "DISCONNECTED")
+                every { featureRepository.findByDeviceId("DEV-3") } returns feature
+
+                service.changeStatus(incident, EventStatus.RESOLVED)
+
+                Then("feature 상태를 건드리지 않는다") {
+                    feature.eventStatus shouldBe "DISCONNECTED"
+                    verify(exactly = 0) { incidentRepository.findAllByDeviceIdAndSourceTypeAndStatusNot("DEV-3", any(), any()) }
+                }
+            }
+
+            When("센서가 아닌 incident를 RESOLVED로 바꾸면") {
+                val incident = dummyIncident(id = 4L, sourceType = IncidentSourceType.CCTV, deviceId = "CCTV-1")
+
+                service.changeStatus(incident, EventStatus.RESOLVED)
+
+                Then("feature를 조회하지 않는다") {
+                    incident.status shouldBe EventStatus.RESOLVED
+                    verify(exactly = 0) { featureRepository.findByDeviceId("CCTV-1") }
+                }
+            }
+
+            When("RESOLVED가 아닌 상태로 바꾸면") {
+                val incident = dummyIncident(id = 5L, deviceId = "DEV-5")
+
+                service.changeStatus(incident, EventStatus.IN_PROGRESS)
+
+                Then("feature를 조회하지 않고 알림만 보낸다") {
+                    incident.status shouldBe EventStatus.IN_PROGRESS
+                    verify(exactly = 0) { featureRepository.findByDeviceId("DEV-5") }
+                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
                 }
             }
         }

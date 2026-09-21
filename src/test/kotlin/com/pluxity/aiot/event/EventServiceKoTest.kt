@@ -9,6 +9,7 @@ import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
 import com.pluxity.aiot.incident.IncidentSourceType
 import com.pluxity.aiot.sensor.type.SensorType
 import com.pluxity.aiot.site.SiteRepository
@@ -31,14 +32,14 @@ class EventServiceKoTest :
         val incidentRepository: IncidentRepository = mockk()
         val siteRepository: SiteRepository = mockk()
         val jdbcTemplate: NamedParameterJdbcTemplate = mockk()
-        val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
+        val incidentService: IncidentService = mockk(relaxed = true)
 
         val eventService =
             EventService(
                 incidentRepository,
                 siteRepository,
                 jdbcTemplate,
-                eventStatusChangeNotifier,
+                incidentService,
             )
 
         Given("이벤트 목록을 조회할 때") {
@@ -163,9 +164,8 @@ class EventServiceKoTest :
 
                 eventService.updateStatus(eventId, newResult)
 
-                Then("상태 변경 성공, 알림 발송") {
-                    incident.status shouldBe newResult
-                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
+                Then("incident 상태 변경을 IncidentService에 위임한다") {
+                    verify(exactly = 1) { incidentService.changeStatus(incident, newResult) }
                 }
             }
 

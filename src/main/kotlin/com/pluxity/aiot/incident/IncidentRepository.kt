@@ -1,5 +1,6 @@
 package com.pluxity.aiot.incident
 
+import com.pluxity.aiot.event.entity.EventStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -14,6 +15,12 @@ interface IncidentRepository :
     ): Incident?
 
     fun findAllByDeviceId(deviceId: String): List<Incident>
+
+    fun findAllByDeviceIdAndSourceTypeAndStatusNot(
+        deviceId: String,
+        sourceType: IncidentSourceType,
+        status: EventStatus,
+    ): List<Incident>
 
     // 호출 전에 쌓인 삭제(site_sensor_manager 등)를 먼저 flush하지 않으면 clear가 그 삭제를 버린다
     @Modifying(flushAutomatically = true, clearAutomatically = true)

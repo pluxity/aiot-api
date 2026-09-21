@@ -13,15 +13,37 @@ import java.net.ServerSocket
 /** 아무도 듣지 않는 포트를 잡아 연결 거부를 만든다 */
 private fun closedPort(): Int = ServerSocket(0).use { it.localPort }
 
-private fun client(port: Int): MicClient {
+private fun client(
+    port: Int,
+    accessToken: String = "",
+): MicClient {
     val properties =
-        MicProperties(enabled = true, baseUrl = "http://127.0.0.1:$port", username = "api", password = "pw")
+        MicProperties(
+            enabled = true,
+            baseUrl = "http://127.0.0.1:$port",
+            username = "api",
+            password = "pw",
+            accessToken = accessToken,
+        )
     val factory = RestClientFactory()
     return MicClient(factory, properties)
 }
 
 class MicClientKoTest :
     BehaviorSpec({
+
+        Given("설정에 액세스 토큰이 있음") {
+            When("로그인을 호출함") {
+                // 서버가 없어 실제 로그인을 시도하면 연결 거부로 실패한다
+                val micClient = client(closedPort(), accessToken = "static-token")
+                micClient.login()
+
+                Then("로그인 요청 없이 설정 토큰을 그대로 쓴다") {
+                    micClient.getAccessToken() shouldBe "static-token"
+                    micClient.usesStaticToken() shouldBe true
+                }
+            }
+        }
 
         Given("업체 서버가 응답하지 않음") {
             When("토큰은 있으나 목록 조회가 연결 거부로 끝남") {

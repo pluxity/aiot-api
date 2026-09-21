@@ -86,7 +86,14 @@ class MicWebSocketClient(
 
     private fun handleMessage(json: String) {
         try {
-            val event = objectMapper.readValue(json, MicEventData::class.java)
+            val node = objectMapper.readTree(json)
+            // 업체가 연결 유지용으로 {"type":"system","message":"ping"}을 보낸다. 이벤트가 아니다
+            if (node.path("type").asText() == SYSTEM_MESSAGE_TYPE) {
+                log.debug { "AI 마이크 시스템 메시지: ${node.path("message").asText()}" }
+                return
+            }
+
+            val event = objectMapper.treeToValue(node, MicEventData::class.java)
             log.info { "AI 마이크 이벤트: id=${event.id}, mic=${event.mic?.id}, label=${event.label?.id}" }
             micEventService.saveEvent(event)
         } catch (e: Exception) {
@@ -97,5 +104,6 @@ class MicWebSocketClient(
     companion object {
         private val HTTP_SCHEME_REGEX = Regex("^http")
         private const val WS_EVENTS_PATH = "${MicClient.API_PREFIX}/ws/events"
+        private const val SYSTEM_MESSAGE_TYPE = "system"
     }
 }

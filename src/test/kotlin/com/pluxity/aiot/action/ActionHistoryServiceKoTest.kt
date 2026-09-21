@@ -2,12 +2,12 @@ package com.pluxity.aiot.action
 
 import com.pluxity.aiot.action.entity.dummyActionHistory
 import com.pluxity.aiot.action.entity.dummyIncident
-import com.pluxity.aiot.event.EventStatusChangeNotifier
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.file.service.FileService
 import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -26,7 +26,7 @@ class ActionHistoryServiceKoTest :
         val incidentRepository: IncidentRepository = mockk()
         val actionHistoryFileRepository: ActionHistoryFileRepository = mockk()
         val fileService: FileService = mockk(relaxed = true)
-        val eventStatusChangeNotifier: EventStatusChangeNotifier = mockk(relaxed = true)
+        val incidentService: IncidentService = mockk(relaxed = true)
 
         val actionHistoryService =
             ActionHistoryService(
@@ -34,7 +34,7 @@ class ActionHistoryServiceKoTest :
                 incidentRepository,
                 actionHistoryFileRepository,
                 fileService,
-                eventStatusChangeNotifier,
+                incidentService,
             )
 
         Given("조치를 등록할 때") {
@@ -52,10 +52,9 @@ class ActionHistoryServiceKoTest :
 
                 val saveId = actionHistoryService.save(1L, request)
 
-                Then("성공하고 incident가 조치완료로 바뀐다") {
+                Then("성공하고 incident를 조치완료로 바꾼다") {
                     saveId shouldBe id
-                    incident.status shouldBe EventStatus.RESOLVED
-                    verify(exactly = 1) { eventStatusChangeNotifier.notifyStatusChanged(incident) }
+                    verify(exactly = 1) { incidentService.changeStatus(incident, EventStatus.RESOLVED) }
                 }
             }
 

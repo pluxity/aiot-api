@@ -1,6 +1,5 @@
 package com.pluxity.aiot.action
 
-import com.pluxity.aiot.event.EventStatusChangeNotifier
 import com.pluxity.aiot.event.entity.EventStatus
 import com.pluxity.aiot.file.extensions.getFileMapById
 import com.pluxity.aiot.file.service.FileService
@@ -8,6 +7,7 @@ import com.pluxity.aiot.global.constant.ErrorCode
 import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.incident.Incident
 import com.pluxity.aiot.incident.IncidentRepository
+import com.pluxity.aiot.incident.IncidentService
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,7 +18,7 @@ class ActionHistoryService(
     private val incidentRepository: IncidentRepository,
     private val actionHistoryFileRepository: ActionHistoryFileRepository,
     private val fileService: FileService,
-    private val eventStatusChangeNotifier: EventStatusChangeNotifier,
+    private val incidentService: IncidentService,
 ) {
     companion object {
         private const val ACTION_HISTORIES: String = "action-histories/"
@@ -65,8 +65,7 @@ class ActionHistoryService(
                 }
             actionHistoryFileRepository.saveAll(actionHistoryFiles)
         }
-        incident.changeStatus(EventStatus.RESOLVED)
-        eventStatusChangeNotifier.notifyStatusChanged(incident)
+        incidentService.changeStatus(incident, EventStatus.RESOLVED)
         return savedActionHistory.requiredId
     }
 

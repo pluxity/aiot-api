@@ -14,7 +14,7 @@ class MicLifecycle(
 ) : RetryingLifecycle("AI 마이크") {
     override fun initialize() {
         micClient.login()
-        micTokenScheduler.start()
+        if (!micClient.usesStaticToken()) micTokenScheduler.start()
         micFacade.sync()
         micWebSocketClient.connect()
     }

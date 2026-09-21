@@ -43,6 +43,7 @@ mic:
   base-url: ${MIC_BASE_URL:}
   username: ${MIC_USERNAME:}
   password: "${MIC_PASSWORD:}"
+  access-token: "${MIC_ACCESS_TOKEN:}"
   token-ttl-fallback: ${MIC_TOKEN_TTL_FALLBACK:3600}
   list-page-size: ${MIC_LIST_PAGE_SIZE:100}
 

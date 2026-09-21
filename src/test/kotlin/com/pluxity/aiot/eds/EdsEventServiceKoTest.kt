@@ -126,6 +126,32 @@ class EdsEventServiceKoTest :
                 }
             }
 
+            When("event_start가 하이픈 날짜와 공백 구분자 형식으로 옴") {
+                every { edsEventRepository.findByEventIdAndEventStatusNot(103, EdsEventStatus.ENDED) } returns null
+                val saved = slot<EdsEvent>()
+                every { edsEventRepository.save(capture(saved)) } answers { saved.captured.withId(12L) }
+                every { cctvRepository.findByEdsCameraId("CAM-01") } returns null
+
+                service.saveEvent(eventData(id = 103, eventStart = "2026-09-21 11:47:47.626"), thumbnailFileId = null)
+
+                Then("그대로 파싱해 저장한다") {
+                    verify(exactly = 1) {
+                        incidentService.open(
+                            sourceType = IncidentSourceType.CCTV,
+                            sourceId = 12L,
+                            site = null,
+                            deviceId = "CAM-01",
+                            deviceName = "CAM-01",
+                            title = "배회",
+                            level = ConditionLevel.WARNING,
+                            occurredAt = LocalDateTime.of(2026, 9, 21, 11, 47, 47, 626_000_000),
+                            latitude = 37.01,
+                            longitude = 127.01,
+                        )
+                    }
+                }
+            }
+
             When("진행 중인 이벤트의 종료 알림이 옴") {
                 val existing =
                     EdsEvent(

@@ -28,8 +28,10 @@ class MicClient(
 ) {
     private val client: RestClient = restClientFactory.createClient(micProperties.baseUrl)
 
+    private val staticToken: String? = micProperties.accessToken.takeIf { it.isNotBlank() }
+
     @Volatile
-    private var accessToken: String? = null
+    private var accessToken: String? = staticToken
 
     @Volatile
     private var tokenTtlSeconds: Long = micProperties.tokenTtlFallback
@@ -39,7 +41,15 @@ class MicClient(
     /** 토큰 갱신 주기 계산에 사용한다. 벤더 응답에 expires_in이 없으면 설정값으로 대체된다 */
     fun getTokenTtlSeconds(): Long = tokenTtlSeconds
 
+    /** 설정 토큰은 갱신할 수 없으므로 갱신 스케줄러와 401 재로그인을 모두 건너뛴다 */
+    fun usesStaticToken(): Boolean = staticToken != null
+
     fun login() {
+        if (staticToken != null) {
+            log.info { "AI 마이크 설정 토큰 사용, 로그인 생략" }
+            return
+        }
+
         val result =
             client
                 .post()
@@ -102,6 +112,9 @@ class MicClient(
         } catch (e: RestClientException) {
             if (e !is RestClientResponseException || e.statusCode != HttpStatus.UNAUTHORIZED) {
                 throw CustomException(ErrorCode.MIC_API_ERROR, e.message)
+            }
+            if (staticToken != null) {
+                throw CustomException(ErrorCode.MIC_LOGIN_FAILED, "설정된 토큰이 거부됨(401)")
             }
             log.warn { "AI 마이크 API 401, 재로그인 후 재시도" }
             retryAfterLogin(block)

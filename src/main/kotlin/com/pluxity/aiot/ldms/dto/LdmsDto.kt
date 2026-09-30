@@ -26,6 +26,8 @@ data class LdmsEbrdInfo(
     val ebrdId: String? = null,
     @field:JsonProperty("ebrd_nm")
     val ebrdNm: String? = null,
+    @field:JsonProperty("ebrd_desc")
+    val ebrdDesc: String? = null,
     @field:JsonProperty("ebrd_lat")
     val ebrdLat: Double? = null,
     @field:JsonProperty("ebrd_lng")

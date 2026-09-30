@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
+import org.springframework.web.client.body
 import org.springframework.web.client.toEntity
 
 private val log = KotlinLogging.logger {}
@@ -59,6 +60,17 @@ class LdmsClient(
 
     fun getEmcallGroupList(): List<LdmsEmcallGroupInfo> =
         getList("/api/emcall_grp/list", object : ParameterizedTypeReference<List<LdmsEmcallGroupInfo>>() {})
+
+    // 없는 번호도 404가 아니라 200에 본문 null로 온다
+    fun getEmcallGroup(emcallGrpSeq: Long): LdmsEmcallGroupInfo? =
+        withSession {
+            client
+                .get()
+                .uri { uri -> uri.path("/api/emcall_grp/one").queryParam("emcallGrpSeq", emcallGrpSeq).build() }
+                .header(HttpHeaders.COOKIE, it)
+                .retrieve()
+                .body<LdmsEmcallGroupInfo>()
+        }
 
     private fun <T : Any> getList(
         path: String,

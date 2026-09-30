@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -71,6 +72,47 @@ class SpeakerController(
         @Parameter(description = "현장 아이디", example = "1")
         @RequestParam("siteId", required = false) siteId: Long?,
     ): ResponseEntity<DataResponseBody<List<SpeakerResponse>>> = ResponseEntity.ok(DataResponseBody(speakerService.findAll(siteId)))
+
+    @Operation(summary = "스피커 상세 조회", description = "아이디로 LDMS 송출그룹을 조회합니다.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "조회 성공"),
+            ApiResponse(
+                responseCode = "404",
+                description = "스피커를 찾을 수 없음",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ErrorResponseBody::class),
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "502",
+                description = "LDMS API 호출 실패",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ErrorResponseBody::class),
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "503",
+                description = "LDMS 로그인 실패",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ErrorResponseBody::class),
+                    ),
+                ],
+            ),
+        ],
+    )
+    @GetMapping("/{speakerId}")
+    fun getSpeaker(
+        @Parameter(description = "스피커 아이디", required = true) @PathVariable speakerId: Long,
+    ): ResponseEntity<DataResponseBody<SpeakerResponse>> = ResponseEntity.ok(DataResponseBody(speakerService.findById(speakerId)))
 
     @Operation(
         summary = "스피커 송출",

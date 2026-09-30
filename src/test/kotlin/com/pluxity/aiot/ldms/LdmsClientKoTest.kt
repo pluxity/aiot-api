@@ -57,6 +57,7 @@ private class FakeLdms {
                     exchange.respond(200, """[{"ebrd_seq":1,"ebrd_id":"C16LD25004DC","ebrd_nm":"BNS 전광판","unknown":1}]""")
                 }
             }
+            createContext("/api/emcall_grp/one") { exchange -> exchange.respond(200, "null") }
             start()
         }
 
@@ -96,6 +97,18 @@ class LdmsClientKoTest :
                     result.size shouldBe 1
                     fake.loginCount.get() shouldBe 2
                     fake.listCookies shouldContainExactly listOf("id=s1", "id=s1", "id=s2")
+                }
+            }
+            fake.server.stop(0)
+        }
+
+        Given("없는 송출그룹 번호") {
+            val fake = FakeLdms()
+            val ldmsClient = client(fake.port)
+
+            When("송출그룹 하나를 조회함") {
+                Then("본문 null을 그대로 null로 반환한다") {
+                    ldmsClient.getEmcallGroup(999L) shouldBe null
                 }
             }
             fake.server.stop(0)

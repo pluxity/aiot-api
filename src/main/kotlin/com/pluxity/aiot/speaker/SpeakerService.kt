@@ -1,6 +1,8 @@
 package com.pluxity.aiot.speaker
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.pluxity.aiot.global.constant.ErrorCode
+import com.pluxity.aiot.global.exception.CustomException
 import com.pluxity.aiot.ldms.LdmsClient
 import com.pluxity.aiot.ldms.dto.LdmsEmcallGroupInfo
 import com.pluxity.aiot.ldms.dto.LdmsEmcallGroupStatus
@@ -29,6 +31,12 @@ class SpeakerService(
                 longitude = { it.emcallGrpLng },
                 latitude = { it.emcallGrpLat },
             ).map { (group, site) -> group.toResponse(parseOutput(group), site) }
+
+    fun findById(id: Long): SpeakerResponse {
+        val group = ldmsClient?.getEmcallGroup(id) ?: throw CustomException(ErrorCode.NOT_FOUND_SPEAKER, id)
+        val (_, site) = siteLocator.locate(listOf(group), null, longitude = { it.emcallGrpLng }, latitude = { it.emcallGrpLat }).single()
+        return group.toResponse(parseOutput(group), site)
+    }
 
     private fun parseOutput(group: LdmsEmcallGroupInfo): SpeakerOutput? {
         val json = group.emcallGrpStatJson?.takeIf { it.isNotBlank() } ?: return null

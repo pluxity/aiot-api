@@ -5,6 +5,7 @@ import com.pluxity.aiot.global.response.BaseResponse
 import com.pluxity.aiot.global.response.toBaseResponse
 import com.pluxity.aiot.speaker.SpeakerPreset
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -23,8 +24,9 @@ data class SpeakerPresetRequest(
     @field:NotBlank(message = "메시지는 필수 입니다.")
     @field:Size(max = 1000, message = "메시지는 최대 1000자까지 입력 가능합니다.")
     val message: String,
-    @field:Schema(description = "반복 횟수", example = "1", defaultValue = "1")
+    @field:Schema(description = "반복 횟수 (1~10)", example = "1", defaultValue = "1", minimum = "1", maximum = "10")
     @field:Min(value = 1, message = "반복 횟수는 1 이상이어야 합니다.")
+    @field:Max(value = 10, message = "반복 횟수는 최대 10회까지 입력 가능합니다.")
     val repeatCount: Int = 1,
 )
 

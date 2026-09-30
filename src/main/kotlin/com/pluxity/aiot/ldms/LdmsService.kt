@@ -22,7 +22,6 @@ class LdmsService(
 
     fun findEmcallGroups(): List<LdmsEmcallGroupResponse> = ldmsClient.getEmcallGroupList().map { it.toResponse(parseStatus(it)) }
 
-    /** 상태 문자열이 깨져 있어도 목록 조회 자체는 실패시키지 않는다 */
     private fun parseStatus(group: LdmsEmcallGroupInfo): LdmsEmcallGroupStatus? {
         val json = group.emcallGrpStatJson?.takeIf { it.isNotBlank() } ?: return null
         return runCatching { objectMapper.readValue(json, LdmsEmcallGroupStatus::class.java) }

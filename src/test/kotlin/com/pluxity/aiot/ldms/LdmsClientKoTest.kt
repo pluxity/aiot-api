@@ -33,7 +33,6 @@ private fun HttpExchange.respond(
     close()
 }
 
-/** 로그인할 때마다 새 세션을 발급하고, 마지막으로 발급한 세션만 유효하게 취급하는 가짜 LDMS */
 private class FakeLdms {
     val loginCount = AtomicInteger()
     val listCookies = mutableListOf<String?>()

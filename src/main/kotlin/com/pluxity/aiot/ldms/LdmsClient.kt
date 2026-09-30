@@ -21,10 +21,6 @@ import org.springframework.web.client.toEntity
 
 private val log = KotlinLogging.logger {}
 
-/**
- * LDMS는 로그인 응답의 id 세션 쿠키로 인증한다. 쿠키는 30분 뒤 만료되고,
- * 만료·누락 시 목록 API가 본문 없이 401을 주므로 그때 재로그인한다.
- */
 @Component
 @ConditionalOnProperty("ldms.enabled", havingValue = "true")
 class LdmsClient(
@@ -78,10 +74,7 @@ class LdmsClient(
                 .orEmpty()
         }
 
-    /**
-     * 세션이 없으면 먼저 로그인하고, 401이면 재로그인 후 한 번만 다시 호출한다.
-     * 연결 거부·타임아웃(ResourceAccessException)도 상위 타입으로 받아 502로 변환한다.
-     */
+    // 연결 거부·타임아웃(ResourceAccessException)은 응답 예외가 아니라 상위 타입으로 받아야 500으로 새지 않는다
     private fun <T> withSession(block: (cookie: String) -> T): T {
         val cookie = sessionCookie ?: login()
         return try {

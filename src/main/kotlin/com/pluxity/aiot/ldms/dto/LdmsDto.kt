@@ -86,7 +86,6 @@ data class LdmsEmcallGroupInfo(
     val evtMode: String? = null,
     @field:JsonProperty("emcall_tts_msg")
     val emcallTtsMsg: String? = null,
-    /** 상태가 JSON 객체가 아니라 JSON 문자열로 온다 */
     @field:JsonProperty("emcall_grp_stat_json")
     val emcallGrpStatJson: String? = null,
     @field:JsonProperty("disp_seq")

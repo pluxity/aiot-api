@@ -2,6 +2,7 @@ package com.pluxity.aiot.ldms.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.pluxity.aiot.broadcast.DeviceStatus
 
 data class LdmsLoginRequest(
     @field:JsonProperty("user_id")
@@ -110,3 +111,10 @@ data class LdmsEmcallGroupStatus(
     @field:JsonProperty("tts_msg")
     val ttsMsg: String? = null,
 )
+
+fun ldmsDeviceStatus(commStat: String?) =
+    when (commStat) {
+        "Ok" -> DeviceStatus.NORMAL
+        "Err" -> DeviceStatus.OFFLINE
+        else -> DeviceStatus.UNKNOWN
+    }

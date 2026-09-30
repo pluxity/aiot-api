@@ -30,10 +30,30 @@ class SpeakerController(
     private val speakerService: SpeakerService,
     private val speakerBroadcastService: SpeakerBroadcastService,
 ) {
-    @Operation(summary = "스피커 목록 조회", description = "등록된 스피커 목록을 조회합니다. 현장 아이디로 필터링할 수 있습니다.")
+    @Operation(summary = "스피커 목록 조회", description = "LDMS 에 등록된 송출그룹 목록을 조회합니다. 현장 아이디로 필터링할 수 있습니다.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "목록 조회 성공"),
+            ApiResponse(
+                responseCode = "502",
+                description = "LDMS API 호출 실패",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ErrorResponseBody::class),
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "503",
+                description = "LDMS 로그인 실패",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ErrorResponseBody::class),
+                    ),
+                ],
+            ),
             ApiResponse(
                 responseCode = "500",
                 description = "서버 오류",

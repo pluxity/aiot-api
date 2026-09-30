@@ -1,6 +1,5 @@
 package com.pluxity.aiot.display
 
-import com.pluxity.aiot.display.dto.DisplayBroadcastGroupResponse
 import com.pluxity.aiot.display.dto.DisplayBroadcastRequest
 import com.pluxity.aiot.display.dto.DisplayBroadcastResponse
 import com.pluxity.aiot.display.dto.DisplayBroadcastSearchRequest
@@ -72,46 +71,6 @@ class DisplayController(
         @Parameter(description = "현장 아이디", example = "1")
         @RequestParam("siteId", required = false) siteId: Long?,
     ): ResponseEntity<DataResponseBody<List<DisplayResponse>>> = ResponseEntity.ok(DataResponseBody(displayService.findAll(siteId)))
-
-    @Operation(summary = "전광판 송출그룹 목록 조회", description = "LDMS 에 등록된 송출그룹 목록과 최근 출력 상태를 조회합니다.")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "목록 조회 성공"),
-            ApiResponse(
-                responseCode = "502",
-                description = "LDMS API 호출 실패",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "503",
-                description = "LDMS 로그인 실패",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "500",
-                description = "서버 오류",
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = ErrorResponseBody::class),
-                    ),
-                ],
-            ),
-        ],
-    )
-    @GetMapping("/broadcast-groups")
-    fun getBroadcastGroups(): ResponseEntity<DataResponseBody<List<DisplayBroadcastGroupResponse>>> =
-        ResponseEntity.ok(DataResponseBody(displayService.findBroadcastGroups()))
 
     @Operation(
         summary = "전광판 송출",

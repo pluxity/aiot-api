@@ -1,8 +1,10 @@
 package com.pluxity.aiot.display
 
-import com.pluxity.aiot.broadcast.DeviceStatus
+import com.pluxity.aiot.global.constant.DeviceStatus
 import com.pluxity.aiot.ldms.LdmsClient
 import com.pluxity.aiot.ldms.dto.LdmsEbrdInfo
+import com.pluxity.aiot.site.SiteLocator
+import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -11,8 +13,10 @@ import io.mockk.mockk
 
 class DisplayServiceKoTest :
     BehaviorSpec({
+        val siteLocator = SiteLocator(mockk<SiteRepository> { every { findAll() } returns emptyList() })
+
         Given("LDMS 연동이 꺼져 있음") {
-            val service = DisplayService(null)
+            val service = DisplayService(null, siteLocator)
 
             When("목록을 조회함") {
                 Then("빈 목록을 반환한다") {
@@ -29,7 +33,7 @@ class DisplayServiceKoTest :
                     LdmsEbrdInfo(ebrdSeq = 2, ebrdId = "B", ebrdNm = "후문", commStat = "Err"),
                     LdmsEbrdInfo(ebrdSeq = 3, ebrdId = "C", ebrdNm = "주차장", commStat = null),
                 )
-            val service = DisplayService(ldmsClient)
+            val service = DisplayService(ldmsClient, siteLocator)
 
             When("전광판 목록을 조회함") {
                 val result = service.findAll(null)

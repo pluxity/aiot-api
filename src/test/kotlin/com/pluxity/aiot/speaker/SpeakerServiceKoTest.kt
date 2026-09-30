@@ -1,9 +1,11 @@
 package com.pluxity.aiot.speaker
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.pluxity.aiot.broadcast.DeviceStatus
+import com.pluxity.aiot.global.constant.DeviceStatus
 import com.pluxity.aiot.ldms.LdmsClient
 import com.pluxity.aiot.ldms.dto.LdmsEmcallGroupInfo
+import com.pluxity.aiot.site.SiteLocator
+import com.pluxity.aiot.site.SiteRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
@@ -13,9 +15,10 @@ import io.mockk.mockk
 class SpeakerServiceKoTest :
     BehaviorSpec({
         val objectMapper = ObjectMapper()
+        val siteLocator = SiteLocator(mockk<SiteRepository> { every { findAll() } returns emptyList() })
 
         Given("LDMS 연동이 꺼져 있음") {
-            val service = SpeakerService(null, objectMapper)
+            val service = SpeakerService(null, objectMapper, siteLocator)
 
             When("스피커 목록을 조회함") {
                 Then("빈 목록을 반환한다") {
@@ -36,7 +39,7 @@ class SpeakerServiceKoTest :
                     LdmsEmcallGroupInfo(emcallGrpSeq = 2, emcallGrpStatJson = "{broken"),
                     LdmsEmcallGroupInfo(emcallGrpSeq = 3, emcallGrpStatJson = null),
                 )
-            val service = SpeakerService(ldmsClient, objectMapper)
+            val service = SpeakerService(ldmsClient, objectMapper, siteLocator)
 
             When("스피커 목록을 조회함") {
                 val result = service.findAll(null)

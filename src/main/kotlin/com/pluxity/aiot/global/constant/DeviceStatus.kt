@@ -1,4 +1,4 @@
-package com.pluxity.aiot.broadcast
+package com.pluxity.aiot.global.constant
 
 import io.swagger.v3.oas.annotations.media.Schema
 

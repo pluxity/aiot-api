@@ -5,6 +5,9 @@ import com.pluxity.aiot.ldms.LdmsClient
 import com.pluxity.aiot.ldms.dto.LdmsEmcallGroupInfo
 import com.pluxity.aiot.ldms.dto.LdmsEmcallGroupStatus
 import com.pluxity.aiot.ldms.dto.ldmsDeviceStatus
+import com.pluxity.aiot.site.Site
+import com.pluxity.aiot.site.SiteLocator
+import com.pluxity.aiot.site.dto.toSiteResponse
 import com.pluxity.aiot.speaker.dto.SpeakerOutput
 import com.pluxity.aiot.speaker.dto.SpeakerResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -16,11 +19,16 @@ private val log = KotlinLogging.logger {}
 class SpeakerService(
     private val ldmsClient: LdmsClient?,
     private val objectMapper: ObjectMapper,
+    private val siteLocator: SiteLocator,
 ) {
-    fun findAll(siteId: Long?): List<SpeakerResponse> {
-        val speakers = ldmsClient?.getEmcallGroupList().orEmpty().map { it.toResponse(parseOutput(it)) }
-        return if (siteId == null) speakers else speakers.filter { it.site?.id == siteId }
-    }
+    fun findAll(siteId: Long?): List<SpeakerResponse> =
+        siteLocator
+            .locate(
+                ldmsClient?.getEmcallGroupList().orEmpty(),
+                siteId,
+                longitude = { it.emcallGrpLng },
+                latitude = { it.emcallGrpLat },
+            ).map { (group, site) -> group.toResponse(parseOutput(group), site) }
 
     private fun parseOutput(group: LdmsEmcallGroupInfo): SpeakerOutput? {
         val json = group.emcallGrpStatJson?.takeIf { it.isNotBlank() } ?: return null
@@ -39,16 +47,18 @@ class SpeakerService(
     }
 }
 
-private fun LdmsEmcallGroupInfo.toResponse(output: SpeakerOutput?) =
-    SpeakerResponse(
-        id = emcallGrpSeq,
-        name = emcallGrpNm.orEmpty(),
-        deviceId = emcallGrpId.orEmpty(),
-        location = null,
-        latitude = emcallGrpLat,
-        longitude = emcallGrpLng,
-        status = ldmsDeviceStatus(commStat),
-        ttsMessage = emcallTtsMsg,
-        output = output,
-        site = null,
-    )
+private fun LdmsEmcallGroupInfo.toResponse(
+    output: SpeakerOutput?,
+    site: Site?,
+) = SpeakerResponse(
+    id = emcallGrpSeq,
+    name = emcallGrpNm.orEmpty(),
+    deviceId = emcallGrpId.orEmpty(),
+    location = null,
+    latitude = emcallGrpLat,
+    longitude = emcallGrpLng,
+    status = ldmsDeviceStatus(commStat),
+    ttsMessage = emcallTtsMsg,
+    output = output,
+    site = site?.toSiteResponse(),
+)

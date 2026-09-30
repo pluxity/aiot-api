@@ -1,6 +1,6 @@
 package com.pluxity.aiot.display.dto
 
-import com.pluxity.aiot.broadcast.DeviceStatus
+import com.pluxity.aiot.global.constant.DeviceStatus
 import com.pluxity.aiot.site.dto.SiteResponse
 import io.swagger.v3.oas.annotations.media.Schema
 

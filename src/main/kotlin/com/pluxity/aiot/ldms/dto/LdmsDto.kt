@@ -2,7 +2,7 @@ package com.pluxity.aiot.ldms.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.pluxity.aiot.broadcast.DeviceStatus
+import com.pluxity.aiot.global.constant.DeviceStatus
 
 data class LdmsLoginRequest(
     @field:JsonProperty("user_id")

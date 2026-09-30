@@ -2,7 +2,10 @@ package com.pluxity.aiot.speaker.dto
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.pluxity.aiot.global.response.BaseResponse
+import com.pluxity.aiot.global.response.toBaseResponse
+import com.pluxity.aiot.speaker.SpeakerPreset
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
@@ -20,6 +23,9 @@ data class SpeakerPresetRequest(
     @field:NotBlank(message = "메시지는 필수 입니다.")
     @field:Size(max = 1000, message = "메시지는 최대 1000자까지 입력 가능합니다.")
     val message: String,
+    @field:Schema(description = "반복 횟수", example = "1", defaultValue = "1")
+    @field:Min(value = 1, message = "반복 횟수는 1 이상이어야 합니다.")
+    val repeatCount: Int = 1,
 )
 
 @Schema(description = "스피커 프리셋 응답")
@@ -30,8 +36,19 @@ data class SpeakerPresetResponse(
     val title: String,
     @field:Schema(description = "메시지 본문", example = "잠시 후 공원이 폐장합니다.")
     val message: String,
+    @field:Schema(description = "반복 횟수", example = "1")
+    val repeatCount: Int,
     @field:JsonUnwrapped val baseResponse: BaseResponse,
 )
+
+fun SpeakerPreset.toResponse() =
+    SpeakerPresetResponse(
+        id = requiredId,
+        title = title,
+        message = message,
+        repeatCount = repeatCount,
+        baseResponse = toBaseResponse(),
+    )
 
 data class SpeakerPresetSearchRequest(
     val page: Int = 1,

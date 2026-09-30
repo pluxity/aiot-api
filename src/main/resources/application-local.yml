@@ -65,6 +65,9 @@ eds:
 mic:
   enabled: false
 
+ldms:
+  enabled: false
+
 ums:
   enabled: false
 

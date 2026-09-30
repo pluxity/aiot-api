@@ -47,6 +47,12 @@ mic:
   token-ttl-fallback: ${MIC_TOKEN_TTL_FALLBACK:3600}
   list-page-size: ${MIC_LIST_PAGE_SIZE:100}
 
+ldms:
+  enabled: ${LDMS_ENABLED:false}
+  base-url: ${LDMS_BASE_URL:}
+  user-id: ${LDMS_USER_ID:}
+  password: "${LDMS_PASSWORD:}"
+
 ums:
   enabled: ${UMS_ENABLED:false}
   url: ${UMS_DB_URL:}
